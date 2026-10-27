@@ -1,4 +1,4 @@
-# mclauncher
+# MCLauncher TUI
 
 > 一个 OpenCode 风格的 Minecraft 终端启动器。纯 Go 编写，单文件运行。
 

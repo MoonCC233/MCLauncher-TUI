@@ -1,0 +1,20 @@
+# Build output
+/mclauncher
+/mclauncher.exe
+/dist/
+
+# Preview / screenshot scratch files
+/preview-*.ansi
+/preview-*.html
+/preview-*.png
+/preview-err.txt
+
+# Local runtime data
+/.mclauncher/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

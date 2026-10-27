@@ -1,0 +1,54 @@
+version: 2
+
+project_name: mclauncher
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: mclauncher
+    main: ./cmd/mclauncher
+    binary: mclauncher
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/MoonCC233/MCLauncher-TUI/internal/version.Version={{.Version}}
+      - -X github.com/MoonCC233/MCLauncher-TUI/internal/version.Commit={{.Commit}}
+      - -X github.com/MoonCC233/MCLauncher-TUI/internal/version.Date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"

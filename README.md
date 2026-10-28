@@ -253,12 +253,20 @@ go run scripts/ansi2html.go preview-home.ansi preview-home.html mclauncher
 
 ## 发布
 
-推送 `v*` 标签即可触发 GitHub Actions 中的 GoReleaser：
+发布说明写在 `docs/releases/vX.Y.Z.md`，提交并推送 `main` 后再推送 `v*` 标签：
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+# 1. 编写并提交发布说明
+git add docs/releases/v0.1.1.md
+git commit -m "docs: add v0.1.1 release notes"
+git push
+
+# 2. 打标签并触发发布
+git tag -a v0.1.1 -m "v0.1.1"
+git push origin v0.1.1
 ```
+
+Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoReleaser 的 `--release-notes` 写入 Release 页面；说明文件缺失时工作流会直接失败，确保每个版本都有更新详情。
 
 发布流水线会构建以下目标，并生成校验和：
 

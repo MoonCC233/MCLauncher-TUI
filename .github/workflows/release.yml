@@ -24,11 +24,21 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: Check release notes
+        id: notes
+        run: |
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ ! -f "$notes" ]; then
+            echo "::error::Missing $notes. Write release notes before tagging."
+            exit 1
+          fi
+          echo "path=$notes" >> "$GITHUB_OUTPUT"
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes=${{ steps.notes.outputs.path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

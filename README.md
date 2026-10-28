@@ -10,7 +10,8 @@
 
 ## 功能
 
-- **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘驱动，窄终端自动收起侧栏。
+- **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏。
+- **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线账户**：按 Java 版离线 UUID 规则生成身份，支持多账户与快速切换。
@@ -103,7 +104,7 @@ Windows 下输出文件为 `mclauncher.exe`。
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录。
 
 5. **调整设置**  
-   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸和下载线程数。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。
+   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数和界面语言。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。语言行会打开语言选择器，第一项“跟随系统”会跟随操作系统区域设置。
 
 ## 快捷键
 
@@ -128,6 +129,39 @@ Windows 下输出文件为 `mclauncher.exe`。
 | Accounts | `a` / `n` 添加离线账户 · `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 |
+
+### 鼠标操作
+
+鼠标行为参考 OpenCode TUI：
+
+- **侧栏、筛选标签、底栏快捷键、弹窗按钮**：单击立即生效。
+- **列表行**：第一次单击选中，450 ms 内再次单击才会打开 / 启动 / 编辑，避免误触。
+- **滚轮**：滚动实例、版本、账户、设置、控制台、帮助和选择器列表。
+- **弹窗**：单击弹窗外部关闭（进度弹窗除外）；表单字段可直接单击聚焦。
+
+键盘操作始终可用，鼠标只是补充。
+
+### 界面语言
+
+支持以下 14 种界面语言：
+
+| 语言 | 代码 | 语言 | 代码 |
+| --- | --- | --- | --- |
+| English | `en` | Português (Brasil) | `pt-BR` |
+| Español | `es` | Português (Portugal) | `pt-PT` |
+| Français | `fr` | Русский | `ru` |
+| Deutsch | `de` | 한국어 | `ko` |
+| 简体中文 | `zh-Hans` | Türkçe | `tr` |
+| 繁體中文 | `zh-Hant` | Tiếng Việt | `vi` |
+| 日本語 | `ja` | العربية | `ar` |
+
+首次启动时自动检测系统语言；配置中的 `settings.language` 为空表示“跟随系统”。也可以在 `Settings → Language` 中切换，或用命令行参数临时指定：
+
+```bash
+./mclauncher --lang zh-Hans
+```
+
+`pt-PT` 缺少的条目会回退到 `pt-BR`，再回退到英文。阿拉伯语会镜像侧栏、页头、底栏和表格列；具体字形连写取决于终端字体与 BiDi 支持。技术日志（下载地址、Java 输出、错误详情）保持英文，便于排查问题。
 
 ## 数据目录
 
@@ -169,9 +203,10 @@ mclauncher/
 
 ```text
 --data-dir <path>       覆盖数据目录
+--lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress
+--preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress | language | java
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```
@@ -191,7 +226,8 @@ go build ./...
 
 ```text
 cmd/mclauncher/         程序入口、参数解析、配置引导
-internal/tui/           Bubble Tea 模型、页面、弹窗与预览数据
+internal/tui/           Bubble Tea 模型、页面、弹窗、鼠标命中区域与预览数据
+internal/i18n/          界面语言目录、区域设置检测、复数与相对时间
 internal/mojang/        版本清单、规则判断、参数替换、依赖解析、natives 解压
 internal/install/       下载、校验、资源索引与安装标记
 internal/launch/        Java 命令行构建、进程启动、输出流
@@ -209,6 +245,8 @@ scripts/ansi2html.go    预览 ANSI 转 HTML（生成文档截图用）
 ```powershell
 go build -o mclauncher.exe ./cmd/mclauncher
 mclauncher.exe --preview --preview-screen home --width 120 --height 38 > preview-home.ansi
+# 生成中文界面预览
+mclauncher.exe --preview --lang zh-Hans --preview-screen settings --width 120 --height 38 > preview-settings-zh.ansi
 go run scripts/ansi2html.go preview-home.ansi preview-home.html mclauncher
 # 再用浏览器无头模式将 preview-home.html 渲染为 PNG
 ```
@@ -237,6 +275,7 @@ git push origin v0.1.0
 - **不管理 Java 安装**：只检测和选择已安装的 Java；不会下载 JDK。
 - **退出启动器不会终止游戏**：启动器退出后游戏继续运行，但后续 stdout/stderr 输出可能丢失。需要停止游戏时请先在 Console 中按 `x`。
 - **无自动更新**：请关注 Releases 页面获取新版本。
+- **阿拉伯语显示取决于终端**：启动器会镜像布局，但阿拉伯文字形连写和 BiDi 排序由终端与字体决定；Windows Terminal 的显示效果通常最好。
 - **预编译二进制未签名**：macOS 首次运行可能需要 `xattr -d com.apple.quarantine ./mclauncher`。
 
 ## 致谢

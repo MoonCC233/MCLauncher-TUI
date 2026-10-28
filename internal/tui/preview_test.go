@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 )
 
 func frameLines(t *testing.T, out string, width, height int) []string {
@@ -21,19 +23,22 @@ func frameLines(t *testing.T, out string, width, height int) []string {
 	return lines
 }
 
+var previewScreens = []string{
+	"home",
+	"instances",
+	"versions",
+	"accounts",
+	"settings",
+	"console",
+	"help",
+	"form",
+	"progress",
+	"language",
+	"java",
+}
+
 func TestPreviewFrames(t *testing.T) {
-	screens := []string{
-		"home",
-		"instances",
-		"versions",
-		"accounts",
-		"settings",
-		"console",
-		"help",
-		"form",
-		"progress",
-	}
-	for _, screen := range screens {
+	for _, screen := range previewScreens {
 		t.Run(screen, func(t *testing.T) {
 			frameLines(t, Preview(screen, 120, 38), 120, 38)
 		})
@@ -48,5 +53,26 @@ func TestPreviewNarrow(t *testing.T) {
 	lines := frameLines(t, Preview("home", 90, 30), 90, 30)
 	if !strings.Contains(strings.Join(lines, "\n"), "mclauncher") {
 		t.Error("preview should still render the header")
+	}
+}
+
+func TestPreviewLanguages(t *testing.T) {
+	for _, lang := range i18n.Supported {
+		code := string(lang.Code)
+		for _, screen := range previewScreens {
+			t.Run(code+"/"+screen, func(t *testing.T) {
+				frameLines(t, Preview(screen, 100, 30, code), 100, 30)
+			})
+		}
+	}
+}
+
+func TestPreviewNarrowLanguages(t *testing.T) {
+	for _, code := range []string{"de", "ru", "zh-Hans", "ar", "pt-PT"} {
+		for _, screen := range previewScreens {
+			t.Run(code+"/"+screen, func(t *testing.T) {
+				frameLines(t, Preview(screen, 80, 24, code), 80, 24)
+			})
+		}
 	}
 }

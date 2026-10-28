@@ -13,6 +13,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/tui"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -24,11 +25,13 @@ func main() {
 		dataDir       = flag.String("data-dir", "", "data directory (overrides MCLAUNCHER_DATA_DIR)")
 		showVersion   = flag.Bool("version", false, "print version and exit")
 		preview       = flag.Bool("preview", false, "render a demo frame to stdout and exit")
-		previewScreen = flag.String("preview-screen", "home", "preview screen: home, instances, versions, accounts, settings, console, help, form, progress")
+		previewScreen = flag.String("preview-screen", "home", "preview screen: home, instances, versions, accounts, settings, console, help, form, progress, language, java")
 		previewWidth  = flag.Int("width", 120, "preview width")
 		previewHeight = flag.Int("height", 38, "preview height")
+		lang          = flag.String("lang", "", "UI language: en, es, fr, de, zh-Hans, zh-Hant, ja, ar, pt-BR, pt-PT, ru, ko, tr, vi")
 	)
 	flag.Parse()
+	configureConsole()
 
 	if *showVersion {
 		fmt.Printf("mclauncher %s\n", version.Full())
@@ -38,7 +41,7 @@ func main() {
 	if *preview {
 		lipgloss.SetColorProfile(termenv.TrueColor)
 		lipgloss.SetHasDarkBackground(true)
-		fmt.Print(tui.Preview(*previewScreen, *previewWidth, *previewHeight))
+		fmt.Print(tui.Preview(*previewScreen, *previewWidth, *previewHeight, *lang))
 		fmt.Print("\n")
 		return
 	}
@@ -104,9 +107,21 @@ func main() {
 			log.Printf("could not write initial config: %v", saveErr)
 		}
 	}
+	if *lang != "" {
+		canonical, ok := i18n.Canonical(*lang)
+		if !ok {
+			fmt.Fprintf(os.Stderr, "unsupported language %q\n", *lang)
+			fmt.Fprintln(os.Stderr, "supported: en, es, fr, de, zh-Hans, zh-Hant, ja, ar, pt-BR, pt-PT, ru, ko, tr, vi")
+			os.Exit(1)
+		}
+		cfg.Settings.Language = string(canonical)
+		if err := cfg.Save(); err != nil {
+			log.Printf("could not save language: %v", err)
+		}
+	}
 
 	model := tui.New(cfg, layout, util.NewHTTPClient(), version.Full(), notice)
-	program := tea.NewProgram(model, tea.WithAltScreen())
+	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	model.SetSender(program.Send)
 	if _, err := program.Run(); err != nil {
 		log.Printf("tui error: %v", err)

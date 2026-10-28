@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -248,6 +249,64 @@ func TestInstanceLifecycle(t *testing.T) {
 func TestSaveWithoutPath(t *testing.T) {
 	if err := (&Config{}).Save(); err == nil {
 		t.Error("Save without a path should fail")
+	}
+}
+
+func TestLanguageNormalization(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"", ""},
+		{"en", "en"},
+		{"EN_us", "en"},
+		{"zh-CN", "zh-Hans"},
+		{"zh_TW.UTF-8", "zh-Hant"},
+		{"pt", "pt-BR"},
+		{"pt_PT.UTF-8", "pt-PT"},
+		{"pt-BR", "pt-BR"},
+		{"de-AT", "de"},
+		{"ja_JP", "ja"},
+		{"offline", ""},
+		{"xx-YY", ""},
+	}
+	for _, tc := range cases {
+		path := filepath.Join(t.TempDir(), "config.json")
+		raw := `{"settings":{"language":` + quoteJSON(tc.in) + `}}`
+		if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		cfg, err := Load(path)
+		if err != nil {
+			t.Fatalf("Load(%q): %v", tc.in, err)
+		}
+		if cfg.Settings.Language != tc.want {
+			t.Errorf("language %q normalized to %q, want %q", tc.in, cfg.Settings.Language, tc.want)
+		}
+	}
+}
+
+func quoteJSON(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
+func TestLanguagePersists(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.Settings.Language = "ru"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Settings.Language != "ru" {
+		t.Errorf("reloaded language = %q, want ru", reloaded.Settings.Language)
 	}
 }
 

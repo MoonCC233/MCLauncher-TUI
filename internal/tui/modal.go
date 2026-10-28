@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -22,6 +23,8 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updatePrompt(msg)
 	case modalJava:
 		return m.updateJavaPicker(msg)
+	case modalLanguage:
+		return m.updateLanguagePicker(msg)
 	case modalProgress:
 		if msg.String() == "esc" {
 			m.cancelTask()
@@ -51,9 +54,7 @@ func (m *Model) updateHelp(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "pgdown":
 		m.helpScroll += 10
 	}
-	if m.helpScroll < 0 {
-		m.helpScroll = 0
-	}
+	m.clampHelpScroll()
 	return m, nil
 }
 
@@ -98,25 +99,25 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if inst := m.cfg.FindInstance(m.confirm.Target); inst != nil {
 				name := inst.Name
 				if err := m.cfg.RemoveInstance(inst); err != nil {
-					m.alert = AlertState{Title: "Could not delete instance", Body: err.Error()}
+					m.alert = AlertState{Title: m.t("Could not delete instance"), Body: err.Error()}
 					m.modal = modalAlert
 					return m, nil
 				}
 				m.clampInstanceCursor()
 				m.clampHomeCursor()
 				m.ensureInstanceVisible()
-				m.setToast("Deleted "+name, toastSuccess)
+				m.setToast(m.tf("Deleted %s", name), toastSuccess)
 				m.addLog("launcher", "deleted instance "+name)
 			}
 		case confirmRemoveAccount:
 			target := m.confirm.Target
 			if err := m.cfg.RemoveAccount(target); err != nil {
-				m.alert = AlertState{Title: "Could not remove account", Body: err.Error()}
+				m.alert = AlertState{Title: m.t("Could not remove account"), Body: err.Error()}
 				m.modal = modalAlert
 				return m, nil
 			}
 			m.clampAccountCursor()
-			m.setToast("Account removed", toastSuccess)
+			m.setToast(m.t("Account removed"), toastSuccess)
 			m.addLog("launcher", "removed account")
 		}
 		m.modal = modalNone
@@ -179,7 +180,7 @@ func (m *Model) chooseJava() (tea.Model, tea.Cmd) {
 		m.cfg.Settings.JavaPath = ""
 		m.saveConfig()
 		m.modal = modalNone
-		m.setToast("Java runtime: auto-detect", toastSuccess)
+		m.setToast(m.t("Java runtime: auto-detect"), toastSuccess)
 		return m, nil
 	}
 	n := len(m.javaRuntimes)
@@ -188,7 +189,7 @@ func (m *Model) chooseJava() (tea.Model, tea.Cmd) {
 		m.cfg.Settings.JavaPath = rt.Path
 		m.saveConfig()
 		m.modal = modalNone
-		m.setToast("Java runtime: "+rt.Short(), toastSuccess)
+		m.setToast(m.tf("Java runtime: %s", rt.Short()), toastSuccess)
 		m.addLog("launcher", "java runtime: "+rt.Path)
 		return m, nil
 	}
@@ -199,7 +200,34 @@ func (m *Model) chooseJava() (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	m.openPrompt(promptJavaPath, "Java executable", m.cfg.Settings.JavaPath, "Full path to java.exe or a JDK folder", 260)
+	m.openPrompt(promptJavaPath, m.t("Java executable"), m.cfg.Settings.JavaPath, m.t("Full path to java.exe or a JDK folder"), 260)
+	return m, nil
+}
+
+func (m *Model) updateLanguagePicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.modal = modalNone
+		return m, nil
+	case "up", "k":
+		m.languagePick--
+	case "down", "j":
+		m.languagePick++
+	case "enter":
+		return m.chooseLanguage()
+	}
+	m.languagePick = clampInt(m.languagePick, 0, m.languagePickerCount()-1)
+	return m, nil
+}
+
+func (m *Model) chooseLanguage() (tea.Model, tea.Cmd) {
+	idx := m.languagePick
+	if idx <= 0 {
+		m.useSystemLanguage()
+	} else if idx <= len(i18n.Supported) {
+		m.setLanguage(i18n.Supported[idx-1].Code)
+	}
+	m.modal = modalNone
 	return m, nil
 }
 
@@ -217,47 +245,52 @@ func (m *Model) helpContent(width int) []string {
 		title   string
 		entries []entry
 	}{
-		{"Sections", []entry{
-			{"tab / shift+tab", "next / previous section"},
-			{"1 … 6", "jump directly to a section"},
-			{"esc", "back to Home"},
-			{"ctrl+c", "quit launcher"},
+		{m.t("Sections"), []entry{
+			{"tab / shift+tab", m.t("next / previous section")},
+			{"1 … 6", m.t("jump directly to a section")},
+			{"esc", m.t("back to Home")},
+			{"ctrl+c", m.t("quit launcher")},
 		}},
-		{"Navigation", []entry{
-			{"↑ ↓ / j k", "move the cursor"},
-			{"pgup / pgdown", "jump by a page"},
-			{"home / end", "first / last item"},
-			{"enter", "open, play or edit"},
+		{m.t("Navigation"), []entry{
+			{"↑ ↓ / j k", m.t("move the cursor")},
+			{"pgup / pgdown", m.t("jump by a page")},
+			{"home / end", m.t("first / last item")},
+			{"enter", m.t("open, play or edit")},
 		}},
-		{"Instances", []entry{
-			{"n", "create from the Versions screen"},
-			{"e", "rename / change memory"},
-			{"d", "delete instance (files are kept)"},
-			{"o", "open the instance folder"},
-			{"x", "stop the running game"},
+		{m.t("Instances"), []entry{
+			{"n", m.t("create from the Versions screen")},
+			{"e", m.t("rename / change memory")},
+			{"d", m.t("delete instance (files are kept)")},
+			{"o", m.t("open the instance folder")},
+			{"x", m.t("stop the running game")},
 		}},
-		{"Versions", []entry{
-			{"/", "filter by version id"},
-			{"t", "all → releases → snapshots"},
-			{"enter", "install if needed, then create instance"},
-			{"i", "install without creating an instance"},
-			{"r", "refresh the Mojang manifest"},
+		{m.t("Versions"), []entry{
+			{"/", m.t("filter by version id")},
+			{"t", m.t("all → releases → snapshots")},
+			{"enter", m.t("install if needed, then create instance")},
+			{"i", m.t("install without creating an instance")},
+			{"r", m.t("refresh the Mojang manifest")},
 		}},
-		{"Accounts & settings", []entry{
-			{"a", "add an offline account"},
-			{"enter", "set the active account"},
-			{"s", "rescan Java runtimes"},
-			{"← → / - +", "adjust memory or download threads"},
+		{m.t("Accounts & settings"), []entry{
+			{"a", m.t("add an offline account")},
+			{"enter", m.t("set the active account")},
+			{"s", m.t("rescan Java runtimes")},
+			{"← → / - +", m.t("adjust memory or download threads")},
 		}},
-		{"Console", []entry{
-			{"↑ ↓ / pgup pgdown", "scroll through game output"},
-			{"G / end", "follow the tail again"},
-			{"x", "stop the running game"},
-			{"c", "clear the console"},
-			{"o", "open the logs folder"},
+		{m.t("Console"), []entry{
+			{"↑ ↓ / pgup pgdown", m.t("scroll through game output")},
+			{"G / end", m.t("follow the tail again")},
+			{"x", m.t("stop the running game")},
+			{"c", m.t("clear the console")},
+			{"o", m.t("open the logs folder")},
+		}},
+		{m.t("Mouse"), []entry{
+			{m.t("click"), m.t("select ; click again to open")},
+			{m.t("wheel"), m.t("scroll lists, help and console")},
+			{"?", m.t("open this help")},
 		}},
 	}
-	out := []string{styleBold.Render("Keyboard shortcuts"), styleBorder.Render(strings.Repeat("─", width)), ""}
+	out := []string{styleBold.Render(m.t("Keyboard shortcuts")), styleBorder.Render(strings.Repeat("─", width)), ""}
 	for _, section := range sections {
 		out = append(out, stylePrimaryB.Render(section.title))
 		for _, e := range section.entries {
@@ -266,7 +299,7 @@ func (m *Model) helpContent(width int) []string {
 		}
 		out = append(out, "")
 	}
-	out = append(out, styleDim.Render("Offline mode: launcher exits without stopping a running game."))
+	out = append(out, styleDim.Render(m.t("Offline mode: launcher exits without stopping a running game.")))
 	return out
 }
 
@@ -287,35 +320,33 @@ func (m *Model) progressPercent() int {
 func (m *Model) progressBody(width int) []string {
 	task := m.task
 	if task == nil {
-		return []string{"Nothing is running."}
+		return []string{m.t("Nothing is running.")}
 	}
 	stage := task.Stage
 	if stage == "" {
-		stage = "Working"
+		stage = m.t("Working")
 	}
 	lines := []string{
-		stylePrimaryB.Render(stage),
+		stylePrimaryB.Render(m.trKnown(stage)),
 		styleMuted.Render(truncateRunes(task.Detail, width)),
 		"",
 	}
 	if task.Total > 0 {
 		lines = append(lines,
-			progressBar(task.Done, task.Total, max(10, width-12))+"  "+
+			m.progressBar(task.Done, task.Total, max(10, width-12))+"  "+
 				styleText.Render(fmt.Sprintf("%3d%%", m.progressPercent())),
 			styleDim.Render(fmt.Sprintf("%s / %s · %s",
 				util.HumanBytes(task.Done), util.HumanBytes(task.Total), util.HumanDuration(time.Since(task.Started)))),
 		)
 	} else {
-		lines = append(lines, spinnerFrame(m.spinner)+" "+styleDim.Render("working · "+util.HumanDuration(time.Since(task.Started))))
+		lines = append(lines, spinnerFrame(m.spinner)+" "+styleDim.Render(m.tf("working · %s", util.HumanDuration(time.Since(task.Started)))))
 	}
 	if task.FilesTotal > 0 {
-		lines = append(lines, styleDim.Render(fmt.Sprintf("%d / %d files", task.FilesDone, task.FilesTotal)))
+		lines = append(lines, styleDim.Render(m.tf("%d / %d files", task.FilesDone, task.FilesTotal)))
 	}
 	lines = append(lines, "")
 	if task.Cancelled {
-		lines = append(lines, styleYellow.Render("Cancelling…"))
-	} else {
-		lines = append(lines, styleDim.Render("esc cancel"))
+		lines = append(lines, styleYellow.Render(m.t("Cancelling…")))
 	}
 	return lines
 }

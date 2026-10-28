@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
@@ -64,7 +65,7 @@ func (m *Model) updateHome(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.openAccountForm()
 	case "r":
 		m.installed = install.InstalledSet(m.layout)
-		m.setToast("Refreshed", toastInfo)
+		m.setToast(m.t("Refreshed"), toastInfo)
 		return m, m.loadManifestCmd(true)
 	case "x":
 		if m.game != nil {
@@ -108,21 +109,21 @@ func (m *Model) updateInstances(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.game != nil && m.game.InstanceID == inst.ID {
-			m.alert = AlertState{Title: "Instance is running", Body: "Stop the game from the Console screen before deleting this instance."}
+			m.alert = AlertState{Title: m.t("Instance is running"), Body: m.t("Stop the game from the Console screen before deleting this instance.")}
 			m.modal = modalAlert
 			return m, nil
 		}
 		m.confirm = ConfirmState{
 			Kind:   confirmDeleteInstance,
-			Title:  "Delete instance?",
-			Body:   fmt.Sprintf("“%s” will be removed from the launcher. Its game files in instances/%s are kept on disk.", inst.Name, inst.ID),
+			Title:  m.t("Delete instance?"),
+			Body:   m.tf("“%s” will be removed from the launcher. Its game files in instances/%s are kept on disk.", inst.Name, inst.ID),
 			Target: inst.ID,
 		}
 		m.modal = modalConfirm
 	case "r":
 		m.installed = install.InstalledSet(m.layout)
 		m.clampInstanceCursor()
-		m.setToast("Refreshed installed versions", toastInfo)
+		m.setToast(m.t("Refreshed installed versions"), toastInfo)
 	case "x":
 		if m.game != nil {
 			m.stopGame()
@@ -168,7 +169,7 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.installed[v.ID] {
-			m.setToast(v.ID+" is already installed", toastInfo)
+			m.setToast(m.tf("%s is already installed", v.ID), toastInfo)
 			return m, nil
 		}
 		return m, m.startInstall(v.ID, "", 0)
@@ -185,7 +186,7 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if !m.installed[v.ID] {
-			m.setToast("Install this version first", toastInfo)
+			m.setToast(m.t("Install this version first"), toastInfo)
 			return m, nil
 		}
 		_ = util.OpenPath(m.layout.VersionDir(v.ID))
@@ -225,7 +226,7 @@ func (m *Model) updateAccounts(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		m.cfg.SetActiveAccount(account.UUID)
 		m.saveConfig()
-		m.setToast("Active account: "+account.Username, toastSuccess)
+		m.setToast(m.tf("Active account: %s", account.Username), toastSuccess)
 	case "a", "n":
 		m.openAccountForm()
 	case "d":
@@ -234,14 +235,14 @@ func (m *Model) updateAccounts(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if len(m.cfg.Accounts) == 1 {
-			m.alert = AlertState{Title: "Keep one account", Body: "Add another account before removing the last one."}
+			m.alert = AlertState{Title: m.t("Keep one account"), Body: m.t("Add another account before removing the last one.")}
 			m.modal = modalAlert
 			return m, nil
 		}
 		m.confirm = ConfirmState{
 			Kind:   confirmRemoveAccount,
-			Title:  "Remove account?",
-			Body:   fmt.Sprintf("“%s” will be removed from this launcher. Existing worlds are not affected.", account.Username),
+			Title:  m.t("Remove account?"),
+			Body:   m.tf("“%s” will be removed from this launcher. Existing worlds are not affected.", account.Username),
 			Target: account.UUID,
 		}
 		m.modal = modalConfirm
@@ -265,7 +266,7 @@ func (m *Model) updateSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if !m.javaScanning {
 			m.javaScanning = true
 			m.javaScanned = false
-			m.setToast("Scanning for Java runtimes…", toastInfo)
+			m.setToast(m.t("Scanning for Java runtimes…"), toastInfo)
 			return m, scanJavaCmd()
 		}
 	case "o":
@@ -285,37 +286,39 @@ func (m *Model) adjustSetting(key string) {
 	if key == "left" || key == "-" {
 		delta = -1
 	}
-	switch m.settingsCursor {
-	case 0:
+	switch m.currentSettingID() {
+	case "memory":
 		next := util.Clamp(m.cfg.Settings.MemoryMB+delta*512, 512, 65536)
 		if next != m.cfg.Settings.MemoryMB {
 			m.cfg.Settings.MemoryMB = next
 			m.saveConfig()
-			m.setToast(fmt.Sprintf("Memory: %d MB", next), toastSuccess)
+			m.setToast(m.tf("Memory: %d MB", next), toastSuccess)
 		}
-	case 4:
+	case "threads":
 		next := util.Clamp(m.cfg.Settings.DownloadThreads+delta, 1, 32)
 		if next != m.cfg.Settings.DownloadThreads {
 			m.cfg.Settings.DownloadThreads = next
 			m.saveConfig()
-			m.setToast(fmt.Sprintf("Download threads: %d", next), toastSuccess)
+			m.setToast(m.tf("Download threads: %d", next), toastSuccess)
 		}
 	}
 }
 
 func (m *Model) editSetting() tea.Cmd {
-	switch m.settingsCursor {
-	case 0:
-		m.openPrompt(promptMemory, "Memory", fmt.Sprintf("%d", m.cfg.Settings.MemoryMB), "512–65536 MB · applied to the next launch", 12)
-	case 1:
+	switch m.currentSettingID() {
+	case "memory":
+		m.openPrompt(promptMemory, m.t("Memory"), fmt.Sprintf("%d", m.cfg.Settings.MemoryMB), m.t("512–65536 MB · applied to the next launch"), 12)
+	case "java":
 		return m.openJavaPicker()
-	case 2:
-		m.openPrompt(promptJVMArgs, "JVM arguments", m.cfg.Settings.JVMArgs, "Extra flags passed to Java, e.g. -XX:+UseG1GC", 64)
-	case 3:
-		m.openPrompt(promptResolution, "Window size", fmt.Sprintf("%dx%d", m.cfg.Settings.Width, m.cfg.Settings.Height), "width x height · 854x480", 16)
-	case 4:
-		m.openPrompt(promptThreads, "Download threads", fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), "1–32 parallel downloads", 4)
-	case 5:
+	case "jvm":
+		m.openPrompt(promptJVMArgs, m.t("JVM arguments"), m.cfg.Settings.JVMArgs, m.t("Extra flags passed to Java, e.g. -XX:+UseG1GC"), 64)
+	case "resolution":
+		m.openPrompt(promptResolution, m.t("Window size"), fmt.Sprintf("%dx%d", m.cfg.Settings.Width, m.cfg.Settings.Height), m.t("width x height · 854x480"), 16)
+	case "threads":
+		m.openPrompt(promptThreads, m.t("Download threads"), fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), m.t("1–32 parallel downloads"), 4)
+	case "language":
+		m.openLanguagePicker()
+	case "data":
 		_ = util.OpenPath(m.layout.Root)
 	}
 	return nil
@@ -338,6 +341,19 @@ func (m *Model) openJavaPicker() tea.Cmd {
 	return nil
 }
 
+func (m *Model) openLanguagePicker() {
+	m.languagePick = 0
+	if m.cfg.Settings.Language != "" {
+		for i, info := range i18n.Supported {
+			if string(info.Code) == m.cfg.Settings.Language {
+				m.languagePick = i + 1
+				break
+			}
+		}
+	}
+	m.modal = modalLanguage
+}
+
 func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	value := strings.TrimSpace(m.prompt.Input.Value())
 	switch m.prompt.Kind {
@@ -345,7 +361,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		n, err := parseInt(value)
 		if err != nil || n < 512 || n > 65536 {
 			m.prompt.Input.SetValue("")
-			m.setToast("Memory must be 512–65536 MB", toastError)
+			m.setToast(m.t("Memory must be 512–65536 MB"), toastError)
 			return m, nil
 		}
 		m.cfg.Settings.MemoryMB = n
@@ -354,7 +370,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	case promptResolution:
 		w, h, ok := util.ParseWindowSize(value)
 		if !ok {
-			m.setToast("Use width x height, e.g. 854x480", toastError)
+			m.setToast(m.t("Use width x height, e.g. 854x480"), toastError)
 			return m, nil
 		}
 		m.cfg.Settings.Width = w
@@ -362,7 +378,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	case promptThreads:
 		n, err := parseInt(value)
 		if err != nil || n < 1 || n > 32 {
-			m.setToast("Threads must be 1–32", toastError)
+			m.setToast(m.t("Threads must be 1–32"), toastError)
 			return m, nil
 		}
 		m.cfg.Settings.DownloadThreads = n
@@ -371,7 +387,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 			m.cfg.Settings.JavaPath = ""
 			m.saveConfig()
 			m.modal = modalNone
-			m.setToast("Java runtime set to auto-detect", toastSuccess)
+			m.setToast(m.t("Java runtime: auto-detect"), toastSuccess)
 			return m, nil
 		}
 		m.modal = modalNone
@@ -379,7 +395,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	}
 	m.saveConfig()
 	m.modal = modalNone
-	m.setToast("Settings saved", toastSuccess)
+	m.setToast(m.t("Settings saved"), toastSuccess)
 	return m, nil
 }
 

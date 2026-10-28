@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -29,14 +30,15 @@ func (m *Model) modalView() string {
 	var (
 		title  string
 		body   []string
-		footer string
+		footer []hintSpec
 		accent = colPrimary
 	)
 	contentW := m.modalContentWidth()
+	var pending []hitRegion
 
 	switch m.modal {
 	case modalHelp:
-		title = "Help"
+		title = m.t("Help")
 		all := m.helpContent(contentW)
 		visible := m.height - 11
 		if visible < 6 {
@@ -58,18 +60,23 @@ func (m *Model) modalView() string {
 			end = len(all)
 		}
 		body = append(body, all[start:end]...)
-		footer = hints(keyHint("↑↓", "scroll"), keyHint("esc", "close"))
+		footer = []hintSpec{
+			hintAction("↑↓", m.t("scroll"), "down"),
+			hint("esc", m.t("close")),
+		}
 	case modalForm:
 		accent = colPrimary
 		title = m.form.Title
+		bodyStart := 3
 		if m.form.Kind == formInstance {
-			body = append(body, styleMuted.Render("Version")+"  "+styleCyan.Render(m.form.VersionID))
+			body = append(body, styleMuted.Render(m.t("Version"))+"  "+styleCyan.Render(m.form.VersionID))
 			body = append(body, "")
 		}
 		for i := range m.form.Fields {
 			m.form.Fields[i].Width = max(10, contentW-6)
 			label := styleMuted.Render(m.form.Labels[i])
 			body = append(body, label, "  "+m.form.Fields[i].View())
+			pending = append(pending, hitRegion{Kind: hitFormField, Index: i, Y: bodyStart + len(body) - 2, W: contentW, H: 2})
 			if i < len(m.form.Hints) && m.form.Hints[i] != "" {
 				body = append(body, styleDim.Render(m.form.Hints[i]))
 			}
@@ -78,13 +85,17 @@ func (m *Model) modalView() string {
 		if m.form.Err != "" {
 			body = append(body, styleRed.Render("✗ "+m.form.Err), "")
 		}
-		submit := "create"
+		submit := m.t("create")
 		if m.form.Kind == formAccount {
-			submit = "add account"
+			submit = m.t("add account")
 		} else if m.form.EditID != "" {
-			submit = "save"
+			submit = m.t("save")
 		}
-		footer = hints(keyHint("tab", "next field"), keyHint("enter", submit), keyHint("esc", "cancel"))
+		footer = []hintSpec{
+			hint("tab", m.t("next field")),
+			hint("enter", submit),
+			hint("esc", m.t("cancel")),
+		}
 	case modalConfirm:
 		accent = colRed
 		title = styleRed.Render(m.confirm.Title)
@@ -93,7 +104,10 @@ func (m *Model) modalView() string {
 			body = append(body, styleMuted.Render(line))
 		}
 		body = append(body, "")
-		footer = hints(keyHint("y / enter", "confirm"), keyHint("esc", "cancel"))
+		footer = []hintSpec{
+			hintAction("y / enter", m.t("confirm"), "enter"),
+			hint("esc", m.t("cancel")),
+		}
 	case modalPrompt:
 		title = m.prompt.Title
 		body = []string{
@@ -101,20 +115,38 @@ func (m *Model) modalView() string {
 			"",
 			m.prompt.Input.View(),
 		}
-		footer = hints(keyHint("enter", "save"), keyHint("esc", "cancel"))
+		footer = []hintSpec{
+			hint("enter", m.t("save")),
+			hint("esc", m.t("cancel")),
+		}
 	case modalJava:
-		title = "Java runtime"
-		body = m.javaPickerBody(contentW)
-		footer = hints(keyHint("enter", "choose"), keyHint("r", "rescan"), keyHint("esc", "cancel"))
+		title = m.t("Java runtime")
+		pickerBody, pickerHits := m.javaPickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("r", m.t("rescan")),
+			hint("esc", m.t("cancel")),
+		}
+	case modalLanguage:
+		title = m.t("Language")
+		pickerBody, pickerHits := m.languagePickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {
 			title = m.task.Title
 		} else {
-			title = "Working"
+			title = m.t("Working")
 		}
 		body = m.progressBody(contentW)
-		footer = ""
+		footer = []hintSpec{hintAction("esc", m.t("cancel"), "esc")}
 	case modalAlert:
 		accent = colRed
 		title = styleRed.Render(m.alert.Title)
@@ -127,7 +159,7 @@ func (m *Model) modalView() string {
 			body = append(body, styleMuted.Render(line))
 		}
 		body = append(body, "")
-		footer = hints(keyHint("enter", "dismiss"))
+		footer = []hintSpec{hint("enter", m.t("dismiss"))}
 	default:
 		return ""
 	}
@@ -138,8 +170,11 @@ func (m *Model) modalView() string {
 		"",
 	}
 	lines = append(lines, body...)
-	if footer != "" {
-		lines = append(lines, "", footer)
+	footerIndex := -1
+	if len(footer) > 0 {
+		lines = append(lines, "")
+		footerIndex = len(lines)
+		lines = append(lines, "")
 	}
 	for i := range lines {
 		lines[i] = fitLine(lines[i], contentW)
@@ -152,6 +187,31 @@ func (m *Model) modalView() string {
 	if len(lines) > maxLines {
 		lines = lines[:maxLines]
 	}
+
+	boxW := contentW + 6
+	boxH := len(lines) + 4
+	offX := (m.width - boxW + 1) / 2
+	offY := (m.height - boxH + 1) / 2
+	if offX < 0 {
+		offX = 0
+	}
+	if offY < 0 {
+		offY = 0
+	}
+	contentX := offX + 3
+	contentY := offY + 2
+	m.modalX, m.modalY, m.modalW, m.modalH = offX, offY, boxW, boxH
+
+	if footerIndex >= 0 && footerIndex < len(lines) {
+		lines[footerIndex] = fitLine(m.renderHints(contentX, contentY+footerIndex, footer...), contentW)
+	}
+	for _, h := range pending {
+		if h.Y < 0 || h.Y >= len(lines) {
+			continue
+		}
+		m.addHit(contentX+h.X, contentY+h.Y, h.W, h.H, h)
+	}
+
 	box := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(accent).
@@ -160,11 +220,12 @@ func (m *Model) modalView() string {
 	return clipLines(lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box), m.width, m.height)
 }
 
-func (m *Model) javaPickerBody(contentW int) []string {
+func (m *Model) javaPickerBody(contentW int) ([]string, []hitRegion) {
 	var body []string
+	var hits []hitRegion
 	if m.javaScanning {
 		body = append(body,
-			stylePrimary.Render(spinnerFrame(m.spinner))+" "+styleMuted.Render("Scanning for Java runtimes…"),
+			stylePrimary.Render(spinnerFrame(m.spinner))+" "+styleMuted.Render(m.t("Scanning for Java runtimes…")),
 			"",
 		)
 	}
@@ -199,10 +260,11 @@ func (m *Model) javaPickerBody(contentW int) []string {
 			marker = stylePrimary.Render("▸ ")
 		}
 		n := len(m.javaRuntimes)
+		lineIdx := 3 + len(body)
 		switch {
 		case i == 0:
-			label := "Auto-detect (recommended)"
-			right := "no runtime found"
+			label := m.t("Auto-detect (recommended)")
+			right := m.t("no runtime found")
 			if summary, ok := m.javaSummary(); ok {
 				right = summary
 			}
@@ -213,19 +275,76 @@ func (m *Model) javaPickerBody(contentW int) []string {
 			active := strings.EqualFold(m.cfg.Settings.JavaPath, rt.Path)
 			body = append(body, javaPickerRow(marker, rt.Short(), util.ShortenPath(rt.Path, 34), active, selected, contentW))
 		case i == n+1:
-			right := "scan the system"
+			right := m.t("scan the system")
 			if m.javaScanning {
-				right = spinnerFrame(m.spinner) + " scanning"
+				right = spinnerFrame(m.spinner) + " " + m.t("scanning")
 			}
-			body = append(body, javaPickerRow(marker, "Scan again", right, false, selected, contentW))
+			body = append(body, javaPickerRow(marker, m.t("Scan again"), right, false, selected, contentW))
 		default:
-			body = append(body, javaPickerRow(marker, "Use a custom path…", "", false, selected, contentW))
+			body = append(body, javaPickerRow(marker, m.t("Use a custom path…"), "", false, selected, contentW))
 		}
+		hits = append(hits, hitRegion{Kind: hitJavaRow, Index: i, Y: lineIdx, W: contentW, H: 1})
 	}
 	if count > visible {
 		body = append(body, styleDim.Render(fmt.Sprintf("  %d / %d", m.javaPicker+1, count)))
 	}
-	return body
+	return body, hits
+}
+
+func (m *Model) languagePickerCount() int {
+	return len(i18n.Supported) + 1
+}
+
+func (m *Model) languagePickerBody(contentW int) ([]string, []hitRegion) {
+	count := m.languagePickerCount()
+	visible := m.height - 14
+	if visible < 5 {
+		visible = 5
+	}
+	if visible > count {
+		visible = count
+	}
+	m.languagePick = clampInt(m.languagePick, 0, count-1)
+	start := m.languagePick - visible/2
+	if start < 0 {
+		start = 0
+	}
+	if start+visible > count {
+		start = count - visible
+	}
+	if start < 0 {
+		start = 0
+	}
+	var body []string
+	var hits []hitRegion
+	for i := start; i < start+visible; i++ {
+		selected := i == m.languagePick
+		marker := "  "
+		if selected {
+			marker = stylePrimary.Render("▸ ")
+		}
+		label := m.t("System default")
+		right := i18n.NativeName(i18n.Detect())
+		active := m.cfg.Settings.Language == ""
+		if i > 0 {
+			info := i18n.Supported[i-1]
+			label = info.Native
+			right = info.English + " · " + string(info.Code)
+			active = m.cfg.Settings.Language == string(info.Code)
+		}
+		left := marker + label
+		if active {
+			left += " " + styleGreen.Render("●")
+		}
+		right = util.Truncate(right, max(8, contentW-ansi.StringWidth(left)-2))
+		line := composeLR("", left, styleDim.Render(right), contentW)
+		body = append(body, line)
+		hits = append(hits, hitRegion{Kind: hitLanguageRow, Index: i, Y: 3 + len(body) - 1, W: contentW, H: 1})
+	}
+	if count > visible {
+		body = append(body, styleDim.Render(fmt.Sprintf("  %d / %d", m.languagePick+1, count)))
+	}
+	return body, hits
 }
 
 func javaPickerRow(marker, label, right string, active, selected bool, width int) string {

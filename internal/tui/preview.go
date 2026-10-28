@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
@@ -11,8 +12,9 @@ import (
 
 // Preview renders a deterministic frame with demo data. It is used by
 // `mclauncher --preview` to generate documentation screenshots without
-// touching the network or the real config.
-func Preview(screenName string, width, height int) string {
+// touching the network or the real config. An optional language code selects
+// a UI language (for example "zh-Hans" or "ar").
+func Preview(screenName string, width, height int, language ...string) string {
 	if width <= 0 {
 		width = 120
 	}
@@ -35,6 +37,9 @@ func Preview(screenName string, width, height int) string {
 		},
 	}
 	cfg.Settings.JVMArgs = "-XX:+UseG1GC"
+	if len(language) > 0 {
+		cfg.Settings.Language = language[0]
+	}
 
 	layout := paths.New(`C:\Users\MoonCC\AppData\Roaming\mclauncher`)
 	m := New(cfg, layout, nil, "0.1.0", "")
@@ -116,7 +121,7 @@ func Preview(screenName string, width, height int) string {
 		m.modal = modalProgress
 		m.task = &TaskState{
 			Kind:       taskInstall,
-			Title:      "Installing 1.21.4",
+			Title:      m.tf("Installing %s", "1.21.4"),
 			VersionID:  "1.21.4",
 			Stage:      "Downloading game files",
 			Detail:     "museum_ui/bedrock_footprint.png",
@@ -129,6 +134,19 @@ func Preview(screenName string, width, height int) string {
 	case "form":
 		m.screen = ScreenVersions
 		m.openInstanceForm("1.21.4")
+	case "language":
+		m.screen = ScreenSettings
+		m.openLanguagePicker()
+		for i, info := range i18n.Supported {
+			if info.Code == i18n.ZHHans {
+				m.languagePick = i + 1
+				break
+			}
+		}
+	case "java":
+		m.screen = ScreenSettings
+		m.modal = modalJava
+		m.javaPicker = 0
 	default:
 		m.screen = ScreenHome
 	}

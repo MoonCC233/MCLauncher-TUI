@@ -104,19 +104,19 @@ func detectJavaCmd(path string) tea.Cmd {
 
 func (m *Model) startInstall(versionID string, createName string, createMemory int) tea.Cmd {
 	if m.task != nil {
-		m.alert = AlertState{Title: "Another task is running", Body: "Wait for the current installation or launch to finish."}
+		m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation or launch to finish.")}
 		m.modal = modalAlert
 		return nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	task := &TaskState{
 		Kind:         taskInstall,
-		Title:        "Installing " + versionID,
+		Title:        m.tf("Installing %s", versionID),
 		VersionID:    versionID,
 		CreateName:   createName,
 		CreateMemory: createMemory,
 		Stage:        "Preparing",
-		Detail:       "Contacting Mojang",
+		Detail:       m.t("Contacting Mojang"),
 		Started:      time.Now(),
 		Cancel:       cancel,
 	}
@@ -161,21 +161,21 @@ func (m *Model) startInstall(versionID string, createName string, createMemory i
 
 func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 	if m.task != nil {
-		m.alert = AlertState{Title: "Another task is running", Body: "Wait for the current installation to finish."}
+		m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation to finish.")}
 		m.modal = modalAlert
 		return nil
 	}
 	if m.game != nil {
 		m.alert = AlertState{
-			Title: "Minecraft is already running",
-			Body:  fmt.Sprintf("%s is still running. Stop it from the Console screen before launching another instance.", m.game.InstanceName),
+			Title: m.t("Minecraft is already running"),
+			Body:  m.tf("%s is still running. Stop it from the Console screen before launching another instance.", m.game.InstanceName),
 		}
 		m.modal = modalAlert
 		return nil
 	}
 	account := m.cfg.ActiveAccount()
 	if account == nil {
-		m.alert = AlertState{Title: "No account selected", Body: "Add an offline account from the Accounts screen first."}
+		m.alert = AlertState{Title: m.t("No account selected"), Body: m.t("Add an offline account from the Accounts screen first.")}
 		m.modal = modalAlert
 		return nil
 	}
@@ -184,15 +184,16 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 	memory := m.cfg.MemoryFor(&inst)
 	runtimes := append([]java.Info(nil), m.javaRuntimes...)
 	javaScanned := m.javaScanned
+	javaNeeded := m.t("needs Java %d+")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	m.task = &TaskState{
 		Kind:       taskLaunch,
-		Title:      "Launching " + inst.Name,
+		Title:      m.tf("Launching %s", inst.Name),
 		VersionID:  inst.VersionID,
 		InstanceID: inst.ID,
 		Stage:      "Preparing",
-		Detail:     "Checking installed files",
+		Detail:     m.t("Checking installed files"),
 		Started:    time.Now(),
 		Cancel:     cancel,
 	}
@@ -272,7 +273,7 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				return
 			}
 
-			stage("Selecting Java runtime", fmt.Sprintf("needs Java %d+", versionJSON.JavaMajor()))
+			stage("Selecting Java runtime", fmt.Sprintf(javaNeeded, versionJSON.JavaMajor()))
 			var runtime java.Info
 			if strings.TrimSpace(settings.JavaPath) != "" {
 				info := java.Detect(settings.JavaPath)
@@ -389,9 +390,9 @@ func (m *Model) handleInstallEvent(ev install.Event) {
 	}
 	switch ev.Type {
 	case install.EventStage:
-		m.task.Stage = ev.Stage
+		m.task.Stage = m.trKnown(ev.Stage)
 		if ev.Detail != "" {
-			m.task.Detail = ev.Detail
+			m.task.Detail = m.trKnown(ev.Detail)
 		}
 		if ev.Total > 0 {
 			m.task.Total = ev.Total
@@ -403,8 +404,8 @@ func (m *Model) handleInstallEvent(ev install.Event) {
 			m.addLog("launcher", ev.Stage+" · "+ev.Detail)
 		}
 	case install.EventProgress:
-		m.task.Stage = ev.Stage
-		m.task.Detail = ev.Detail
+		m.task.Stage = m.trKnown(ev.Stage)
+		m.task.Detail = m.trKnown(ev.Detail)
 		m.task.Done = ev.Done
 		m.task.Total = ev.Total
 		m.task.FilesDone = ev.FilesDone
@@ -416,7 +417,7 @@ func (m *Model) handleInstallEvent(ev install.Event) {
 		m.task.Total = ev.Total
 		m.task.FilesDone = ev.FilesDone
 		m.task.FilesTotal = ev.FilesTotal
-		m.task.Stage = "Ready"
+		m.task.Stage = m.trKnown("Ready")
 	}
 }
 
@@ -426,14 +427,14 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	m.modal = modalNone
 	if msg.cancelled || errors.Is(msg.err, context.Canceled) {
 		m.addLog("launcher", "task cancelled")
-		m.setToast("Cancelled", toastInfo)
+		m.setToast(m.t("Cancelled"), toastInfo)
 		return m, nil
 	}
 	if msg.err != nil {
 		m.addLog("error", msg.err.Error())
-		title := "Installation failed"
+		title := m.t("Installation failed")
 		if msg.kind == taskLaunch {
-			title = "Could not launch Minecraft"
+			title = m.t("Could not launch Minecraft")
 		}
 		m.alert = AlertState{Title: title, Body: msg.err.Error()}
 		m.modal = modalAlert
@@ -443,19 +444,19 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.kind == taskInstall && task != nil && task.CreateName != "" {
 		inst, err := m.cfg.AddInstance(task.CreateName, task.VersionID, task.CreateMemory)
 		if err != nil {
-			m.alert = AlertState{Title: "Could not create instance", Body: err.Error()}
+			m.alert = AlertState{Title: m.t("Could not create instance"), Body: err.Error()}
 			m.modal = modalAlert
 			return m, nil
 		}
 		m.instanceCursor = len(m.cfg.Instances) - 1
 		m.homeCursor = 0
 		m.screen = ScreenHome
-		m.setToast(fmt.Sprintf("Created %s", inst.Name), toastSuccess)
+		m.setToast(m.tf("Created %s", inst.Name), toastSuccess)
 		m.addLog("launcher", "created instance "+inst.Name)
 		return m, nil
 	}
 	if msg.kind == taskInstall {
-		m.setToast("Installed "+msg.versionID, toastSuccess)
+		m.setToast(m.tf("Installed %s", msg.versionID), toastSuccess)
 		m.addLog("launcher", "installed "+msg.versionID)
 	}
 	return m, nil
@@ -486,11 +487,11 @@ func (m *Model) handleGameExit(msg gameExitMsg) (tea.Model, tea.Cmd) {
 	m.logFollow = true
 	m.logScroll = 0
 	if wasStopping {
-		m.setToast("Minecraft stopped", toastInfo)
+		m.setToast(m.t("Minecraft stopped"), toastInfo)
 	} else if exitCode == 0 {
-		m.setToast("Minecraft exited · played "+util.HumanDuration(msg.played), toastSuccess)
+		m.setToast(m.tf("Minecraft exited · played %s", util.HumanDuration(msg.played)), toastSuccess)
 	} else {
-		m.setToast(fmt.Sprintf("Minecraft exited with code %d — check Console", exitCode), toastError)
+		m.setToast(m.tf("Minecraft exited with code %d — check Console", exitCode), toastError)
 	}
 	return m, nil
 }
@@ -504,7 +505,7 @@ func (m *Model) cancelTask() {
 	}
 	m.task.Cancelled = true
 	m.task.Stage = "Cancelling"
-	m.task.Detail = "waiting for workers to stop"
+	m.task.Detail = m.t("waiting for workers to stop")
 }
 
 func (m *Model) stopGame() {
@@ -520,57 +521,57 @@ func (m *Model) openInstanceForm(versionID string) {
 	name := versionID
 	versionInstalled := m.installed[versionID]
 	fields := make([]textinput.Model, 2)
-	fields[0] = newTextInput("My World", name, 34, 48)
+	fields[0] = newTextInput(m.t("My World"), name, 34, 48)
 	fields[0].Focus()
-	fields[1] = newTextInput("global default", "", 34, 12)
+	fields[1] = newTextInput(m.t("global default"), "", 34, 12)
 	m.form = FormState{
 		Kind:      formInstance,
-		Title:     "New instance",
+		Title:     m.t("New instance"),
 		VersionID: versionID,
 		Fields:    fields,
-		Labels:    []string{"Name", "Memory (MB, optional)"},
-		Hints:     []string{"", "Leave empty to use the global memory limit"},
+		Labels:    []string{m.t("Name"), m.t("Memory (MB, optional)")},
+		Hints:     []string{"", m.t("Leave empty to use the global memory limit")},
 		Focus:     0,
 	}
 	if versionInstalled {
 		m.form.Hints = append(m.form.Hints, "")
 	} else {
-		m.form.Hints[0] = "Version " + versionID + " will be installed first"
+		m.form.Hints[0] = m.tf("Version %s will be installed first", versionID)
 	}
 	m.modal = modalForm
 }
 
 func (m *Model) openEditInstanceForm(inst *config.Instance) {
 	fields := make([]textinput.Model, 2)
-	fields[0] = newTextInput("My World", inst.Name, 34, 48)
+	fields[0] = newTextInput(m.t("My World"), inst.Name, 34, 48)
 	fields[0].Focus()
 	mem := ""
 	if inst.MemoryMB > 0 {
 		mem = fmt.Sprintf("%d", inst.MemoryMB)
 	}
-	fields[1] = newTextInput("global default", mem, 34, 12)
+	fields[1] = newTextInput(m.t("global default"), mem, 34, 12)
 	m.form = FormState{
 		Kind:      formInstance,
-		Title:     "Edit instance",
+		Title:     m.t("Edit instance"),
 		VersionID: inst.VersionID,
 		EditID:    inst.ID,
 		Fields:    fields,
-		Labels:    []string{"Name", "Memory (MB, optional)"},
-		Hints:     []string{"Version " + inst.VersionID + " (fixed)", "Leave empty to use the global memory limit"},
+		Labels:    []string{m.t("Name"), m.t("Memory (MB, optional)")},
+		Hints:     []string{m.tf("Version %s (fixed)", inst.VersionID), m.t("Leave empty to use the global memory limit")},
 		Focus:     0,
 	}
 	m.modal = modalForm
 }
 
 func (m *Model) openAccountForm() {
-	field := newTextInput("username", "", 30, 16)
+	field := newTextInput(m.t("username"), "", 30, 16)
 	field.Focus()
 	m.form = FormState{
 		Kind:   formAccount,
-		Title:  "Add offline account",
+		Title:  m.t("Add offline account"),
 		Fields: []textinput.Model{field},
-		Labels: []string{"Username"},
-		Hints:  []string{"3–16 characters · letters, numbers, underscore"},
+		Labels: []string{m.t("Username")},
+		Hints:  []string{m.t("3–16 characters · letters, numbers, underscore")},
 		Focus:  0,
 	}
 	m.modal = modalForm
@@ -613,24 +614,24 @@ func (m *Model) submitForm() (tea.Model, tea.Cmd) {
 		}
 		m.ensureAccountVisible()
 		m.modal = modalNone
-		m.setToast("Added offline account "+name, toastSuccess)
+		m.setToast(m.tf("Added offline account %s", name), toastSuccess)
 		m.addLog("launcher", "added account "+name)
 		return m, nil
 	case formInstance:
 		name := values[0]
 		if name == "" {
-			m.form.Err = "instance name cannot be empty"
+			m.form.Err = m.t("instance name cannot be empty")
 			return m, nil
 		}
 		if len([]rune(name)) > 48 {
-			m.form.Err = "instance name is too long (max 48 characters)"
+			m.form.Err = m.t("instance name is too long (max 48 characters)")
 			return m, nil
 		}
 		memory := 0
 		if values[1] != "" {
 			n, err := parseInt(values[1])
 			if err != nil || n < 512 || n > 65536 {
-				m.form.Err = "memory must be between 512 and 65536 MB"
+				m.form.Err = m.t("memory must be between 512 and 65536 MB")
 				return m, nil
 			}
 			memory = n
@@ -638,7 +639,7 @@ func (m *Model) submitForm() (tea.Model, tea.Cmd) {
 		if m.form.EditID != "" {
 			inst := m.cfg.FindInstance(m.form.EditID)
 			if inst == nil {
-				m.form.Err = "instance no longer exists"
+				m.form.Err = m.t("instance no longer exists")
 				return m, nil
 			}
 			if err := m.cfg.UpdateInstance(inst, name, m.form.VersionID, memory); err != nil {
@@ -646,7 +647,7 @@ func (m *Model) submitForm() (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.modal = modalNone
-			m.setToast("Saved "+name, toastSuccess)
+			m.setToast(m.tf("Saved %s", name), toastSuccess)
 			return m, nil
 		}
 		versionID := m.form.VersionID
@@ -664,7 +665,7 @@ func (m *Model) submitForm() (tea.Model, tea.Cmd) {
 		m.ensureInstanceVisible()
 		m.modal = modalNone
 		m.screen = ScreenHome
-		m.setToast(fmt.Sprintf("Created %s", inst.Name), toastSuccess)
+		m.setToast(m.tf("Created %s", inst.Name), toastSuccess)
 		m.addLog("launcher", "created instance "+inst.Name)
 		return m, nil
 	}

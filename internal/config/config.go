@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -41,6 +42,7 @@ type Settings struct {
 	Width           int    `json:"width"`
 	Height          int    `json:"height"`
 	DownloadThreads int    `json:"download_threads"`
+	Language        string `json:"language,omitempty"`
 }
 
 func DefaultSettings() Settings {
@@ -99,6 +101,14 @@ func (c *Config) normalize() {
 	}
 	if c.Settings.DownloadThreads < 1 || c.Settings.DownloadThreads > 32 {
 		c.Settings.DownloadThreads = 8
+	}
+	if c.Settings.Language != "" {
+		if lang, ok := i18n.Canonical(c.Settings.Language); ok {
+			c.Settings.Language = string(lang)
+		} else {
+			// An unknown language means "follow the system locale".
+			c.Settings.Language = ""
+		}
 	}
 	// Keep only sane accounts, ignoring duplicates by UUID or (because
 	// Minecraft names are case-insensitive) by username.

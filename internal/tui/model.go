@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
@@ -33,8 +34,15 @@ const (
 	screenCount
 )
 
-var screenNames = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console"}
+var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console"}
 var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸"}
+
+type settingsRow struct {
+	ID          string
+	Label       string
+	Value       string
+	Description string
+}
 
 type modalKind int
 
@@ -47,6 +55,7 @@ const (
 	modalJava
 	modalProgress
 	modalAlert
+	modalLanguage
 )
 
 type formKind int
@@ -203,6 +212,18 @@ type Model struct {
 	javaScanning bool
 	javaPicker   int
 
+	lang         i18n.Lang
+	languagePick int
+
+	lastClick  time.Time
+	lastClickX int
+	lastClickY int
+
+	modalX int
+	modalY int
+	modalW int
+	modalH int
+
 	modal      modalKind
 	helpScroll int
 	form       FormState
@@ -210,6 +231,8 @@ type Model struct {
 	confirm    ConfirmState
 	alert      AlertState
 	task       *TaskState
+
+	hits []hitRegion
 
 	game *GameState
 
@@ -235,6 +258,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 		AppVersion:      appVersion,
 		DataRoot:        layout.Root,
 		StartupNote:     notice,
+		lang:            i18n.Resolve(cfg.Settings.Language),
 		screen:          ScreenHome,
 		installed:       install.InstalledSet(layout),
 		manifestLoading: true,
@@ -242,7 +266,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 		logFollow:       true,
 		search:          textinput.New(),
 	}
-	m.search.Placeholder = "filter versions"
+	m.search.Placeholder = m.t("filter versions")
 	m.search.Prompt = "/ "
 	m.search.CharLimit = 48
 	m.search.PromptStyle = stylePrimary
@@ -252,7 +276,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 	m.addLog("system", "mclauncher "+appVersion)
 	if notice != "" {
 		m.addLog("error", notice)
-		m.setToast(notice, toastError)
+		m.setToast(m.trKnown(notice), toastError)
 	}
 	return m
 }
@@ -296,6 +320,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateFilter(msg)
 		}
 		return m.updateGlobalKey(msg)
+	case tea.MouseMsg:
+		return m.updateMouse(msg)
 	case tickMsg:
 		m.clock++
 		m.spinner++
@@ -319,7 +345,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.manifestErr = msg.err.Error()
 			m.addLog("error", "manifest: "+msg.err.Error())
 			if m.manifest == nil {
-				m.setToast("Could not load the version list", toastError)
+				m.setToast(m.t("Could not load the version list"), toastError)
 			}
 		}
 		return m, nil
@@ -337,7 +363,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case javaDetectMsg:
 		if msg.err != nil {
-			m.alert = AlertState{Title: "Invalid Java path", Body: msg.err.Error()}
+			m.alert = AlertState{Title: m.t("Invalid Java path"), Body: msg.err.Error()}
 			m.modal = modalAlert
 			return m, nil
 		}
@@ -357,7 +383,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.javaRuntimes = merged
 			m.javaScanned = true
-			m.setToast("Java runtime set to "+msg.info.Short(), toastSuccess)
+			m.setToast(m.tf("Java runtime: %s", msg.info.Short()), toastSuccess)
 			m.addLog("launcher", "java runtime: "+msg.info.Path)
 		}
 		return m, nil
@@ -384,7 +410,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.task = nil
 		m.modal = modalNone
 		m.addLog("launcher", fmt.Sprintf("started %s · pid %d", msg.instanceName, msg.pid))
-		m.setToast("Minecraft is running", toastSuccess)
+		m.setToast(m.t("Minecraft is running"), toastSuccess)
 		m.screen = ScreenConsole
 		m.logFollow = true
 		m.logScroll = 0
@@ -629,7 +655,7 @@ func (m *Model) switchScope() {
 
 func (m *Model) saveConfig() {
 	if err := m.cfg.Save(); err != nil {
-		m.setToast("Could not save config: "+err.Error(), toastError)
+		m.setToast(m.tf("Could not save config: %s", err.Error()), toastError)
 		m.addLog("error", "save config: "+err.Error())
 	}
 }
@@ -751,9 +777,9 @@ func (m *Model) javaSummary() (string, bool) {
 		return best.Short(), true
 	}
 	if m.javaScanning {
-		return "scanning…", false
+		return m.t("scanning…"), false
 	}
-	return "not found", false
+	return m.t("not found"), false
 }
 
 func (m *Model) runtimeForDisplay() string {
@@ -764,24 +790,94 @@ func (m *Model) runtimeForDisplay() string {
 	return "Java " + strings.TrimPrefix(label, "Java ")
 }
 
-func (m *Model) settingsRows() []struct{ Label, Value string } {
-	javaLabel := "Auto-detect"
+func (m *Model) settingsRows() []settingsRow {
+	javaLabel := m.t("Auto-detect")
 	if m.cfg.Settings.JavaPath != "" {
 		javaLabel = util.ShortenPath(m.cfg.Settings.JavaPath, 52)
 	} else if label, ok := m.javaSummary(); ok {
-		javaLabel = "Auto · " + label
+		javaLabel = m.t("Auto") + " · " + label
 	}
 	jvm := m.cfg.Settings.JVMArgs
 	if strings.TrimSpace(jvm) == "" {
 		jvm = "—"
 	}
-	return []struct{ Label, Value string }{
-		{"Memory", fmt.Sprintf("%d MB", m.cfg.Settings.MemoryMB)},
-		{"Java runtime", javaLabel},
-		{"JVM arguments", util.Truncate(jvm, 56)},
-		{"Resolution", fmt.Sprintf("%d × %d", m.cfg.Settings.Width, m.cfg.Settings.Height)},
-		{"Download threads", fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads)},
-		{"Data directory", util.ShortenPath(m.layout.Root, 56)},
-		{"Launcher version", m.AppVersion},
+	language := m.tf("System (%s)", i18n.NativeName(m.lang))
+	if m.cfg.Settings.Language != "" {
+		language = i18n.NativeName(m.lang)
 	}
+	return []settingsRow{
+		{ID: "memory", Label: m.t("Memory"), Value: fmt.Sprintf("%d MB", m.cfg.Settings.MemoryMB),
+			Description: m.t("Memory limit used by instances that do not set their own value.")},
+		{ID: "java", Label: m.t("Java runtime"), Value: javaLabel,
+			Description: m.t("Auto-detect selects the runtime requested by the Minecraft version.")},
+		{ID: "jvm", Label: m.t("JVM arguments"), Value: util.Truncate(jvm, 56),
+			Description: m.t("Extra space-separated flags passed to the JVM.")},
+		{ID: "resolution", Label: m.t("Resolution"), Value: fmt.Sprintf("%d × %d", m.cfg.Settings.Width, m.cfg.Settings.Height),
+			Description: m.t("Initial Minecraft window size.")},
+		{ID: "threads", Label: m.t("Download threads"), Value: fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads),
+			Description: m.t("Parallel downloads used while installing game files.")},
+		{ID: "language", Label: m.t("Language"), Value: language,
+			Description: m.t("Interface language. System follows your operating system locale.")},
+		{ID: "data", Label: m.t("Data directory"), Value: util.ShortenPath(m.layout.Root, 56),
+			Description: m.t("Versions, assets, libraries and instance game directories.")},
+		{ID: "version", Label: m.t("Launcher version"), Value: m.AppVersion,
+			Description: m.t("mclauncher is built with Go, Bubble Tea and Lip Gloss.")},
+	}
+}
+
+// t translates a UI key for the current language.
+func (m *Model) t(key string) string { return i18n.T(m.lang, key) }
+
+// tf translates and formats a UI template.
+func (m *Model) tf(key string, args ...any) string { return i18n.TF(m.lang, key, args...) }
+
+// trKnown translates s when a catalog entry exists, otherwise returns it
+// unchanged. It is used for stage names coming from the installer.
+func (m *Model) trKnown(s string) string {
+	if s == "" {
+		return ""
+	}
+	if m.lang == "" || m.lang == i18n.EN || i18n.Has(m.lang, s) {
+		return m.t(s)
+	}
+	return s
+}
+
+// count renders "3 instances" (or the language equivalent).
+func (m *Model) count(n int, one, many string) string {
+	return i18n.Count(m.lang, n, one, many)
+}
+
+// relTime is the localized relative timestamp used by lists.
+func (m *Model) relTime(ts int64) string { return i18n.RelativeTime(m.lang, ts) }
+
+// rtl reports whether the current language uses a right-to-left layout.
+func (m *Model) rtl() bool { return i18n.IsRTL(m.lang) }
+
+// setLanguage applies a language immediately and persists it.
+func (m *Model) setLanguage(lang i18n.Lang) {
+	if !i18n.SupportedCode(lang) {
+		lang = i18n.EN
+	}
+	m.lang = lang
+	m.cfg.Settings.Language = string(lang)
+	m.search.Placeholder = m.t("filter versions")
+	m.saveConfig()
+	m.setToast(m.tf("Language: %s", i18n.NativeName(lang)), toastSuccess)
+}
+
+func (m *Model) useSystemLanguage() {
+	m.lang = i18n.Resolve("")
+	m.cfg.Settings.Language = ""
+	m.search.Placeholder = m.t("filter versions")
+	m.saveConfig()
+	m.setToast(m.tf("Language: System (%s)", i18n.NativeName(m.lang)), toastSuccess)
+}
+
+func (m *Model) currentSettingID() string {
+	rows := m.settingsRows()
+	if m.settingsCursor < 0 || m.settingsCursor >= len(rows) {
+		return ""
+	}
+	return rows[m.settingsCursor].ID
 }

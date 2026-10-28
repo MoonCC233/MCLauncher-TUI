@@ -11,6 +11,7 @@ import (
 
 type VersionJSON struct {
 	ID                 string           `json:"id"`
+	InheritsFrom       string           `json:"inheritsFrom,omitempty"`
 	Type               string           `json:"type"`
 	MainClass          string           `json:"mainClass"`
 	Assets             string           `json:"assets"`
@@ -90,6 +91,25 @@ func (a *Argument) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	a.Rules = obj.Rules
+	if len(obj.Value) == 0 {
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(data, &fields); err != nil {
+			return err
+		}
+		values, ok := fields["Values"]
+		if !ok {
+			return fmt.Errorf("argument value: missing")
+		}
+		if err := json.Unmarshal(values, &a.Values); err != nil {
+			return fmt.Errorf("argument value: %w", err)
+		}
+		if rules, ok := fields["Rules"]; ok {
+			if err := json.Unmarshal(rules, &a.Rules); err != nil {
+				return fmt.Errorf("argument rules: %w", err)
+			}
+		}
+		return nil
+	}
 	var one string
 	if err := json.Unmarshal(obj.Value, &one); err == nil {
 		a.Values = []string{one}
@@ -101,6 +121,20 @@ func (a *Argument) UnmarshalJSON(data []byte) error {
 	}
 	a.Values = many
 	return nil
+}
+
+func (a Argument) MarshalJSON() ([]byte, error) {
+	if len(a.Rules) == 0 && len(a.Values) == 1 {
+		return json.Marshal(a.Values[0])
+	}
+	var value any = a.Values
+	if len(a.Values) == 1 {
+		value = a.Values[0]
+	}
+	return json.Marshal(struct {
+		Rules []Rule `json:"rules,omitempty"`
+		Value any    `json:"value"`
+	}{Rules: a.Rules, Value: value})
 }
 
 type Rule struct {

@@ -119,6 +119,33 @@ func TestArgumentUnmarshalJSON(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{`), &arg); err == nil {
 		t.Error("broken JSON should not unmarshal")
 	}
+	if err := json.Unmarshal([]byte(`{"Rules":null,"Values":["-Dlegacy=1"]}`), &arg); err != nil || len(arg.Values) != 1 || arg.Values[0] != "-Dlegacy=1" {
+		t.Errorf("legacy argument = %+v, err = %v", arg, err)
+	}
+}
+
+func TestArgumentMarshalJSONRoundTrip(t *testing.T) {
+	args := []Argument{
+		{Values: []string{"-Xmx2G"}},
+		{Values: []string{"--width", "1280"}},
+		{
+			Rules:  []Rule{{Action: "allow", OS: &OSRule{Name: "windows"}}},
+			Values: []string{"-Dfabric=1"},
+		},
+	}
+	for _, arg := range args {
+		data, err := json.Marshal(arg)
+		if err != nil {
+			t.Fatalf("Marshal(%+v): %v", arg, err)
+		}
+		var got Argument
+		if err := json.Unmarshal(data, &got); err != nil {
+			t.Fatalf("Unmarshal(%s): %v", data, err)
+		}
+		if len(got.Rules) != len(arg.Rules) || strings.Join(got.Values, "|") != strings.Join(arg.Values, "|") {
+			t.Errorf("round trip %s = %+v, want %+v", data, got, arg)
+		}
+	}
 }
 
 func TestMavenPath(t *testing.T) {

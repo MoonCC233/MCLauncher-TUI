@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +45,8 @@ type Installer struct {
 	Threads   int
 	Client    *http.Client
 	OnEvent   func(Event)
+
+	resolving map[string]bool
 }
 
 type InstalledMarker struct {
@@ -61,7 +64,7 @@ func IsInstalled(layout paths.Layout, versionID string) bool {
 	if _, err := os.Stat(layout.Marker(versionID)); err != nil {
 		return false
 	}
-	if info, err := os.Stat(layout.ClientJar(versionID)); err != nil || info.Size() == 0 {
+	if info, err := os.Stat(mojang.ClientJarFor(layout, versionID)); err != nil || info.Size() == 0 {
 		return false
 	}
 	_, err := os.Stat(layout.VersionJSON(versionID))
@@ -95,6 +98,18 @@ func (in *Installer) threads() int {
 	return 8
 }
 
+func (in *Installer) missingParent() string {
+	profile, err := mojang.LoadVersionJSON(in.Layout, in.VersionID)
+	if err != nil || profile.InheritsFrom == "" {
+		return ""
+	}
+	parent := strings.TrimSpace(profile.InheritsFrom)
+	if parent == "" || parent == in.VersionID || IsInstalled(in.Layout, parent) {
+		return ""
+	}
+	return parent
+}
+
 type fileTask struct {
 	dest  string
 	url   string
@@ -109,13 +124,39 @@ func (in *Installer) Install(ctx context.Context) error {
 	if client == nil {
 		client = util.NewHTTPClient()
 	}
+	if in.resolving == nil {
+		in.resolving = map[string]bool{}
+	}
+	if in.resolving[in.VersionID] {
+		return fmt.Errorf("version inheritance cycle at %s", in.VersionID)
+	}
+	in.resolving[in.VersionID] = true
+	defer delete(in.resolving, in.VersionID)
+
 	in.emit(Event{Type: EventStage, Stage: "Preparing", Detail: "Resolving version metadata"})
-	version, err := mojang.FetchVersionJSON(ctx, client, in.Layout, in.Manifest, in.VersionID, false)
+	version, jarID, err := mojang.LoadResolvedVersionJSON(in.Layout, in.VersionID)
 	if err != nil {
-		return err
+		if parent := in.missingParent(); parent != "" {
+			child := *in
+			child.VersionID = parent
+			if err := child.Install(ctx); err != nil {
+				return fmt.Errorf("install parent %s: %w", parent, err)
+			}
+			version, jarID, err = mojang.LoadResolvedVersionJSON(in.Layout, in.VersionID)
+		}
+	}
+	if err != nil {
+		version, err = mojang.FetchVersionJSON(ctx, client, in.Layout, in.Manifest, in.VersionID, false)
+		if err != nil {
+			return err
+		}
+		jarID = in.VersionID
 	}
 	if version.MainClass == "" {
 		return fmt.Errorf("version %s has no main class", in.VersionID)
+	}
+	if jarID == "" {
+		jarID = in.VersionID
 	}
 
 	assetID := version.AssetID()
@@ -168,12 +209,13 @@ func (in *Installer) Install(ctx context.Context) error {
 	if clientInfo.URL == "" {
 		return fmt.Errorf("version %s has no client download URL", in.VersionID)
 	}
+	clientJar := in.Layout.ClientJar(jarID)
 	addTask(&fileTask{
-		dest:  in.Layout.ClientJar(in.VersionID),
+		dest:  clientJar,
 		url:   clientInfo.URL,
 		sha1:  clientInfo.SHA1,
 		size:  clientInfo.Size,
-		label: filepath.Base(in.Layout.ClientJar(in.VersionID)),
+		label: filepath.Base(clientJar),
 		kind:  "client",
 	})
 	for _, artifact := range res.Artifacts {
@@ -339,7 +381,9 @@ func (p *progressTracker) progress(idx int, n int64, size int64) {
 		FilesTotal: p.filesTotal,
 	}
 	p.mu.Unlock()
-	p.onEvent(ev)
+	if p.onEvent != nil {
+		p.onEvent(ev)
+	}
 }
 
 func (p *progressTracker) setDetail(detail string) {
@@ -371,7 +415,9 @@ func (p *progressTracker) finish(idx int, size int64) {
 		FilesTotal: p.filesTotal,
 	}
 	p.mu.Unlock()
-	p.onEvent(ev)
+	if p.onEvent != nil {
+		p.onEvent(ev)
+	}
 }
 
 func (in *Installer) downloadAll(ctx context.Context, client *http.Client, tasks []*fileTask, totalBytes int64) error {
@@ -472,6 +518,33 @@ func logConfigPath(layout paths.Layout, version *mojang.VersionJSON) string {
 
 func LogConfigPath(layout paths.Layout, version *mojang.VersionJSON) string {
 	return logConfigPath(layout, version)
+}
+
+const consolePatternLayout = `<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />`
+
+var xmlLogLayoutPattern = regexp.MustCompile(`(?is)<(?:Legacy)?XMLLayout\s*/>`)
+
+func ConsoleLogConfig(layout paths.Layout, source string) (string, error) {
+	data, err := os.ReadFile(source)
+	if err != nil {
+		return "", err
+	}
+	if !xmlLogLayoutPattern.Match(data) {
+		return source, nil
+	}
+	patched := xmlLogLayoutPattern.ReplaceAll(data, []byte(consolePatternLayout))
+	name := strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+	dest := filepath.Join(layout.Cache, "log_configs", name+"-console.xml")
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return "", err
+	}
+	if existing, readErr := os.ReadFile(dest); readErr == nil && string(existing) == string(patched) {
+		return dest, nil
+	}
+	if err := os.WriteFile(dest, patched, 0o644); err != nil {
+		return "", err
+	}
+	return dest, nil
 }
 
 func materializeVirtual(ctx context.Context, layout paths.Layout, assetID string, index *mojang.AssetIndexFile) error {

@@ -81,6 +81,10 @@ func (l Layout) ManifestCache() string {
 	return filepath.Join(l.Cache, "version_manifest_v2.json")
 }
 
+func (l Layout) LoaderCache() string {
+	return filepath.Join(l.Cache, "loaders")
+}
+
 // DefaultRoot resolves the default data directory. Portable installs place
 // everything in .minecraft next to the executable's working directory;
 // MCLAUNCHER_DATA_DIR can still redirect it.

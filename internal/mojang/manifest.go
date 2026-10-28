@@ -122,13 +122,20 @@ func (m *Manifest) Find(id string) *VersionSummary {
 }
 
 func LoadVersionJSON(layout paths.Layout, id string) (*VersionJSON, error) {
-	var v VersionJSON
-	path := layout.VersionJSON(id)
-	if err := util.ReadJSON(path, &v); err != nil {
+	v, err := loadVersionJSONFile(layout, id)
+	if err != nil {
 		return nil, err
 	}
 	if v.MainClass == "" || len(v.Libraries) == 0 {
 		return nil, fmt.Errorf("version metadata for %s is incomplete", id)
+	}
+	return v, nil
+}
+
+func loadVersionJSONFile(layout paths.Layout, id string) (*VersionJSON, error) {
+	var v VersionJSON
+	if err := util.ReadJSON(layout.VersionJSON(id), &v); err != nil {
+		return nil, err
 	}
 	if v.ID == "" {
 		v.ID = id

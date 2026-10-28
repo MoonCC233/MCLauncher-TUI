@@ -46,13 +46,40 @@ func (a Account) IsMicrosoft() bool { return a.Kind == "microsoft" }
 func (a Account) UUIDHex() string { return strings.ReplaceAll(a.UUID, "-", "") }
 
 type Instance struct {
-	ID           string `json:"id"`
-	Name         string `json:"name"`
-	VersionID    string `json:"version_id"`
-	MemoryMB     int    `json:"memory_mb,omitempty"`
-	CreatedAt    int64  `json:"created_at"`
-	LastPlayedAt int64  `json:"last_played_at,omitempty"`
-	PlaySeconds  int64  `json:"play_seconds,omitempty"`
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	VersionID     string `json:"version_id"`
+	GameVersion   string `json:"game_version,omitempty"`
+	Loader        string `json:"loader,omitempty"`
+	LoaderVersion string `json:"loader_version,omitempty"`
+	MemoryMB      int    `json:"memory_mb,omitempty"`
+	CreatedAt     int64  `json:"created_at"`
+	LastPlayedAt  int64  `json:"last_played_at,omitempty"`
+	PlaySeconds   int64  `json:"play_seconds,omitempty"`
+}
+
+func (i Instance) LoaderLabel() string {
+	switch i.Loader {
+	case "fabric":
+		return "Fabric"
+	case "neoforge":
+		return "NeoForge"
+	}
+	return ""
+}
+
+func (i Instance) VersionLabel() string {
+	base := strings.TrimSpace(i.GameVersion)
+	if base == "" {
+		base = i.VersionID
+	}
+	if label := i.LoaderLabel(); label != "" {
+		if strings.TrimSpace(i.LoaderVersion) != "" {
+			return base + " · " + label + " " + i.LoaderVersion
+		}
+		return base + " · " + label
+	}
+	return i.VersionID
 }
 
 type Settings struct {
@@ -198,10 +225,20 @@ func (c *Config) normalize() {
 	for _, inst := range c.Instances {
 		inst.Name = strings.TrimSpace(inst.Name)
 		inst.VersionID = strings.TrimSpace(inst.VersionID)
+		inst.GameVersion = strings.TrimSpace(inst.GameVersion)
+		inst.Loader = strings.ToLower(strings.TrimSpace(inst.Loader))
+		inst.LoaderVersion = strings.TrimSpace(inst.LoaderVersion)
 		if inst.ID == "" || inst.Name == "" || inst.VersionID == "" || seenI[inst.ID] {
 			continue
 		}
 		seenI[inst.ID] = true
+		if inst.Loader != "fabric" && inst.Loader != "neoforge" {
+			inst.Loader = ""
+			inst.LoaderVersion = ""
+		}
+		if inst.GameVersion == "" {
+			inst.GameVersion = inst.VersionID
+		}
 		inst.MemoryMB = util.Clamp(inst.MemoryMB, 0, 65536)
 		instances = append(instances, inst)
 	}
@@ -376,11 +413,57 @@ func (c *Config) AddInstance(name, versionID string, memoryMB int) (*Instance, e
 		return nil, err
 	}
 	inst := Instance{
-		ID:        id,
-		Name:      name,
-		VersionID: versionID,
-		MemoryMB:  util.Clamp(memoryMB, 0, 65536),
-		CreatedAt: time.Now().Unix(),
+		ID:          id,
+		Name:        name,
+		VersionID:   versionID,
+		GameVersion: versionID,
+		MemoryMB:    util.Clamp(memoryMB, 0, 65536),
+		CreatedAt:   time.Now().Unix(),
+	}
+	c.Instances = append(c.Instances, inst)
+	if err := c.Save(); err != nil {
+		return nil, err
+	}
+	return &c.Instances[len(c.Instances)-1], nil
+}
+
+func (c *Config) AddLoaderInstance(name, versionID, gameVersion, loader, loaderVersion string, memoryMB int) (*Instance, error) {
+	name = strings.TrimSpace(name)
+	versionID = strings.TrimSpace(versionID)
+	gameVersion = strings.TrimSpace(gameVersion)
+	loader = strings.ToLower(strings.TrimSpace(loader))
+	loaderVersion = strings.TrimSpace(loaderVersion)
+	if name == "" {
+		return nil, fmt.Errorf("instance name cannot be empty")
+	}
+	if len([]rune(name)) > 48 {
+		return nil, fmt.Errorf("instance name is too long (max 48 characters)")
+	}
+	if versionID == "" {
+		return nil, fmt.Errorf("version cannot be empty")
+	}
+	if loader != "fabric" && loader != "neoforge" {
+		return nil, fmt.Errorf("unknown mod loader %q", loader)
+	}
+	if gameVersion == "" {
+		return nil, fmt.Errorf("game version cannot be empty")
+	}
+	if loaderVersion == "" {
+		return nil, fmt.Errorf("loader version cannot be empty")
+	}
+	id, err := newID()
+	if err != nil {
+		return nil, err
+	}
+	inst := Instance{
+		ID:            id,
+		Name:          name,
+		VersionID:     versionID,
+		GameVersion:   gameVersion,
+		Loader:        loader,
+		LoaderVersion: loaderVersion,
+		MemoryMB:      util.Clamp(memoryMB, 0, 65536),
+		CreatedAt:     time.Now().Unix(),
 	}
 	c.Instances = append(c.Instances, inst)
 	if err := c.Save(); err != nil {

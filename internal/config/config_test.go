@@ -445,3 +445,90 @@ func TestBackupCorrupt(t *testing.T) {
 		t.Errorf("backup content = %q, err = %v", data, err)
 	}
 }
+func TestThemeNormalization(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	raw := `{"settings":{"theme":"bogus","theme_accent":"#abc"}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Settings.Theme != DefaultTheme {
+		t.Errorf("invalid theme = %q, want %q", cfg.Settings.Theme, DefaultTheme)
+	}
+	if cfg.Settings.ThemeAccent != "#AABBCC" {
+		t.Errorf("accent = %q, want #AABBCC", cfg.Settings.ThemeAccent)
+	}
+
+	cfg.Settings.Theme = "forest"
+	cfg.Settings.ThemeAccent = "invalid"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Settings.Theme != "forest" {
+		t.Errorf("theme = %q, want forest", reloaded.Settings.Theme)
+	}
+	if reloaded.Settings.ThemeAccent != "" {
+		t.Errorf("invalid accent should be cleared, got %q", reloaded.Settings.ThemeAccent)
+	}
+}
+
+func TestAddLoaderInstance(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inst, err := cfg.AddLoaderInstance("Fabric World", "fabric-loader-0.16.10-1.21.4", "1.21.4", "Fabric", "0.16.10", 6144)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inst.Loader != "fabric" || inst.GameVersion != "1.21.4" || inst.LoaderVersion != "0.16.10" {
+		t.Errorf("loader instance = %+v", inst)
+	}
+	if got := inst.VersionLabel(); got != "1.21.4 · Fabric 0.16.10" {
+		t.Errorf("VersionLabel = %q", got)
+	}
+	if got := inst.LoaderLabel(); got != "Fabric" {
+		t.Errorf("LoaderLabel = %q", got)
+	}
+
+	if _, err := cfg.AddLoaderInstance("Bad", "bad", "1.21.4", "forge", "1.0", 0); err == nil {
+		t.Error("unknown loader should be rejected")
+	}
+	if _, err := cfg.AddLoaderInstance("Bad", "bad", "1.21.4", "fabric", "", 0); err == nil {
+		t.Error("empty loader version should be rejected")
+	}
+
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reloaded.Instances) != 1 || reloaded.Instances[0].Loader != "fabric" {
+		t.Errorf("loader instance did not persist: %+v", reloaded.Instances)
+	}
+}
+
+func TestVanillaInstanceGameVersion(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inst, err := cfg.AddInstance("Vanilla", "1.21.4", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inst.GameVersion != "1.21.4" {
+		t.Errorf("GameVersion = %q, want 1.21.4", inst.GameVersion)
+	}
+	if got := inst.VersionLabel(); got != "1.21.4" {
+		t.Errorf("VersionLabel = %q, want 1.21.4", got)
+	}
+}

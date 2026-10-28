@@ -18,6 +18,10 @@ const (
 	hitLanguageRow
 	hitAccountTypeRow
 	hitResolutionRow
+	hitThemeRow
+	hitFormChoice
+	hitLoaderKindRow
+	hitLoaderVersionRow
 )
 
 // hitRegion is a clickable rectangle recorded while the frame is rendered.
@@ -173,10 +177,40 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 		if idx < 0 || idx >= len(m.form.Fields) {
 			return m, nil
 		}
-		m.form.Fields[m.form.Focus].Blur()
+		if m.form.Focus < len(m.form.Fields) {
+			m.form.Fields[m.form.Focus].Blur()
+		}
 		m.form.Focus = idx
 		m.form.Err = ""
 		return m, m.form.Fields[idx].Focus()
+	case hitFormChoice:
+		if hit.Index < 0 || hit.Index >= len(m.form.Choices) {
+			return m, nil
+		}
+		double := m.registerClick(hit)
+		if m.form.Focus < len(m.form.Fields) {
+			m.form.Fields[m.form.Focus].Blur()
+		}
+		m.form.Focus = len(m.form.Fields) + hit.Index
+		m.form.Err = ""
+		if double {
+			return m.chooseFormChoice()
+		}
+		return m, nil
+	case hitLoaderKindRow:
+		double := m.registerClick(hit)
+		m.loaderPick = hit.Index
+		if double {
+			return m.chooseLoaderKind()
+		}
+		return m, nil
+	case hitLoaderVersionRow:
+		double := m.registerClick(hit)
+		m.loaderVerPick = hit.Index
+		if double {
+			return m.chooseLoaderVersion()
+		}
+		return m, nil
 	case hitJavaRow:
 		double := m.registerClick(hit)
 		m.javaPicker = hit.Index
@@ -203,6 +237,13 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 		m.resolutionPick = hit.Index
 		if double {
 			return m.chooseResolution()
+		}
+		return m, nil
+	case hitThemeRow:
+		double := m.registerClick(hit)
+		m.themePick = hit.Index
+		if double {
+			return m.chooseTheme()
 		}
 		return m, nil
 	}
@@ -269,6 +310,19 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 	case modalResolution:
 		if n := m.resolutionPickerCount(); n > 0 {
 			m.resolutionPick = clampInt(m.resolutionPick+dir, 0, n-1)
+		}
+		return m, nil
+	case modalTheme:
+		if n := m.themePickerCount(); n > 0 {
+			m.themePick = clampInt(m.themePick+dir, 0, n-1)
+		}
+		return m, nil
+	case modalLoader:
+		m.loaderPick = clampInt(m.loaderPick+dir, 0, 2)
+		return m, nil
+	case modalLoaderVersions:
+		if n := m.loaderVersionPickerCount(); n > 0 {
+			m.loaderVerPick = clampInt(m.loaderVerPick+dir, 0, n-1)
 		}
 		return m, nil
 	case modalNone:

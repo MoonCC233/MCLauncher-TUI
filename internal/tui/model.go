@@ -17,6 +17,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -31,11 +32,12 @@ const (
 	ScreenAccounts
 	ScreenSettings
 	ScreenConsole
+	ScreenDownloads
 	screenCount
 )
 
-var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console"}
-var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸"}
+var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console", "Downloads"}
+var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸", "↓"}
 
 type settingsRow struct {
 	ID          string
@@ -59,6 +61,9 @@ const (
 	modalAccountAdd
 	modalMicrosoft
 	modalResolution
+	modalTheme
+	modalLoader
+	modalLoaderVersions
 )
 
 type formKind int
@@ -78,6 +83,8 @@ const (
 	promptJavaPath
 	promptDataDir
 	promptMicrosoftClientID
+	promptThemeAccent
+	promptLoaderVersion
 )
 
 type confirmKind int
@@ -85,6 +92,7 @@ type confirmKind int
 const (
 	confirmDeleteInstance confirmKind = iota
 	confirmRemoveAccount
+	confirmUninstallVersion
 )
 
 type taskKind string
@@ -109,34 +117,68 @@ type LogLine struct {
 }
 
 type TaskState struct {
-	Kind         taskKind
-	Title        string
-	VersionID    string
-	InstanceID   string
-	CreateName   string
-	CreateMemory int
-	Stage        string
-	Detail       string
-	Done         int64
-	Total        int64
-	FilesDone    int
-	FilesTotal   int
-	Started      time.Time
-	Cancel       context.CancelFunc
-	Cancelled    bool
-	Err          error
+	Kind          taskKind
+	Title         string
+	VersionID     string
+	InstanceID    string
+	CreateName    string
+	CreateMemory  int
+	CreateLoader  bool
+	GameVersion   string
+	Loader        loader.Kind
+	LoaderVersion string
+	Backgrounded  bool
+	Stage         string
+	Detail        string
+	Done          int64
+	Total         int64
+	FilesDone     int
+	FilesTotal    int
+	Started       time.Time
+	Cancel        context.CancelFunc
+	Cancelled     bool
+	Err           error
+}
+
+type TaskRecord struct {
+	Kind       taskKind
+	Title      string
+	VersionID  string
+	Stage      string
+	Detail     string
+	Status     string
+	Started    time.Time
+	Finished   time.Time
+	Done       int64
+	Total      int64
+	FilesDone  int
+	FilesTotal int
+	Err        string
+}
+
+type FormChoice struct {
+	ID    string
+	Label string
+	Value string
+	Hint  string
 }
 
 type FormState struct {
-	Kind      formKind
-	Title     string
-	VersionID string
-	EditID    string
-	Fields    []textinput.Model
-	Labels    []string
-	Hints     []string
-	Focus     int
-	Err       string
+	Kind           formKind
+	Title          string
+	VersionID      string
+	EditID         string
+	Fields         []textinput.Model
+	Labels         []string
+	Hints          []string
+	Choices        []FormChoice
+	Focus          int
+	Err            string
+	Loader         loader.Kind
+	LoaderVersion  string
+	LoaderVersions []loader.Version
+	LoaderLoading  bool
+	LoaderErr      string
 }
 
 type PromptState struct {
@@ -214,6 +256,9 @@ type Model struct {
 
 	accountTypePick int
 	resolutionPick  int
+	themePick       int
+	loaderPick      int
+	loaderVerPick   int
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -233,13 +278,14 @@ type Model struct {
 	modalW int
 	modalH int
 
-	modal      modalKind
-	helpScroll int
-	form       FormState
-	prompt     PromptState
-	confirm    ConfirmState
-	alert      AlertState
-	task       *TaskState
+	modal       modalKind
+	helpScroll  int
+	form        FormState
+	prompt      PromptState
+	confirm     ConfirmState
+	alert       AlertState
+	task        *TaskState
+	taskHistory []TaskRecord
 
 	hits []hitRegion
 
@@ -260,6 +306,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 	if client == nil {
 		client = util.NewHTTPClient()
 	}
+	applyTheme(cfg.Settings.Theme, cfg.Settings.ThemeAccent)
 	m := &Model{
 		cfg:             cfg,
 		layout:          layout,
@@ -396,6 +443,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.addLog("launcher", "java runtime: "+msg.info.Path)
 		}
 		return m, nil
+	case loaderVersionsMsg:
+		m.handleLoaderVersions(msg)
+		return m, nil
+	case loaderLogMsg:
+		if m.task != nil {
+			m.addLog("launcher", msg.line)
+		}
+		return m, nil
 	case installEventMsg:
 		m.handleInstallEvent(msg.ev)
 		return m, nil
@@ -470,7 +525,7 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "shift+tab":
 		m.switchScreen((m.screen + screenCount - 1) % screenCount)
 		return m, nil
-	case "1", "2", "3", "4", "5", "6":
+	case "1", "2", "3", "4", "5", "6", "7":
 		idx := int(msg.String()[0] - '1')
 		if idx >= 0 && idx < int(screenCount) {
 			m.switchScreen(Screen(idx))
@@ -496,6 +551,8 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateSettings(msg)
 	case ScreenConsole:
 		return m.updateConsole(msg)
+	case ScreenDownloads:
+		return m.updateDownloads(msg)
 	}
 	return m, nil
 }
@@ -507,6 +564,7 @@ func (m *Model) switchScreen(screen Screen) {
 	m.screen = screen
 	m.filterActive = false
 	if screen == ScreenVersions {
+		m.installed = install.InstalledSet(m.layout)
 		m.rebuildVersions()
 	}
 	if screen == ScreenAccounts {
@@ -874,6 +932,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Parallel downloads used while installing game files.")},
 		{ID: "language", Label: m.t("Language"), Value: language,
 			Description: m.t("Interface language. System follows your operating system locale.")},
+		{ID: "theme", Label: m.t("Theme"), Value: m.themeValue(),
+			Description: m.t("Color palette used by the launcher. Custom accent overrides the primary color.")},
 		{ID: "data", Label: m.t("Data directory"), Value: util.ShortenPath(m.layout.Root, 56),
 			Description: m.t("Versions, assets, libraries and instance game directories.")},
 		{ID: "microsoft", Label: m.t("Microsoft Client ID"), Value: microsoft,
@@ -922,6 +982,45 @@ func (m *Model) setLanguage(lang i18n.Lang) {
 	m.search.Placeholder = m.t("filter versions")
 	m.saveConfig()
 	m.setToast(m.tf("Language: %s", i18n.NativeName(lang)), toastSuccess)
+}
+
+func (m *Model) themeValue() string {
+	value := themeName(m.cfg.Settings.Theme)
+	if accent := m.cfg.Settings.ThemeAccent; accent != "" {
+		value += " · " + accent
+	}
+	return value
+}
+
+func (m *Model) setTheme(id, accent string) {
+	m.cfg.Settings.Theme = normalizeThemeID(id)
+	if normalized, ok := util.NormalizeHexColor(accent); ok {
+		m.cfg.Settings.ThemeAccent = normalized
+	} else {
+		m.cfg.Settings.ThemeAccent = ""
+	}
+	applyTheme(m.cfg.Settings.Theme, m.cfg.Settings.ThemeAccent)
+	m.restyleTextInputs()
+	m.saveConfig()
+}
+
+func (m *Model) restyleTextInputs() {
+	m.search.PromptStyle = stylePrimary
+	m.search.TextStyle = styleText
+	m.search.PlaceholderStyle = styleDim
+	m.search.Cursor.Style = stylePrimary
+	if len(m.form.Fields) > 0 {
+		for i := range m.form.Fields {
+			m.form.Fields[i].PromptStyle = stylePrimary
+			m.form.Fields[i].TextStyle = styleText
+			m.form.Fields[i].PlaceholderStyle = styleDim
+			m.form.Fields[i].Cursor.Style = stylePrimary
+		}
+	}
+	m.prompt.Input.PromptStyle = stylePrimary
+	m.prompt.Input.TextStyle = styleText
+	m.prompt.Input.PlaceholderStyle = styleDim
+	m.prompt.Input.Cursor.Style = stylePrimary
 }
 
 func (m *Model) useSystemLanguage() {

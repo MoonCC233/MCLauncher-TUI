@@ -63,9 +63,13 @@ func (m *Model) viewHome(w, h int) []string {
 	lines = append(lines, "")
 
 	if m.game != nil {
+		versionText := m.game.VersionID
+		if inst := m.cfg.FindInstance(m.game.InstanceID); inst != nil {
+			versionText = inst.VersionLabel()
+		}
 		lines = append(lines,
 			"  "+styleGreen.Render("● "+m.t("RUNNING"))+"  "+styleBold.Render(m.game.InstanceName)+
-				styleDim.Render("  "+m.game.VersionID+" · "+elapsedSince(m.game.Started)+" · pid "+fmt.Sprintf("%d", m.game.Pid)),
+				styleDim.Render("  "+versionText+" · "+elapsedSince(m.game.Started)+" · pid "+fmt.Sprintf("%d", m.game.Pid)),
 			"  "+styleDim.Render(m.t("logs are streaming in Console · press x to stop")),
 			"",
 		)
@@ -133,7 +137,7 @@ func (m *Model) homeRow(inst config.Instance, selected bool, w int) string {
 	if m.game != nil && m.game.InstanceID == inst.ID {
 		running = styleGreen.Render("● ")
 	}
-	const versionW, playedW, memW = 12, 14, 8
+	const versionW, playedW, memW = 18, 14, 8
 	showPlayed := w >= 54
 	showMem := w >= 70
 	nameW := w - 19
@@ -159,7 +163,7 @@ func (m *Model) homeRow(inst config.Instance, selected bool, w int) string {
 	}
 	cols := []string{
 		fitLine(nameStyle.Render(util.Truncate(inst.Name, nameW)), nameW),
-		fitLine(styleCyan.Render(util.Truncate(inst.VersionID, versionW)), versionW),
+		fitLine(styleCyan.Render(util.Truncate(inst.VersionLabel(), versionW)), versionW),
 	}
 	if showPlayed {
 		cols = append(cols, fitLine(styleMuted.Render(played), playedW))
@@ -212,7 +216,7 @@ func (m *Model) viewInstances(w, h int) []string {
 		lines = append(lines,
 			"  "+stylePrimary.Render("▌ ")+styleBold.Render(inst.Name),
 			"  "+styleMuted.Render(m.tf("%s · %s · %s%s",
-				inst.VersionID, m.memoryLabel(inst), m.tf("last played %s", m.relTime(inst.LastPlayedAt)), m.playedTotal(*inst))),
+				inst.VersionLabel(), m.memoryLabel(inst), m.tf("last played %s", m.relTime(inst.LastPlayedAt)), m.playedTotal(*inst))),
 			"  "+styleDim.Render(util.ShortenPath(m.layout.InstanceDir(inst.ID), w-4)),
 		)
 	}
@@ -246,7 +250,7 @@ func (m *Model) instanceRow(inst config.Instance, selected bool, w int) string {
 	if m.game != nil && m.game.InstanceID == inst.ID {
 		running = styleGreen.Render("● ")
 	}
-	const versionW, playedW, memW = 12, 16, 10
+	const versionW, playedW, memW = 18, 16, 10
 	showPlayed := w >= 56
 	showMem := w >= 72
 	nameW := w - 19
@@ -272,7 +276,7 @@ func (m *Model) instanceRow(inst config.Instance, selected bool, w int) string {
 	}
 	cols := []string{
 		fitLine(nameStyle.Render(util.Truncate(inst.Name, nameW)), nameW),
-		fitLine(versionStyle.Render(util.Truncate(inst.VersionID, versionW)), versionW),
+		fitLine(versionStyle.Render(util.Truncate(inst.VersionLabel(), versionW)), versionW),
 	}
 	if showPlayed {
 		cols = append(cols, fitLine(styleMuted.Render(played), playedW))
@@ -348,9 +352,13 @@ func (m *Model) viewVersions(w, h int) []string {
 			state = styleGreen.Render(m.t("installed"))
 		}
 		date := m.releaseDate(v.ReleaseTime)
+		hint := m.t("enter create instance · i install only · o open version folder")
+		if m.installed[v.ID] {
+			hint += " · d " + m.t("uninstall installed version")
+		}
 		lines = append(lines,
-			"  "+stylePrimary.Render("▌ ")+styleBold.Render(v.ID)+styleDim.Render("  "+m.versionLabel(*v)+" · "+m.tf("released %s", date))+"  "+state,
-			"  "+styleDim.Render(m.t("enter create instance · i install only · o open version folder")),
+			"  "+stylePrimary.Render("● ")+styleBold.Render(v.ID)+styleDim.Render("  "+m.versionLabel(*v)+" · "+m.tf("released %s", date))+"  "+state,
+			"  "+styleDim.Render(hint),
 		)
 	}
 	return lines

@@ -18,6 +18,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/version"
@@ -48,6 +49,10 @@ type installEventMsg struct {
 type taskStageMsg struct {
 	Stage  string
 	Detail string
+}
+
+type loaderLogMsg struct {
+	line string
 }
 
 type taskDoneMsg struct {
@@ -155,6 +160,152 @@ func (m *Model) startInstall(versionID string, createName string, createMemory i
 				err:       err,
 				cancelled: errors.Is(err, context.Canceled),
 			})
+		}()
+		return nil
+	}
+}
+
+func (m *Model) uninstallVersion(id string) error {
+	if id == "" || !m.installed[id] {
+		return fmt.Errorf("version %s is not installed", id)
+	}
+	if err := os.RemoveAll(m.layout.VersionDir(id)); err != nil {
+		return err
+	}
+	delete(m.installed, id)
+	m.rebuildVersions()
+	m.addLog("launcher", "uninstalled "+id)
+	return nil
+}
+
+func (m *Model) startLoaderInstall(kind loader.Kind, gameVersion, loaderVersion, createName string, createMemory int) tea.Cmd {
+	if m.task != nil {
+		m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation or launch to finish.")}
+		m.modal = modalAlert
+		return nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	title := m.tf("Installing %s", loaderVersionSummary(kind, loaderVersion))
+	task := &TaskState{
+		Kind:          taskInstall,
+		Title:         title,
+		VersionID:     gameVersion,
+		CreateName:    createName,
+		CreateMemory:  createMemory,
+		CreateLoader:  true,
+		GameVersion:   gameVersion,
+		Loader:        kind,
+		LoaderVersion: loaderVersion,
+		Stage:         "Preparing",
+		Detail:        m.t("Contacting Mojang"),
+		Started:       time.Now(),
+		Cancel:        cancel,
+	}
+	m.task = task
+	m.modal = modalProgress
+	m.addLog("launcher", fmt.Sprintf("install %s %s for %s", kind, loaderVersion, gameVersion))
+
+	layout := m.layout
+	client := m.client
+	manifest := m.manifest
+	threads := m.cfg.Settings.DownloadThreads
+	settings := m.cfg.Settings
+	runtimes := append([]java.Info(nil), m.javaRuntimes...)
+	send := m.send
+
+	return func() tea.Msg {
+		go func() {
+			emitter := func(msg tea.Msg) {
+				if send != nil {
+					send(msg)
+				}
+			}
+			stage := func(name, detail string) {
+				emitter(taskStageMsg{Stage: name, Detail: detail})
+			}
+			logLine := func(line string) {
+				emitter(loaderLogMsg{line: line})
+			}
+			finish := func(versionID string, err error) {
+				emitter(taskDoneMsg{
+					kind:      taskInstall,
+					versionID: versionID,
+					err:       err,
+					cancelled: errors.Is(err, context.Canceled) || ctx.Err() != nil,
+				})
+			}
+			runInstaller := func(versionID string) error {
+				installer := &install.Installer{
+					Layout:    layout,
+					VersionID: versionID,
+					Manifest:  manifest,
+					Threads:   threads,
+					Client:    client,
+					OnEvent: func(ev install.Event) {
+						emitter(installEventMsg{ev: ev})
+					},
+				}
+				return installer.Install(ctx)
+			}
+
+			if !install.IsInstalled(layout, gameVersion) {
+				stage("Installing game files", gameVersion)
+				if err := runInstaller(gameVersion); err != nil {
+					finish(gameVersion, err)
+					return
+				}
+			} else {
+				logLine("reusing installed Minecraft " + gameVersion)
+			}
+			if err := ctx.Err(); err != nil {
+				finish(gameVersion, err)
+				return
+			}
+
+			javaPath := settings.JavaPath
+			if kind == loader.NeoForge {
+				required := 8
+				if vanilla, _, err := mojang.LoadResolvedVersionJSON(layout, gameVersion); err == nil {
+					required = vanilla.JavaMajor()
+				}
+				runtime, _, err := java.Select(runtimes, required, settings.JavaPath)
+				if err != nil {
+					finish(gameVersion, fmt.Errorf("NeoForge installer: %w", err))
+					return
+				}
+				javaPath = runtime.Path
+			}
+
+			stage("Installing loader", loaderVersionSummary(kind, loaderVersion))
+			result, err := loader.Install(ctx, loader.Options{
+				Kind:          kind,
+				GameVersion:   gameVersion,
+				LoaderVersion: loaderVersion,
+				Layout:        layout,
+				Client:        client,
+				JavaPath:      javaPath,
+				OnStage: func(stageName, detail string) {
+					stage(stageName, detail)
+				},
+				OnLog: logLine,
+			})
+			if err != nil {
+				finish(gameVersion, err)
+				return
+			}
+			if err := ctx.Err(); err != nil {
+				finish(gameVersion, err)
+				return
+			}
+
+			stage("Checking installed files", result.VersionID)
+			if !install.IsInstalled(layout, result.VersionID) {
+				if err := runInstaller(result.VersionID); err != nil {
+					finish(result.VersionID, err)
+					return
+				}
+			}
+			finish(result.VersionID, nil)
 		}()
 		return nil
 	}
@@ -280,8 +431,12 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 			}
 
 			stage("Loading version metadata", inst.VersionID)
-			versionJSON, err := mojang.LoadVersionJSON(layout, inst.VersionID)
+			versionJSON, _, err := mojang.LoadResolvedVersionJSON(layout, inst.VersionID)
 			if err != nil {
+				if inst.Loader != "" {
+					fail(fmt.Errorf("load loader version %s: %w — reinstall the loader", inst.VersionID, err))
+					return
+				}
 				man := manifest
 				if man == nil {
 					man, _ = mojang.FetchManifest(ctx, client, layout, false)
@@ -346,7 +501,11 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 			if versionJSON.Logging != nil && versionJSON.Logging.Client != nil {
 				candidate := install.LogConfigPath(layout, versionJSON)
 				if st, statErr := os.Stat(candidate); statErr == nil && !st.IsDir() {
-					logConfig = candidate
+					if consoleConfig, configErr := install.ConsoleLogConfig(layout, candidate); configErr == nil {
+						logConfig = consoleConfig
+					} else {
+						logConfig = candidate
+					}
 				}
 			}
 
@@ -446,15 +605,24 @@ func (m *Model) handleInstallEvent(ev install.Event) {
 
 func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	task := m.task
+	backgrounded := task != nil && task.Backgrounded
 	m.task = nil
-	m.modal = modalNone
+	if !backgrounded && m.modal == modalProgress {
+		m.modal = modalNone
+	}
 	if msg.cancelled || errors.Is(msg.err, context.Canceled) {
+		m.recordTask(task, "cancelled", nil)
 		m.addLog("launcher", "task cancelled")
 		m.setToast(m.t("Cancelled"), toastInfo)
 		return m, nil
 	}
 	if msg.err != nil {
+		m.recordTask(task, "failed", msg.err)
 		m.addLog("error", msg.err.Error())
+		if backgrounded {
+			m.setToast(m.t("Task failed — see Downloads"), toastError)
+			return m, nil
+		}
 		title := m.t("Installation failed")
 		if msg.kind == taskLaunch {
 			title = m.t("Could not launch Minecraft")
@@ -463,17 +631,36 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalAlert
 		return m, nil
 	}
+	m.recordTask(task, "completed", nil)
 	m.installed = install.InstalledSet(m.layout)
 	if msg.kind == taskInstall && task != nil && task.CreateName != "" {
-		inst, err := m.cfg.AddInstance(task.CreateName, task.VersionID, task.CreateMemory)
+		var (
+			inst *config.Instance
+			err  error
+		)
+		versionID := task.VersionID
+		if msg.versionID != "" {
+			versionID = msg.versionID
+		}
+		if task.CreateLoader {
+			inst, err = m.cfg.AddLoaderInstance(task.CreateName, versionID, task.GameVersion, string(task.Loader), task.LoaderVersion, task.CreateMemory)
+		} else {
+			inst, err = m.cfg.AddInstance(task.CreateName, versionID, task.CreateMemory)
+		}
 		if err != nil {
 			m.alert = AlertState{Title: m.t("Could not create instance"), Body: err.Error()}
+			if backgrounded {
+				m.setToast(m.t("Could not create instance"), toastError)
+				return m, nil
+			}
 			m.modal = modalAlert
 			return m, nil
 		}
 		m.instanceCursor = len(m.cfg.Instances) - 1
 		m.homeCursor = 0
-		m.screen = ScreenHome
+		if !backgrounded {
+			m.screen = ScreenHome
+		}
 		m.setToast(m.tf("Created %s", inst.Name), toastSuccess)
 		m.addLog("launcher", "created instance "+inst.Name)
 		return m, nil
@@ -556,6 +743,7 @@ func (m *Model) openInstanceForm(versionID string) {
 		Hints:     []string{"", m.t("Leave empty to use the global memory limit")},
 		Focus:     0,
 	}
+	m.syncFormChoices()
 	if versionInstalled {
 		m.form.Hints = append(m.form.Hints, "")
 	} else {
@@ -580,9 +768,10 @@ func (m *Model) openEditInstanceForm(inst *config.Instance) {
 		EditID:    inst.ID,
 		Fields:    fields,
 		Labels:    []string{m.t("Name"), m.t("Memory (MB, optional)")},
-		Hints:     []string{m.tf("Version %s (fixed)", inst.VersionID), m.t("Leave empty to use the global memory limit")},
+		Hints:     []string{m.tf("Version %s (fixed)", inst.VersionLabel()), m.t("Leave empty to use the global memory limit")},
 		Focus:     0,
 	}
+	m.syncFormChoices()
 	m.modal = modalForm
 }
 
@@ -672,6 +861,9 @@ func (m *Model) submitForm() (tea.Model, tea.Cmd) {
 			m.modal = modalNone
 			m.setToast(m.tf("Saved %s", name), toastSuccess)
 			return m, nil
+		}
+		if m.form.Loader != "" {
+			return m.submitLoaderForm(name, memory)
 		}
 		versionID := m.form.VersionID
 		if !m.installed[versionID] {

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 )
@@ -30,9 +31,13 @@ var previewScreens = []string{
 	"accounts",
 	"settings",
 	"console",
+	"downloads",
 	"help",
 	"form",
 	"progress",
+	"theme",
+	"loader",
+	"loader-versions",
 	"language",
 	"java",
 	"account-type",
@@ -77,6 +82,14 @@ func TestPreviewNarrowLanguages(t *testing.T) {
 			t.Run(code+"/"+screen, func(t *testing.T) {
 				frameLines(t, Preview(screen, 80, 24, code), 80, 24)
 			})
+		}
+	}
+}
+func TestPreviewShortLoaderFormScrolls(t *testing.T) {
+	plain := ansi.Strip(Preview("loader", 80, 24, "en"))
+	for _, want := range []string{"Mod loader", "Fabric", "Loader version", "0.16.10", "create", "cancel"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("short loader form is missing %q", want)
 		}
 	}
 }

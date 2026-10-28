@@ -174,6 +174,32 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.startInstall(v.ID, "", 0)
+	case "d":
+		v := m.currentVersion()
+		if v == nil {
+			return m, nil
+		}
+		if !m.installed[v.ID] {
+			m.setToast(m.t("Install this version first"), toastInfo)
+			return m, nil
+		}
+		if m.game != nil {
+			m.alert = AlertState{Title: m.t("Instance is running"), Body: m.t("Stop the game from the Console screen before deleting this instance.")}
+			m.modal = modalAlert
+			return m, nil
+		}
+		if m.task != nil && (m.task.VersionID == v.ID || m.task.GameVersion == v.ID) {
+			m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation to finish.")}
+			m.modal = modalAlert
+			return m, nil
+		}
+		m.confirm = ConfirmState{
+			Kind:   confirmUninstallVersion,
+			Title:  m.t("Uninstall version?"),
+			Body:   m.tf("Delete installed files for %s? Instances using it will reinstall on next launch.", v.ID),
+			Target: v.ID,
+		}
+		m.modal = modalConfirm
 	case "t":
 		m.switchScope()
 	case "/":
@@ -319,6 +345,13 @@ func (m *Model) adjustSetting(key string) {
 		m.cfg.Settings.Height = preset.Height
 		m.saveConfig()
 		m.setToast(m.tf("Resolution: %d × %d", preset.Width, preset.Height), toastSuccess)
+	case "theme":
+		idx := m.currentThemePreset()
+		n := len(themePresets)
+		idx = (idx + delta + n) % n
+		preset := themePresets[idx]
+		m.setTheme(preset.ID, m.cfg.Settings.ThemeAccent)
+		m.setToast(m.tf("Theme: %s", preset.Name), toastSuccess)
 	}
 }
 
@@ -336,6 +369,8 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openPrompt(promptThreads, m.t("Download threads"), fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), m.t("1–32 parallel downloads"), 4)
 	case "language":
 		m.openLanguagePicker()
+	case "theme":
+		m.openThemePicker()
 	case "data":
 		m.openPrompt(promptDataDir, m.t("Data directory"), m.cfg.Settings.DataDir, m.t("Leave empty to use the default .minecraft folder."), 260)
 	case "microsoft":
@@ -420,6 +455,26 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		m.modal = modalNone
 		m.setToast(m.t("Settings saved"), toastSuccess)
 		return m, nil
+	case promptThemeAccent:
+		accent, ok := util.NormalizeHexColor(value)
+		if !ok {
+			m.setToast(m.t("Use a hex color such as #fab283"), toastError)
+			return m, nil
+		}
+		m.setTheme(m.cfg.Settings.Theme, accent)
+		m.modal = modalNone
+		m.setToast(m.tf("Accent color: %s", accent), toastSuccess)
+		return m, nil
+	case promptLoaderVersion:
+		version, ok := sanitizeLoaderVersion(value)
+		if !ok {
+			m.setToast(m.t("Enter a valid loader version."), toastError)
+			return m, nil
+		}
+		m.form.LoaderVersion = version
+		m.syncFormChoices()
+		m.modal = modalForm
+		return m, m.focusFormRow(len(m.form.Fields) - 1)
 	}
 	m.saveConfig()
 	m.modal = modalNone

@@ -68,11 +68,13 @@ func (m *Model) modalView() string {
 		accent = colPrimary
 		title = m.form.Title
 		bodyStart := 3
+		focusStart, focusEnd := -1, -1
 		if m.form.Kind == formInstance {
 			body = append(body, styleMuted.Render(m.t("Version"))+"  "+styleCyan.Render(m.form.VersionID))
 			body = append(body, "")
 		}
 		for i := range m.form.Fields {
+			rel := len(body)
 			m.form.Fields[i].Width = max(10, contentW-6)
 			label := styleMuted.Render(m.form.Labels[i])
 			body = append(body, label, "  "+m.form.Fields[i].View())
@@ -81,10 +83,75 @@ func (m *Model) modalView() string {
 				body = append(body, styleDim.Render(m.form.Hints[i]))
 			}
 			body = append(body, styleBorder.Render(strings.Repeat("─", max(12, contentW-4))), "")
+			if m.form.Focus == i {
+				focusStart, focusEnd = bodyStart+rel, bodyStart+rel+3
+			}
+		}
+		for i, choice := range m.form.Choices {
+			rel := len(body)
+			focused := m.form.Focus == len(m.form.Fields)+i
+			marker := "  "
+			labelStyle := styleMuted
+			valueStyle := styleText
+			if focused {
+				marker = stylePrimary.Render("▸ ")
+				labelStyle = stylePrimaryB
+				valueStyle = styleBold
+			}
+			rowStart := bodyStart + len(body)
+			body = append(body, marker+labelStyle.Render(choice.Label), "  "+valueStyle.Render(choice.Value))
+			pending = append(pending, hitRegion{Kind: hitFormChoice, Index: i, Y: rowStart, W: contentW, H: 2})
+			if choice.Hint != "" {
+				body = append(body, "  "+styleDim.Render(choice.Hint))
+			}
+			body = append(body, styleBorder.Render(strings.Repeat("─", max(12, contentW-4))), "")
+			if focused {
+				focusStart, focusEnd = bodyStart+rel, bodyStart+rel+3
+			}
 		}
 		if m.form.Err != "" {
+			focusStart = bodyStart + len(body)
 			body = append(body, styleRed.Render("✗ "+m.form.Err), "")
+			focusEnd = bodyStart + len(body) - 1
 		}
+		maxLines := m.height - 6
+		if maxLines < 4 {
+			maxLines = 4
+		}
+		maxBody := maxLines - bodyStart - 2
+		if maxBody < 1 {
+			maxBody = 1
+		}
+		start := 0
+		if focusStart >= 0 {
+			if focusEnd >= start+maxBody {
+				start = focusEnd - maxBody + 1
+			}
+			if focusStart < start {
+				start = focusStart
+			}
+		}
+		if start > len(body)-maxBody {
+			start = len(body) - maxBody
+		}
+		if start < 0 {
+			start = 0
+		}
+		if start > 0 {
+			body = body[start:]
+		}
+		if len(body) > maxBody {
+			body = body[:maxBody]
+		}
+		visible := pending[:0]
+		for _, hit := range pending {
+			hit.Y -= start
+			if hit.Y < bodyStart || hit.Y+hit.H > bodyStart+len(body) {
+				continue
+			}
+			visible = append(visible, hit)
+		}
+		pending = visible
 		submit := m.t("create")
 		if m.form.Kind == formAccount {
 			submit = m.t("add account")
@@ -161,6 +228,34 @@ func (m *Model) modalView() string {
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("cancel")),
 		}
+	case modalTheme:
+		title = m.t("Theme")
+		pickerBody, pickerHits := m.themePickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
+	case modalLoader:
+		title = m.t("Mod loader")
+		pickerBody, pickerHits := m.loaderKindPickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
+	case modalLoaderVersions:
+		title = m.t("Loader version")
+		pickerBody, pickerHits := m.loaderVersionPickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("r", m.t("retry")),
+			hint("esc", m.t("cancel")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {
@@ -169,7 +264,11 @@ func (m *Model) modalView() string {
 			title = m.t("Working")
 		}
 		body = m.progressBody(contentW)
-		footer = []hintSpec{hintAction("esc", m.t("cancel"), "esc")}
+		footer = []hintSpec{
+			hintAction("b", m.t("background"), "b"),
+			hintAction("d", m.t("downloads"), "d"),
+			hintAction("esc", m.t("cancel"), "esc"),
+		}
 	case modalAlert:
 		accent = colRed
 		title = styleRed.Render(m.alert.Title)

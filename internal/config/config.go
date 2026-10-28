@@ -17,11 +17,18 @@ import (
 const DataVersion = 1
 
 type Account struct {
-	Username  string `json:"username"`
-	UUID      string `json:"uuid"`
-	Kind      string `json:"kind"`
-	CreatedAt int64  `json:"created_at"`
+	Username     string `json:"username"`
+	UUID         string `json:"uuid"`
+	Kind         string `json:"kind"`
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	XUID         string `json:"xuid,omitempty"`
+	ClientID     string `json:"client_id,omitempty"`
+	ExpiresAt    int64  `json:"expires_at,omitempty"`
+	CreatedAt    int64  `json:"created_at"`
 }
+
+func (a Account) IsMicrosoft() bool { return a.Kind == "microsoft" }
 
 func (a Account) UUIDHex() string { return strings.ReplaceAll(a.UUID, "-", "") }
 
@@ -36,13 +43,15 @@ type Instance struct {
 }
 
 type Settings struct {
-	MemoryMB        int    `json:"memory_mb"`
-	JavaPath        string `json:"java_path"`
-	JVMArgs         string `json:"jvm_args"`
-	Width           int    `json:"width"`
-	Height          int    `json:"height"`
-	DownloadThreads int    `json:"download_threads"`
-	Language        string `json:"language,omitempty"`
+	MemoryMB          int    `json:"memory_mb"`
+	JavaPath          string `json:"java_path"`
+	JVMArgs           string `json:"jvm_args"`
+	Width             int    `json:"width"`
+	Height            int    `json:"height"`
+	DownloadThreads   int    `json:"download_threads"`
+	Language          string `json:"language,omitempty"`
+	DataDir           string `json:"data_dir,omitempty"`
+	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
 }
 
 func DefaultSettings() Settings {
@@ -110,6 +119,8 @@ func (c *Config) normalize() {
 			c.Settings.Language = ""
 		}
 	}
+	c.Settings.DataDir = strings.TrimSpace(c.Settings.DataDir)
+	c.Settings.MicrosoftClientID = strings.TrimSpace(c.Settings.MicrosoftClientID)
 	// Keep only sane accounts, ignoring duplicates by UUID or (because
 	// Minecraft names are case-insensitive) by username.
 	accounts := make([]Account, 0, len(c.Accounts))
@@ -120,11 +131,32 @@ func (c *Config) normalize() {
 		if auth.ValidateUsername(a.Username) != nil {
 			continue
 		}
-		if a.UUID == "" {
-			a.UUID = auth.OfflineUUID(a.Username)
-		}
+		a.Kind = strings.TrimSpace(a.Kind)
 		if a.Kind == "" {
 			a.Kind = "offline"
+		}
+		if a.Kind == "microsoft" {
+			a.UUID = auth.NormalizeUUID(a.UUID)
+			if a.UUID == "" {
+				continue
+			}
+			a.AccessToken = strings.TrimSpace(a.AccessToken)
+			a.RefreshToken = strings.TrimSpace(a.RefreshToken)
+			a.XUID = strings.TrimSpace(a.XUID)
+			a.ClientID = strings.TrimSpace(a.ClientID)
+			if a.ExpiresAt < 0 {
+				a.ExpiresAt = 0
+			}
+		} else {
+			a.Kind = "offline"
+			if a.UUID == "" {
+				a.UUID = auth.OfflineUUID(a.Username)
+			}
+			a.AccessToken = ""
+			a.RefreshToken = ""
+			a.XUID = ""
+			a.ClientID = ""
+			a.ExpiresAt = 0
 		}
 		key := strings.ToLower(a.UUID)
 		nameKey := strings.ToLower(a.Username)
@@ -203,6 +235,79 @@ func (c *Config) AddAccount(name string) (*Account, error) {
 		return nil, err
 	}
 	return &c.Accounts[len(c.Accounts)-1], nil
+}
+
+// AddMicrosoftAccount stores a fresh Microsoft login, replacing an existing
+// entry for the same Minecraft profile.
+func (c *Config) AddMicrosoftAccount(session auth.MinecraftSession) (*Account, error) {
+	name := strings.TrimSpace(session.Username)
+	if err := auth.ValidateUsername(name); err != nil {
+		return nil, err
+	}
+	uuid := auth.NormalizeUUID(session.UUID)
+	if uuid == "" {
+		return nil, fmt.Errorf("Microsoft profile has no UUID")
+	}
+	if strings.TrimSpace(session.AccessToken) == "" {
+		return nil, fmt.Errorf("Microsoft sign-in returned no Minecraft token")
+	}
+	account := Account{
+		Username:     name,
+		UUID:         uuid,
+		Kind:         "microsoft",
+		AccessToken:  session.AccessToken,
+		RefreshToken: session.RefreshToken,
+		XUID:         session.XUID,
+		ClientID:     session.ClientID,
+		ExpiresAt:    session.ExpiresAt,
+		CreatedAt:    time.Now().Unix(),
+	}
+	out := c.Accounts[:0]
+	for _, existing := range c.Accounts {
+		sameUUID := strings.EqualFold(existing.UUID, uuid)
+		sameName := strings.EqualFold(existing.Username, name)
+		if sameUUID || sameName {
+			if existing.CreatedAt > 0 {
+				account.CreatedAt = existing.CreatedAt
+			}
+			if c.ActiveAccountUUID == existing.UUID {
+				c.ActiveAccountUUID = uuid
+			}
+			continue
+		}
+		out = append(out, existing)
+	}
+	c.Accounts = append(out, account)
+	if c.ActiveAccountUUID == "" {
+		c.ActiveAccountUUID = account.UUID
+	}
+	if err := c.Save(); err != nil {
+		return nil, err
+	}
+	return &c.Accounts[len(c.Accounts)-1], nil
+}
+
+// UpdateMicrosoftAccount replaces the tokens of an existing account after a
+// refresh. It returns false when the account disappeared.
+func (c *Config) UpdateMicrosoftAccount(uuid string, session auth.MinecraftSession) (bool, error) {
+	for i := range c.Accounts {
+		if !strings.EqualFold(c.Accounts[i].UUID, uuid) {
+			continue
+		}
+		c.Accounts[i].Kind = "microsoft"
+		c.Accounts[i].Username = session.Username
+		c.Accounts[i].UUID = auth.NormalizeUUID(session.UUID)
+		c.Accounts[i].AccessToken = session.AccessToken
+		c.Accounts[i].RefreshToken = session.RefreshToken
+		c.Accounts[i].XUID = session.XUID
+		c.Accounts[i].ClientID = session.ClientID
+		c.Accounts[i].ExpiresAt = session.ExpiresAt
+		if c.ActiveAccountUUID == uuid {
+			c.ActiveAccountUUID = c.Accounts[i].UUID
+		}
+		return true, c.Save()
+	}
+	return false, nil
 }
 
 func (c *Config) RemoveAccount(uuid string) error {

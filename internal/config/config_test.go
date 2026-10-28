@@ -161,6 +161,120 @@ func TestAccountLifecycle(t *testing.T) {
 	}
 }
 
+func TestMicrosoftAccountLifecycle(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := cfg.AddMicrosoftAccount(auth.MinecraftSession{Username: "MoonCC"}); err == nil {
+		t.Error("AddMicrosoftAccount without a UUID should fail")
+	}
+	if _, err := cfg.AddMicrosoftAccount(auth.MinecraftSession{
+		Username: "MoonCC",
+		UUID:     "b50ad385829d3141a2167e7d7539ba7f",
+	}); err == nil {
+		t.Error("AddMicrosoftAccount without a Minecraft token should fail")
+	}
+
+	now := time.Now().Add(time.Hour).Unix()
+	session := auth.MinecraftSession{
+		Username:     "MoonCC",
+		UUID:         "B50AD385829D3141A2167E7D7539BA7F",
+		AccessToken:  "mc-token-1",
+		RefreshToken: "ms-refresh-1",
+		XUID:         "2535400000000001",
+		ClientID:     auth.DefaultMicrosoftClientID,
+		ExpiresAt:    now,
+	}
+	first, err := cfg.AddMicrosoftAccount(session)
+	if err != nil {
+		t.Fatalf("AddMicrosoftAccount: %v", err)
+	}
+	if first.Kind != "microsoft" || first.AccessToken != "mc-token-1" || first.RefreshToken != "ms-refresh-1" {
+		t.Errorf("unexpected Microsoft account: %+v", first)
+	}
+	if first.UUID != "b50ad385-829d-3141-a216-7e7d7539ba7f" {
+		t.Errorf("UUID = %q, want normalized UUID", first.UUID)
+	}
+	if !first.IsMicrosoft() {
+		t.Error("IsMicrosoft() = false")
+	}
+	if cfg.ActiveAccountUUID != first.UUID {
+		t.Errorf("ActiveAccountUUID = %q, want first account", cfg.ActiveAccountUUID)
+	}
+	createdAt := first.CreatedAt
+
+	// Signing in again for the same profile replaces the tokens in place and
+	// keeps the original creation time.
+	session.AccessToken = "mc-token-2"
+	replaced, err := cfg.AddMicrosoftAccount(session)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Accounts) != 1 {
+		t.Fatalf("accounts = %+v, want a single entry", cfg.Accounts)
+	}
+	if replaced.AccessToken != "mc-token-2" || replaced.CreatedAt != createdAt {
+		t.Errorf("replacement = %+v, want new token and original CreatedAt %d", replaced, createdAt)
+	}
+
+	second, err := cfg.AddMicrosoftAccount(auth.MinecraftSession{
+		Username:     "Alex",
+		UUID:         "069a79f444e94726a5befca90e38aaf5",
+		AccessToken:  "mc-token-3",
+		RefreshToken: "ms-refresh-3",
+		XUID:         "2535400000000003",
+		ClientID:     auth.DefaultMicrosoftClientID,
+		ExpiresAt:    now,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Accounts) != 2 {
+		t.Fatalf("accounts = %+v, want two entries", cfg.Accounts)
+	}
+	if cfg.ActiveAccountUUID != first.UUID {
+		t.Error("adding another Microsoft account should not steal the active slot")
+	}
+
+	refreshed := auth.MinecraftSession{
+		Username:     "MoonCC",
+		UUID:         "b50ad385829d3141a2167e7d7539ba7f",
+		AccessToken:  "mc-token-4",
+		RefreshToken: "ms-refresh-4",
+		XUID:         "2535400000000001",
+		ClientID:     auth.DefaultMicrosoftClientID,
+		ExpiresAt:    now + 3600,
+	}
+	updated, err := cfg.UpdateMicrosoftAccount(first.UUID, refreshed)
+	if err != nil || !updated {
+		t.Fatalf("UpdateMicrosoftAccount = %v, %v", updated, err)
+	}
+	if cfg.Accounts[0].AccessToken != "mc-token-4" || cfg.Accounts[0].RefreshToken != "ms-refresh-4" {
+		t.Errorf("refresh was not stored: %+v", cfg.Accounts[0])
+	}
+	if cfg.Accounts[1].UUID != second.UUID {
+		t.Errorf("unrelated account was modified: %+v", cfg.Accounts[1])
+	}
+	if updated, err := cfg.UpdateMicrosoftAccount("does-not-exist", refreshed); err != nil || updated {
+		t.Errorf("UpdateMicrosoftAccount(unknown) = %v, %v", updated, err)
+	}
+
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reloaded.Accounts) != 2 {
+		t.Fatalf("reloaded accounts = %+v", reloaded.Accounts)
+	}
+	got := reloaded.Accounts[0]
+	if got.AccessToken != "mc-token-4" || got.XUID != "2535400000000001" {
+		t.Errorf("reloaded Microsoft account = %+v", got)
+	}
+}
+
 func TestInstanceLifecycle(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	cfg, err := Load(path)

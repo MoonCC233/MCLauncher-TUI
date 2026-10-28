@@ -2,6 +2,7 @@
 /mclauncher
 /mclauncher.exe
 /dist/
+.minecraft
 
 # Preview / screenshot scratch files
 /preview-*.ansi
@@ -11,6 +12,7 @@
 
 # Local runtime data
 /.mclauncher/
+/.minecraft/
 *.log
 
 # OS / editor

@@ -25,6 +25,9 @@ func (m *Model) joinColumns(parts ...string) string {
 }
 
 func (m *Model) rowHit(screen Screen, index, line, width int) {
+	if line < 0 || line >= m.bodyHeight() {
+		return
+	}
 	m.addHit(m.contentX(), bodyTop+line, width, 1, hitRegion{Kind: hitRow, Screen: screen, Index: index})
 }
 
@@ -46,7 +49,7 @@ func (m *Model) viewHome(w, h int) []string {
 		m.sectionHeader(m.t("Home"), titleRight, w),
 		"",
 	}
-	for _, logo := range renderLogo() {
+	for _, logo := range renderLogo(w) {
 		lines = append(lines, "  "+logo)
 	}
 	lines = append(lines,
@@ -94,6 +97,11 @@ func (m *Model) viewHome(w, h int) []string {
 		action = m.tf("play %s", util.Truncate(inst.Name, 22))
 	}
 	hintY := bodyTop + len(lines)
+	if hintY-bodyTop >= m.bodyHeight() {
+		// The hint row is clipped away on very short terminals; keep the text
+		// for width calculations but do not record phantom click targets.
+		hintY = -1
+	}
 	lines = append(lines, "  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4,
 		hint("enter", action),
 		hint("n", m.t("new instance")),
@@ -176,8 +184,12 @@ func (m *Model) viewInstances(w, h int) []string {
 		for len(lines) < h-4 {
 			lines = append(lines, "")
 		}
+		lines = append(lines, "")
 		hintY := bodyTop + len(lines)
-		lines = append(lines, "", "  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4,
+		if hintY-bodyTop >= m.bodyHeight() {
+			hintY = -1
+		}
+		lines = append(lines, "  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4,
 			hint("n", m.t("browse versions")),
 			hint("tab", m.t("sections")),
 		))
@@ -284,9 +296,9 @@ func (m *Model) viewVersions(w, h int) []string {
 	lines := []string{
 		m.sectionHeader(m.t("Versions"), right, w),
 		"",
-		m.filterBar(w),
-		"",
 	}
+	lines = append(lines, m.filterBarLines(w, bodyTop+len(lines))...)
+	lines = append(lines, "")
 	if m.manifest == nil {
 		if m.manifestLoading {
 			lines = append(lines,
@@ -337,21 +349,60 @@ func (m *Model) viewVersions(w, h int) []string {
 		}
 		date := m.releaseDate(v.ReleaseTime)
 		lines = append(lines,
-			"  "+stylePrimary.Render("▌ ")+styleBold.Render(v.ID)+styleDim.Render("  "+m.versionTypeLabel(v.Type)+" · "+m.tf("released %s", date))+"  "+state,
+			"  "+stylePrimary.Render("▌ ")+styleBold.Render(v.ID)+styleDim.Render("  "+m.versionLabel(*v)+" · "+m.tf("released %s", date))+"  "+state,
 			"  "+styleDim.Render(m.t("enter create instance · i install only · o open version folder")),
 		)
 	}
 	return lines
 }
 
-func (m *Model) filterBar(w int) string {
-	chips := []string{m.t("all"), m.t("releases"), m.t("snapshots")}
-	order := []int{0, 1, 2}
+func (m *Model) filterChips() []string {
+	return []string{m.t("all"), m.t("releases"), m.t("snapshots"), m.t("ancient"), m.t("April Fools")}
+}
+
+func (m *Model) filterChipOrder() []int {
+	order := []int{0, 1, 2, 3, 4}
 	if m.rtl() {
-		order = []int{2, 1, 0}
+		order = []int{4, 3, 2, 1, 0}
 	}
-	var parts []string
-	x := m.contentX() + 2
+	return order
+}
+
+// filterBarHeight counts the wrapped chip rows plus the filter/status line.
+func (m *Model) filterBarHeight(w int) int {
+	chips := m.filterChips()
+	rows, cur := 1, 2
+	hasChip := false
+	for _, idx := range m.filterChipOrder() {
+		width := ansi.StringWidth(" " + chips[idx] + " ")
+		extra := 0
+		if hasChip {
+			extra = 1
+		}
+		if hasChip && cur+width+extra > w {
+			rows++
+			cur = 2
+			hasChip = false
+			extra = 0
+		}
+		if hasChip {
+			cur++
+		}
+		cur += width
+		hasChip = true
+	}
+	return rows + 1
+}
+
+// filterBarLines renders the version category chips and the filter status.
+// Chips wrap on narrow terminals instead of being truncated. y0 is the screen
+// row of the first chip line, used for mouse hit regions.
+func (m *Model) filterBarLines(w, y0 int) []string {
+	chips := m.filterChips()
+	order := m.filterChipOrder()
+	var rows [][]string
+	var row []string
+	cur := 2
 	for _, idx := range order {
 		chip := chips[idx]
 		var rendered string
@@ -364,23 +415,69 @@ func (m *Model) filterBar(w int) string {
 		} else {
 			rendered = styleDim.Render(" " + chip + " ")
 		}
-		m.addHit(x, bodyTop+2, ansi.StringWidth(rendered), 1, hitRegion{Kind: hitChip, Scope: idx})
-		x += ansi.StringWidth(rendered) + 1
-		parts = append(parts, rendered)
+		width := ansi.StringWidth(rendered)
+		extra := 0
+		if len(row) > 0 {
+			extra = 1
+		}
+		if cur+width+extra > w && len(row) > 0 {
+			rows = append(rows, row)
+			row = nil
+			cur = 2
+			extra = 0
+		}
+		if len(row) > 0 {
+			cur++
+		}
+		y := y0 + len(rows)
+		if cur < w && y >= bodyTop && y < bodyTop+m.bodyHeight() {
+			hitW := width
+			if maxW := w - cur; hitW > maxW {
+				hitW = maxW
+			}
+			m.addHit(m.contentX()+cur, y, hitW, 1, hitRegion{Kind: hitChip, Scope: idx})
+		}
+		row = append(row, rendered)
+		cur += width
 	}
-	bar := "  " + strings.Join(parts, styleBorder.Render(" "))
+	rows = append(rows, row)
+
+	var out []string
+	for _, items := range rows {
+		out = append(out, fitLine("  "+strings.Join(items, styleBorder.Render(" ")), w))
+	}
+
+	var status string
 	if m.filterActive {
-		m.search.Width = util.Clamp(w-44, 12, 40)
-		bar += "  " + m.search.View()
+		m.search.Width = util.Clamp(w-8, 12, 40)
+		status = m.search.View()
 	} else if m.filter != "" {
-		bar += "  " + styleYellow.Render("/ "+m.filter) + styleDim.Render("  "+m.t("esc clear"))
+		status = styleYellow.Render("/ "+m.filter) + styleDim.Render("  "+m.t("esc clear"))
 	} else {
-		bar += "  " + styleDim.Render("/ "+m.t("filter"))
+		status = styleDim.Render("/ " + m.t("filter"))
 	}
 	if m.manifestErr != "" {
-		bar += "  " + styleRed.Render("· "+util.Truncate(m.manifestErr, max(8, w-ansi.StringWidth(bar)-8)))
+		avail := w - 4 - ansi.StringWidth(status)
+		if avail > 8 {
+			status += "  " + styleRed.Render("· "+util.Truncate(m.manifestErr, avail))
+		}
 	}
-	return fitLine(bar, w)
+	out = append(out, fitLine("  "+status, w))
+	return out
+}
+
+func (m *Model) versionLabel(v mojang.VersionSummary) string {
+	if isAprilFoolsVersion(v.ID) {
+		return m.t("April Fools")
+	}
+	return m.versionTypeLabel(v.Type)
+}
+
+func (m *Model) versionLabelStyle(v mojang.VersionSummary) lipgloss.Style {
+	if isAprilFoolsVersion(v.ID) {
+		return lipgloss.NewStyle().Foreground(colPurple)
+	}
+	return versionTypeStyle(v.Type)
 }
 
 func (m *Model) versionRow(v mojang.VersionSummary, selected bool, w int) string {
@@ -396,11 +493,17 @@ func (m *Model) versionRow(v mojang.VersionSummary, selected bool, w int) string
 	if selected {
 		idStyle = stylePrimaryB
 	}
-	const typeW, dateW, statusW = 10, 10, 13
+	const dateW, statusW = 10, 13
+	typeW := 10
+	if w >= 74 {
+		// Keep translated labels such as "April Fools" and
+		// "Día de los Inocentes" intact on wide layouts.
+		typeW = 20
+	}
 	showStatus := w >= 59
-	idW := w - 43
+	idW := w - 43 - (typeW - 10)
 	if !showStatus {
-		idW = w - 28
+		idW = w - 28 - (typeW - 10)
 	}
 	if idW > 22 {
 		idW = 22
@@ -416,7 +519,7 @@ func (m *Model) versionRow(v mojang.VersionSummary, selected bool, w int) string
 	}
 	cols := []string{
 		fitLine(idStyle.Render(util.Truncate(v.ID, idW)), idW),
-		fitLine(versionTypeStyle(v.Type).Render(util.Truncate(m.versionTypeLabel(v.Type), typeW)), typeW),
+		fitLine(m.versionLabelStyle(v).Render(util.Truncate(m.versionLabel(v), typeW)), typeW),
 		fitLine(styleDim.Render(m.releaseDate(v.ReleaseTime)), dateW),
 	}
 	if showStatus {
@@ -467,7 +570,7 @@ func (m *Model) releaseDate(s string) string {
 
 func (m *Model) viewAccounts(w, h int) []string {
 	lines := []string{
-		m.sectionHeader(m.t("Accounts"), m.t("offline mode"), w),
+		m.sectionHeader(m.t("Accounts"), m.count(len(m.cfg.Accounts), "account", "accounts"), w),
 		"",
 	}
 	if len(m.cfg.Accounts) == 0 {
@@ -499,15 +602,23 @@ func (m *Model) viewAccounts(w, h int) []string {
 		if acc.UUID == m.cfg.ActiveAccountUUID {
 			active = m.t("active account")
 		}
-		created := util.FormatUnix(acc.CreatedAt)
-		if acc.CreatedAt <= 0 {
-			created = m.t("never")
-		}
 		lines = append(lines,
 			"  "+stylePrimary.Render("▌ ")+styleBold.Render(acc.Username)+styleDim.Render("  "+active),
 			"  "+styleMuted.Render("UUID  "+acc.UUID),
-			"  "+styleDim.Render(m.tf("created %s · offline player · deterministic Java UUID", created)),
 		)
+		if acc.IsMicrosoft() {
+			detail := m.t("Microsoft account")
+			if acc.ExpiresAt > 0 {
+				detail = m.tf("Microsoft account · session valid until %s", time.Unix(acc.ExpiresAt, 0).Local().Format("2006-01-02 15:04"))
+			}
+			lines = append(lines, "  "+styleDim.Render(detail))
+		} else {
+			created := util.FormatUnix(acc.CreatedAt)
+			if acc.CreatedAt <= 0 {
+				created = m.t("never")
+			}
+			lines = append(lines, "  "+styleDim.Render(m.tf("created %s · offline player · deterministic Java UUID", created)))
+		}
 	}
 	return lines
 }
@@ -524,8 +635,8 @@ func (m *Model) accountRow(acc config.Account, selected bool, w int) string {
 		active = styleGreen.Render("●")
 	}
 	badge := styleDim.Render(m.t("offline"))
-	if acc.UUID == m.cfg.ActiveAccountUUID {
-		badge = styleGreen.Render(m.t("active"))
+	if acc.IsMicrosoft() {
+		badge = styleCyan.Render(m.t("microsoft"))
 	}
 	nameW := 20
 	uuidW := w - 2 - 2 - 1 - nameW - 10 - 3
@@ -535,7 +646,7 @@ func (m *Model) accountRow(acc config.Account, selected bool, w int) string {
 	cols := []string{
 		fitLine(nameStyle.Render(util.Truncate(acc.Username, nameW)), nameW),
 		fitLine(styleDim.Render(acc.UUID), uuidW),
-		fitLine(badge, 8),
+		fitLine(badge, 10),
 	}
 	return m.rowLine(marker, active+" ", cols, w)
 }

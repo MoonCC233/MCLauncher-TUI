@@ -3,7 +3,7 @@ package paths
 import (
 	"os"
 	"path/filepath"
-	"runtime"
+	"strings"
 )
 
 // Layout describes every directory mclauncher owns inside its data root.
@@ -81,40 +81,45 @@ func (l Layout) ManifestCache() string {
 	return filepath.Join(l.Cache, "version_manifest_v2.json")
 }
 
-// DefaultRoot resolves the per-user data directory, honouring
-// MCLAUNCHER_DATA_DIR for portable installs.
+// DefaultRoot resolves the default data directory. Portable installs place
+// everything in .minecraft next to the executable's working directory;
+// MCLAUNCHER_DATA_DIR can still redirect it.
 func DefaultRoot() (string, error) {
-	if override := os.Getenv("MCLAUNCHER_DATA_DIR"); override != "" {
-		abs, err := filepath.Abs(override)
-		if err != nil {
-			return "", err
-		}
-		return abs, nil
+	if override := strings.TrimSpace(os.Getenv("MCLAUNCHER_DATA_DIR")); override != "" {
+		return ResolveDataDir(override)
 	}
-	switch runtime.GOOS {
-	case "windows":
-		if appData := os.Getenv("APPDATA"); appData != "" {
-			return filepath.Join(appData, "mclauncher"), nil
-		}
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(home, "AppData", "Roaming", "mclauncher"), nil
-	case "darwin":
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(home, "Library", "Application Support", "mclauncher"), nil
-	default:
-		if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
-			return filepath.Join(xdg, "mclauncher"), nil
-		}
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		return filepath.Join(home, ".local", "share", "mclauncher"), nil
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "", err
 	}
+	abs, err := filepath.Abs(cwd)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(abs, ".minecraft"), nil
+}
+
+// ResolveDataDir expands ~ and turns a relative path into an absolute one.
+func ResolveDataDir(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return DefaultRoot()
+	}
+	if value == "~" || strings.HasPrefix(value, "~/") || strings.HasPrefix(value, `~\`) {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		rest := strings.TrimLeft(value[1:], `/\`)
+		if rest == "" {
+			value = home
+		} else {
+			value = filepath.Join(home, rest)
+		}
+	}
+	abs, err := filepath.Abs(value)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Clean(abs), nil
 }

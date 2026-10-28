@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
@@ -180,11 +181,13 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 		return nil
 	}
 	accountCopy := *account
+	accountUUID := account.UUID
 	settings := m.cfg.Settings
 	memory := m.cfg.MemoryFor(&inst)
 	runtimes := append([]java.Info(nil), m.javaRuntimes...)
 	javaScanned := m.javaScanned
 	javaNeeded := m.t("needs Java %d+")
+	microsoftExpired := m.t("Microsoft session expired. Sign in again from the Accounts screen.")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	m.task = &TaskState{
@@ -232,6 +235,26 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 					return true
 				}
 				return false
+			}
+
+			if accountCopy.IsMicrosoft() && auth.NeedsRefresh(accountCopy.ExpiresAt) {
+				stage("Refreshing Microsoft session", accountCopy.Username)
+				session, refreshErr := auth.RefreshMicrosoft(ctx, client, accountCopy.ClientID, accountCopy.RefreshToken)
+				if refreshErr != nil {
+					fail(fmt.Errorf("%s: %w", microsoftExpired, refreshErr))
+					return
+				}
+				accountCopy.Username = session.Username
+				accountCopy.UUID = session.UUID
+				accountCopy.AccessToken = session.AccessToken
+				accountCopy.RefreshToken = session.RefreshToken
+				accountCopy.XUID = session.XUID
+				accountCopy.ClientID = session.ClientID
+				accountCopy.ExpiresAt = session.ExpiresAt
+				emitter(microsoftRefreshedMsg{uuid: accountUUID, session: session})
+			}
+			if checkCancel() {
+				return
 			}
 
 			stage("Checking installed files", inst.VersionID)

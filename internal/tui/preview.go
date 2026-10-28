@@ -3,6 +3,7 @@ package tui
 import (
 	"time"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
@@ -29,6 +30,7 @@ func Preview(screenName string, width, height int, language ...string) string {
 		Accounts: []config.Account{
 			{Username: "MoonCC", UUID: "b50ad385-829d-3141-a216-7e7d7539ba7f", Kind: "offline", CreatedAt: now.AddDate(0, -2, 0).Unix()},
 			{Username: "Steve", UUID: "0f31b1f0e0c14f8b8a9c6d5e4f3a2b1c", Kind: "offline", CreatedAt: now.AddDate(0, 0, -9).Unix()},
+			{Username: "Alex", UUID: "069a79f4-44e9-4726-a5be-fca90e38aaf5", Kind: "microsoft", ExpiresAt: now.Add(18*time.Hour + 24*time.Minute).Unix(), CreatedAt: now.AddDate(0, -4, 0).Unix()},
 		},
 		Instances: []config.Instance{
 			{ID: "a1b2c3d4e5", Name: "Survival", VersionID: "1.21.4", MemoryMB: 6144, CreatedAt: now.AddDate(0, -1, 0).Unix(), LastPlayedAt: now.Add(-2 * 24 * time.Hour).Unix(), PlaySeconds: 12780},
@@ -41,8 +43,8 @@ func Preview(screenName string, width, height int, language ...string) string {
 		cfg.Settings.Language = language[0]
 	}
 
-	layout := paths.New(`C:\Users\MoonCC\AppData\Roaming\mclauncher`)
-	m := New(cfg, layout, nil, "0.1.0", "")
+	layout := paths.New(`C:\Users\MoonCC\MCLauncher\.minecraft`)
+	m := New(cfg, layout, nil, "0.2.0", "")
 	m.width = width
 	m.height = height
 	m.ready = true
@@ -72,12 +74,12 @@ func Preview(screenName string, width, height int, language ...string) string {
 	m.ensureVersionVisible()
 	m.instanceCursor = 0
 	m.homeCursor = 0
-	m.accountCursor = 0
+	m.accountCursor = 2
 	m.logs = nil
 	push := func(source, text string, ago time.Duration) {
 		m.logs = append(m.logs, LogLine{At: now.Add(-ago), Source: source, Text: text})
 	}
-	push("system", "mclauncher 0.1.0", 62*time.Second)
+	push("system", "mclauncher 0.2.0", 62*time.Second)
 	push("launcher", "version manifest: network · 27 versions", 61*time.Second)
 	push("launcher", "java scan: 3 runtimes", 60*time.Second)
 	push("launcher", "installed 1.21.4 · 512 files · 283.4 MB", 59*time.Second)
@@ -147,6 +149,36 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.screen = ScreenSettings
 		m.modal = modalJava
 		m.javaPicker = 0
+	case "account-type":
+		m.screen = ScreenAccounts
+		m.openAccountTypePicker()
+	case "microsoft":
+		m.screen = ScreenAccounts
+		m.modal = modalMicrosoft
+		m.ms = MicrosoftLoginState{
+			Stage:    "waiting",
+			ClientID: auth.DefaultMicrosoftClientID,
+			Started:  now.Add(-38 * time.Second),
+			Interval: 5 * time.Second,
+			Code: &auth.DeviceCode{
+				UserCode:        "K7QX-4M2P",
+				VerificationURI: "https://www.microsoft.com/link",
+				ExpiresIn:       900,
+				Interval:        5,
+			},
+		}
+	case "microsoft-error":
+		m.screen = ScreenAccounts
+		m.modal = modalMicrosoft
+		m.ms = MicrosoftLoginState{
+			Stage: "failed",
+			Err:   "Xbox Live rejected the sign-in: this account has no Xbox profile; sign in at xbox.com once (XErr 2148916233)",
+		}
+	case "resolution":
+		m.screen = ScreenSettings
+		m.cfg.Settings.Width = 1920
+		m.cfg.Settings.Height = 1080
+		m.openResolutionPicker()
 	default:
 		m.screen = ScreenHome
 	}
@@ -161,11 +193,13 @@ func demoManifest(now time.Time) *mojang.Manifest {
 	}
 	items := []demo{
 		{"25w45a", "snapshot", "2025-11-05T12:00:00+00:00"},
+		{"25w14craftmine", "snapshot", "2025-04-01T12:00:00+00:00"},
 		{"1.21.4", "release", "2024-12-03T10:12:00+00:00"},
 		{"1.21.3", "release", "2024-10-23T12:00:00+00:00"},
 		{"1.21.2", "release", "2024-10-22T11:00:00+00:00"},
 		{"1.21.1", "release", "2024-08-08T14:00:00+00:00"},
 		{"1.21", "release", "2024-06-13T10:00:00+00:00"},
+		{"24w14potato", "snapshot", "2024-04-01T12:00:00+00:00"},
 		{"1.20.6", "release", "2024-04-29T12:00:00+00:00"},
 		{"1.20.4", "release", "2023-12-07T12:00:00+00:00"},
 		{"1.20.2", "release", "2023-09-21T12:00:00+00:00"},
@@ -175,17 +209,22 @@ func demoManifest(now time.Time) *mojang.Manifest {
 		{"1.18.2", "release", "2022-02-28T12:00:00+00:00"},
 		{"1.17.1", "release", "2021-07-06T12:00:00+00:00"},
 		{"1.16.5", "release", "2021-01-14T12:00:00+00:00"},
+		{"20w14infinite", "snapshot", "2020-04-01T12:00:00+00:00"},
 		{"1.15.2", "release", "2020-01-17T12:00:00+00:00"},
 		{"1.14.4", "release", "2019-07-19T12:00:00+00:00"},
+		{"3D Shareware v1.34", "release", "2019-04-01T12:00:00+00:00"},
 		{"1.13.2", "release", "2018-10-22T12:00:00+00:00"},
 		{"1.12.2", "release", "2017-09-18T12:00:00+00:00"},
 		{"1.11.2", "release", "2016-12-21T12:00:00+00:00"},
 		{"1.10.2", "release", "2016-06-23T12:00:00+00:00"},
 		{"1.9.4", "release", "2016-05-10T12:00:00+00:00"},
+		{"1.RV-Pre1", "snapshot", "2016-03-31T12:00:00+00:00"},
 		{"1.8.9", "release", "2015-12-09T12:00:00+00:00"},
+		{"15w14a", "snapshot", "2015-04-01T12:00:00+00:00"},
 		{"1.7.10", "release", "2014-05-14T12:00:00+00:00"},
 		{"1.6.4", "release", "2013-09-19T12:00:00+00:00"},
 		{"1.5.2", "release", "2013-05-02T12:00:00+00:00"},
+		{"2.0", "release", "2013-04-01T12:00:00+00:00"},
 		{"1.4.7", "release", "2013-01-09T12:00:00+00:00"},
 		{"1.3.2", "release", "2012-08-16T12:00:00+00:00"},
 		{"1.2.5", "release", "2012-04-04T12:00:00+00:00"},
@@ -195,12 +234,12 @@ func demoManifest(now time.Time) *mojang.Manifest {
 		{"Alpha 1.2.6", "old_alpha", "2010-12-03T12:00:00+00:00"},
 	}
 	m := &mojang.Manifest{Source: "network", LatestRelease: "1.21.4", LatestSnapshot: "25w45a"}
-	for i, item := range items {
+	for _, item := range items {
 		m.Versions = append(m.Versions, mojang.VersionSummary{
 			ID:          item.id,
 			Type:        item.kind,
 			ReleaseTime: item.date,
-			Latest:      i == 1,
+			Latest:      item.id == "1.21.4",
 		})
 	}
 	return m

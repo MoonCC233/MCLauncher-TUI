@@ -81,10 +81,29 @@ func TestDefaultRootOverride(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultRoot(default): %v", err)
 	}
-	if filepath.Base(got) != "mclauncher" {
-		t.Errorf("DefaultRoot(default) = %q, want a mclauncher directory", got)
+	if filepath.Base(got) != ".minecraft" {
+		t.Errorf("DefaultRoot(default) = %q, want a .minecraft directory", got)
 	}
 	if !filepath.IsAbs(got) {
 		t.Errorf("DefaultRoot should be absolute, got %q", got)
+	}
+}
+
+func TestResolveDataDir(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("MCLAUNCHER_DATA_DIR", "")
+	got, err := ResolveDataDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != root {
+		t.Errorf("ResolveDataDir(%q) = %q", root, got)
+	}
+	got, err = ResolveDataDir("relative-data")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(got) || filepath.Base(got) != "relative-data" {
+		t.Errorf("ResolveDataDir(relative) = %q", got)
 	}
 }

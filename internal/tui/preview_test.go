@@ -35,6 +35,10 @@ var previewScreens = []string{
 	"progress",
 	"language",
 	"java",
+	"account-type",
+	"microsoft",
+	"microsoft-error",
+	"resolution",
 }
 
 func TestPreviewFrames(t *testing.T) {

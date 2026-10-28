@@ -87,6 +87,10 @@ func Build(opts Options) (*Spec, error) {
 	if err := os.MkdirAll(gameDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create instance directory: %w", err)
 	}
+	microsoft := opts.Account.IsMicrosoft()
+	if microsoft && strings.TrimSpace(opts.Account.AccessToken) == "" {
+		return nil, fmt.Errorf("Microsoft account %s has no access token — sign in again from the Accounts screen", opts.Account.Username)
+	}
 	assetsDir := opts.AssetsDir
 	if assetsDir == "" {
 		assetsDir = opts.Layout.Assets
@@ -113,14 +117,24 @@ func Build(opts Options) (*Spec, error) {
 	memory := util.Clamp(opts.MemoryMB, 512, 65536)
 	nativesDir := opts.Layout.NativesDir(versionID)
 
+	accessToken := "0"
+	authSession := "0"
+	userType := "legacy"
+	xuid := ""
+	if microsoft {
+		accessToken = strings.TrimSpace(opts.Account.AccessToken)
+		userType = "msa"
+		xuid = opts.Account.XUID
+	}
+
 	replacements := map[string]string{
 		"auth_player_name":    opts.Account.Username,
 		"auth_uuid":           strings.ReplaceAll(opts.Account.UUID, "-", ""),
-		"auth_access_token":   "0",
-		"auth_session":        "0",
-		"auth_xuid":           "",
+		"auth_access_token":   accessToken,
+		"auth_session":        authSession,
+		"auth_xuid":           xuid,
 		"clientid":            "",
-		"user_type":           "legacy",
+		"user_type":           userType,
 		"user_properties":     "{}",
 		"version_name":        versionID,
 		"version_type":        opts.Version.TypeLabel(),
@@ -180,9 +194,12 @@ func Build(opts Options) (*Spec, error) {
 			"--assetsDir", assetsDir,
 			"--assetIndex", opts.Version.AssetID(),
 			"--uuid", replacements["auth_uuid"],
-			"--accessToken", "0",
-			"--userType", "legacy",
+			"--accessToken", accessToken,
+			"--userType", userType,
 			"--userProperties", "{}",
+		}
+		if xuid != "" {
+			gameArgs = append(gameArgs, "--xuid", xuid)
 		}
 	}
 	launcherArgs = append(launcherArgs, gameArgs...)

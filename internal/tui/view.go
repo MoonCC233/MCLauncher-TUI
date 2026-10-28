@@ -126,6 +126,8 @@ func (m *Model) compactNav(width int) string {
 		}
 	}
 	var parts []string
+	sep := styleBorder.Render(" · ")
+	sepW := ansi.StringWidth(sep)
 	x := 1
 	for _, idx := range order {
 		label := fmt.Sprintf("%d %s", idx+1, m.t(screenNameKeys[idx]))
@@ -135,11 +137,20 @@ func (m *Model) compactNav(width int) string {
 		} else {
 			styled = styleDim.Render(label)
 		}
-		m.addHit(x, 1, ansi.StringWidth(styled), 1, hitRegion{Kind: hitNav, Screen: Screen(idx)})
+		labelW := ansi.StringWidth(styled)
+		// The header adds one leading space, so nav cells occupy the screen
+		// columns 1..width. Clamp the hit region to what fitLine can show.
+		if x <= width && labelW > 0 {
+			hitW := labelW
+			if maxW := width - x + 1; hitW > maxW {
+				hitW = maxW
+			}
+			m.addHit(x, 1, hitW, 1, hitRegion{Kind: hitNav, Screen: Screen(idx)})
+		}
 		parts = append(parts, styled)
-		x += ansi.StringWidth(styled) + 5
+		x += labelW + sepW
 	}
-	return strings.Join(parts, styleBorder.Render(" · "))
+	return strings.Join(parts, sep)
 }
 
 func composeLR(leftPrefix, left, right string, width int) string {
@@ -219,7 +230,9 @@ func (m *Model) sidebarView(height int) []string {
 		} else {
 			add(styleMuted.Render("  " + label))
 		}
-		m.addHit(x, bodyTop+lineIdx, w, 1, hitRegion{Kind: hitNav, Screen: Screen(i)})
+		if lineIdx < height {
+			m.addHit(x, bodyTop+lineIdx, w, 1, hitRegion{Kind: hitNav, Screen: Screen(i)})
+		}
 	}
 	add("")
 	add(styleDim.Render(m.t("STATUS")))
@@ -319,7 +332,11 @@ func (m *Model) footerView() string {
 		helpX = 1
 	}
 	if m.game == nil {
-		m.addHit(helpX, y, rightW, 1, hitRegion{Kind: hitKey, Key: keyMsg("?")})
+		hitW := rightW
+		if maxW := 1 + avail - helpX; hitW > maxW {
+			hitW = maxW
+		}
+		m.addHit(helpX, y, hitW, 1, hitRegion{Kind: hitKey, Key: keyMsg("?")})
 	}
 	return " " + fitLine(line, avail) + " "
 }

@@ -138,6 +138,29 @@ func (m *Model) modalView() string {
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("cancel")),
 		}
+	case modalAccountAdd:
+		title = m.t("Select account type")
+		pickerBody, pickerHits := m.accountTypePickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
+	case modalMicrosoft:
+		accent = colCyan
+		title = m.t("Microsoft account")
+		body = m.microsoftModalBody(contentW)
+		footer = m.microsoftModalHints()
+	case modalResolution:
+		title = m.t("Window size")
+		pickerBody, pickerHits := m.resolutionPickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {
@@ -190,8 +213,11 @@ func (m *Model) modalView() string {
 
 	boxW := contentW + 6
 	boxH := len(lines) + 4
-	offX := (m.width - boxW + 1) / 2
-	offY := (m.height - boxH + 1) / 2
+	// lipgloss.Place rounds the leftover gap down when centering, so the hit
+	// regions have to use the same floor division or every click inside the
+	// modal is shifted by one cell whenever the gap is odd.
+	offX := (m.width - boxW) / 2
+	offY := (m.height - boxH) / 2
 	if offX < 0 {
 		offX = 0
 	}
@@ -203,7 +229,9 @@ func (m *Model) modalView() string {
 	m.modalX, m.modalY, m.modalW, m.modalH = offX, offY, boxW, boxH
 
 	if footerIndex >= 0 && footerIndex < len(lines) {
-		lines[footerIndex] = fitLine(m.renderHints(contentX, contentY+footerIndex, footer...), contentW)
+		// Drop hints that would be cut off by the box so every recorded hit
+		// region still corresponds to visible text.
+		lines[footerIndex] = fitLine(m.renderHintsWidth(contentX, contentY+footerIndex, contentW, footer...), contentW)
 	}
 	for _, h := range pending {
 		if h.Y < 0 || h.Y >= len(lines) {

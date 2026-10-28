@@ -46,3 +46,15 @@ func OpenPath(path string) error {
 		return exec.Command("xdg-open", path).Start()
 	}
 }
+
+// OpenURL opens a web page in the user's default browser.
+func OpenURL(rawURL string) error {
+	switch runtime.GOOS {
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", rawURL).Start()
+	case "darwin":
+		return exec.Command("open", rawURL).Start()
+	default:
+		return exec.Command("xdg-open", rawURL).Start()
+	}
+}

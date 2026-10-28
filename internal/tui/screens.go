@@ -10,6 +10,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -228,7 +229,7 @@ func (m *Model) updateAccounts(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.saveConfig()
 		m.setToast(m.tf("Active account: %s", account.Username), toastSuccess)
 	case "a", "n":
-		m.openAccountForm()
+		m.openAccountTypePicker()
 	case "d":
 		account := m.currentAccount()
 		if account == nil {
@@ -301,6 +302,23 @@ func (m *Model) adjustSetting(key string) {
 			m.saveConfig()
 			m.setToast(m.tf("Download threads: %d", next), toastSuccess)
 		}
+	case "resolution":
+		n := len(resolutionPresets)
+		idx := m.currentResolutionPreset()
+		if idx >= n {
+			if delta > 0 {
+				idx = 0
+			} else {
+				idx = n - 1
+			}
+		} else {
+			idx = (idx + delta + n) % n
+		}
+		preset := resolutionPresets[idx]
+		m.cfg.Settings.Width = preset.Width
+		m.cfg.Settings.Height = preset.Height
+		m.saveConfig()
+		m.setToast(m.tf("Resolution: %d × %d", preset.Width, preset.Height), toastSuccess)
 	}
 }
 
@@ -313,13 +331,15 @@ func (m *Model) editSetting() tea.Cmd {
 	case "jvm":
 		m.openPrompt(promptJVMArgs, m.t("JVM arguments"), m.cfg.Settings.JVMArgs, m.t("Extra flags passed to Java, e.g. -XX:+UseG1GC"), 64)
 	case "resolution":
-		m.openPrompt(promptResolution, m.t("Window size"), fmt.Sprintf("%dx%d", m.cfg.Settings.Width, m.cfg.Settings.Height), m.t("width x height · 854x480"), 16)
+		m.openResolutionPicker()
 	case "threads":
 		m.openPrompt(promptThreads, m.t("Download threads"), fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), m.t("1–32 parallel downloads"), 4)
 	case "language":
 		m.openLanguagePicker()
 	case "data":
-		_ = util.OpenPath(m.layout.Root)
+		m.openPrompt(promptDataDir, m.t("Data directory"), m.cfg.Settings.DataDir, m.t("Leave empty to use the default .minecraft folder."), 260)
+	case "microsoft":
+		m.openPrompt(promptMicrosoftClientID, m.t("Microsoft Client ID"), m.cfg.Settings.MicrosoftClientID, m.t("Optional Azure application (client) ID. Leave empty to use the built-in client."), 64)
 	}
 	return nil
 }
@@ -392,11 +412,65 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		}
 		m.modal = modalNone
 		return m, detectJavaCmd(value)
+	case promptDataDir:
+		return m.applyDataDir(value)
+	case promptMicrosoftClientID:
+		m.cfg.Settings.MicrosoftClientID = value
+		m.saveConfig()
+		m.modal = modalNone
+		m.setToast(m.t("Settings saved"), toastSuccess)
+		return m, nil
 	}
 	m.saveConfig()
 	m.modal = modalNone
 	m.setToast(m.t("Settings saved"), toastSuccess)
 	return m, nil
+}
+
+// applyDataDir switches the game data root at runtime. The config file stays
+// in the bootstrap root, so changing the data directory can never make the
+// launcher lose its own settings.
+func (m *Model) applyDataDir(value string) (tea.Model, tea.Cmd) {
+	if m.task != nil || m.game != nil {
+		m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation or launch to finish.")}
+		m.modal = modalAlert
+		return m, nil
+	}
+	root, err := paths.ResolveDataDir(value)
+	if err != nil {
+		m.alert = AlertState{Title: m.t("Data directory"), Body: err.Error()}
+		m.modal = modalAlert
+		return m, nil
+	}
+	layout := paths.New(root)
+	if err := layout.Ensure(); err != nil {
+		m.alert = AlertState{Title: m.t("Data directory"), Body: err.Error()}
+		m.modal = modalAlert
+		return m, nil
+	}
+	if value == "" {
+		m.cfg.Settings.DataDir = ""
+	} else {
+		m.cfg.Settings.DataDir = layout.Root
+	}
+	if layout.Root == m.layout.Root {
+		m.saveConfig()
+		m.modal = modalNone
+		m.setToast(m.tf("Data directory: %s", layout.Root), toastSuccess)
+		return m, nil
+	}
+	m.layout = layout
+	m.DataRoot = layout.Root
+	m.installed = install.InstalledSet(layout)
+	m.manifest = nil
+	m.manifestLoading = true
+	m.manifestAt = time.Time{}
+	m.rebuildVersions()
+	m.modal = modalNone
+	m.saveConfig()
+	m.addLog("launcher", "data directory: "+layout.Root)
+	m.setToast(m.tf("Data directory: %s", layout.Root), toastSuccess)
+	return m, m.loadManifestCmd(true)
 }
 
 func (m *Model) updateConsole(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

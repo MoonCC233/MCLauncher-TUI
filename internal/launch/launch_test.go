@@ -175,6 +175,62 @@ func TestBuildDefaultArguments(t *testing.T) {
 	}
 }
 
+func TestBuildMicrosoftAccount(t *testing.T) {
+	opts := fixture(t)
+	opts.Account = config.Account{
+		Username:    "Alex",
+		UUID:        "069a79f4-44e9-4726-a5be-fca90e38aaf5",
+		Kind:        "microsoft",
+		AccessToken: "minecraft-access-token",
+		XUID:        "2535400000000003",
+	}
+	spec, err := Build(opts)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	for _, want := range []string{
+		"--uuid", "069a79f444e94726a5befca90e38aaf5",
+		"--accessToken", "minecraft-access-token",
+		"--userType", "msa",
+		"--xuid", "2535400000000003",
+	} {
+		if !contains(spec.Args, want) {
+			t.Errorf("args missing %q:\n%v", want, spec.Args)
+		}
+	}
+
+	opts.Account.AccessToken = " "
+	if _, err := Build(opts); err == nil || !strings.Contains(err.Error(), "no access token") {
+		t.Errorf("Build without a token error = %v, want no access token", err)
+	}
+}
+
+func TestBuildMicrosoftLegacyArguments(t *testing.T) {
+	opts := fixture(t)
+	opts.Account = config.Account{
+		Username:    "Alex",
+		UUID:        "069a79f4-44e9-4726-a5be-fca90e38aaf5",
+		Kind:        "microsoft",
+		AccessToken: "minecraft-access-token",
+		XUID:        "2535400000000003",
+	}
+	opts.Version.MinecraftArguments = "--username ${auth_player_name} --accessToken ${auth_access_token} --userType ${user_type} --xuid ${auth_xuid}"
+
+	spec, err := Build(opts)
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	for _, want := range []string{
+		"--accessToken", "minecraft-access-token",
+		"--userType", "msa",
+		"--xuid", "2535400000000003",
+	} {
+		if !contains(spec.Args, want) {
+			t.Errorf("legacy args missing %q:\n%v", want, spec.Args)
+		}
+	}
+}
+
 func TestBuildJVMArgsAndLogConfig(t *testing.T) {
 	opts := fixture(t)
 	opts.Version.Arguments = &mojang.Arguments{

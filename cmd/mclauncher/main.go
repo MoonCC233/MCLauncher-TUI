@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -25,7 +25,7 @@ func main() {
 		dataDir       = flag.String("data-dir", "", "data directory (overrides MCLAUNCHER_DATA_DIR)")
 		showVersion   = flag.Bool("version", false, "print version and exit")
 		preview       = flag.Bool("preview", false, "render a demo frame to stdout and exit")
-		previewScreen = flag.String("preview-screen", "home", "preview screen: home, instances, versions, accounts, settings, console, help, form, progress, language, java")
+		previewScreen = flag.String("preview-screen", "home", "preview screen: home, instances, versions, accounts, settings, console, help, form, progress, language, java, account-type, microsoft, microsoft-error, resolution")
 		previewWidth  = flag.Int("width", 120, "preview width")
 		previewHeight = flag.Int("height", 38, "preview height")
 		lang          = flag.String("lang", "", "UI language: en, es, fr, de, zh-Hans, zh-Hant, ja, ar, pt-BR, pt-PT, ru, ko, tr, vi")
@@ -52,26 +52,60 @@ func main() {
 		os.Exit(1)
 	}
 
-	var (
-		layout paths.Layout
-		err    error
-	)
+	var bootstrapRoot string
 	if *dataDir != "" {
-		abs, absErr := filepath.Abs(*dataDir)
+		abs, absErr := paths.ResolveDataDir(*dataDir)
 		if absErr != nil {
 			fmt.Fprintln(os.Stderr, "invalid data directory:", absErr)
 			os.Exit(1)
 		}
-		layout = paths.New(abs)
+		bootstrapRoot = abs
 	} else {
 		root, rootErr := paths.DefaultRoot()
 		if rootErr != nil {
 			fmt.Fprintln(os.Stderr, "could not resolve data directory:", rootErr)
 			os.Exit(1)
 		}
-		layout = paths.New(root)
+		bootstrapRoot = root
 	}
-	if err = layout.Ensure(); err != nil {
+	if err := os.MkdirAll(bootstrapRoot, 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "could not create data directory:", err)
+		os.Exit(1)
+	}
+	bootstrap := paths.New(bootstrapRoot)
+
+	cfg, cfgErr := config.Load(bootstrap.ConfigFile)
+	notice := ""
+	if cfgErr != nil {
+		backup := config.BackupCorrupt(bootstrap.ConfigFile)
+		notice = "Config could not be loaded; starting with defaults."
+		if backup != "" {
+			notice = "Config was corrupt and has been backed up."
+		}
+		log.Printf("config load failed: %v (backup: %s)", cfgErr, backup)
+		cfg = &config.Config{
+			Path:        bootstrap.ConfigFile,
+			DataVersion: config.DataVersion,
+			Settings:    config.DefaultSettings(),
+		}
+	}
+
+	dataRoot := bootstrapRoot
+	envOverride := strings.TrimSpace(os.Getenv("MCLAUNCHER_DATA_DIR")) != ""
+	if *dataDir == "" && !envOverride && cfg.Settings.DataDir != "" {
+		resolved, resolveErr := paths.ResolveDataDir(cfg.Settings.DataDir)
+		if resolveErr != nil {
+			notice = "Could not use the configured data directory; using the default."
+			log.Printf("data directory %q: %v", cfg.Settings.DataDir, resolveErr)
+		} else {
+			dataRoot = resolved
+		}
+	}
+	layout := paths.New(dataRoot)
+	if layout.Root == bootstrapRoot && cfg.Settings.DataDir != "" {
+		cfg.Settings.DataDir = ""
+	}
+	if err := layout.Ensure(); err != nil {
 		fmt.Fprintln(os.Stderr, "could not create data directory:", err)
 		os.Exit(1)
 	}
@@ -84,25 +118,10 @@ func main() {
 	} else {
 		log.SetOutput(os.Stderr)
 	}
-	log.Printf("mclauncher %s starting", version.Full())
+	log.Printf("mclauncher %s starting (data: %s)", version.Full(), layout.Root)
 	defer log.Printf("mclauncher exiting")
 
-	cfg, cfgErr := config.Load(layout.ConfigFile)
-	notice := ""
-	if cfgErr != nil {
-		backup := config.BackupCorrupt(layout.ConfigFile)
-		notice = "Config could not be loaded; starting with defaults."
-		if backup != "" {
-			notice = "Config was corrupt and has been backed up."
-		}
-		log.Printf("config load failed: %v (backup: %s)", cfgErr, backup)
-		cfg = &config.Config{
-			Path:        layout.ConfigFile,
-			DataVersion: config.DataVersion,
-			Settings:    config.DefaultSettings(),
-		}
-	}
-	if _, statErr := os.Stat(layout.ConfigFile); os.IsNotExist(statErr) {
+	if _, statErr := os.Stat(cfg.Path); os.IsNotExist(statErr) {
 		if saveErr := cfg.Save(); saveErr != nil {
 			log.Printf("could not write initial config: %v", saveErr)
 		}

@@ -10,16 +10,17 @@
 
 ## 功能
 
-- **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏。
+- **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏；首页使用五线像素字 “MCLAUNCHER” 标志，字距随窗口宽度自适应，窗口过窄时回退为渐变文字。
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
-- **离线账户**：按 Java 版离线 UUID 规则生成身份，支持多账户与快速切换。
+- **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
 - **Java 运行时管理**：自动扫描常见安装位置，也可手动指定；按版本要求选择 Java，并在版本过旧时提示。
-- **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数、游戏窗口尺寸。
+- **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数；窗口尺寸提供从 854×480 到 4K 的常用预设，也可手动输入自定义分辨率。
 - **可靠的下载**：多线程下载、SHA-1 校验、原子写入配置文件。
 - **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录。
-- **原版覆盖范围**：正式版、快照与旧版本；旧版 assets 的 virtual / map_to_resources 索引也有处理。
+- **版本分类**：正式版、快照、远古版（Beta / Alpha）与愚人节版独立筛选；正式版和快照分类会自动排除愚人节版本；旧版 assets 的 virtual / map_to_resources 索引也有处理。
+- **便携数据目录**：默认把游戏数据放在当前目录的 `.minecraft`，可在设置中改到任意路径。
 
 ## 界面预览
 
@@ -41,6 +42,10 @@
 | 新建实例 | 安装进度 |
 | --- | --- |
 | ![表单](docs/form.png) | ![进度](docs/progress.png) |
+
+| 账户类型 | 分辨率预设 |
+| --- | --- |
+| ![账户类型](docs/account-type.png) | ![分辨率](docs/resolution.png) |
 
 </details>
 
@@ -89,10 +94,13 @@ Windows 下输出文件为 `mclauncher.exe`。
 ## 使用流程
 
 1. **添加账户**  
-   进入 `Accounts`，按 `a` 输入用户名。离线账户名需为 3–16 位字母、数字或下划线。按 `enter` 设为当前账户。
+   进入 `Accounts`，按 `a` 选择账户类型：  
+   - **离线账户**：输入 3–16 位字母、数字或下划线用户名，按 Java 版离线 UUID 规则生成身份。  
+   - **Microsoft 正版账户**：选择 `Sign in with Microsoft`。启动器会申请设备代码并自动打开 `https://www.microsoft.com/link`，在浏览器中输入弹窗里的代码并完成登录；也可以按 `c` 复制代码、按 `r` 重新申请。登录成功后会自动获取 Minecraft 档案、UUID 与 XUID。  
+   多个账户可共存，按 `enter` 设为当前账户。
 
 2. **安装版本**  
-   进入 `Versions`，等待版本清单加载。使用 `/` 搜索，`t` 在“全部 / 正式版 / 快照”之间切换。  
+   进入 `Versions`，等待版本清单加载。使用 `/` 搜索，`t` 在“全部 / 正式版 / 快照 / 远古版 / 愚人节版”之间循环切换；愚人节版本会显示紫色 `April Fools` 标签。  
    - `enter`：安装（如果尚未安装）并打开“新建实例”表单。  
    - `i`：仅安装，不创建实例。  
    - `r`：重新拉取 Mojang 版本清单。
@@ -104,7 +112,11 @@ Windows 下输出文件为 `mclauncher.exe`。
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录。
 
 5. **调整设置**  
-   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数和界面语言。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。语言行会打开语言选择器，第一项“跟随系统”会跟随操作系统区域设置。
+   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数、界面语言、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。  
+   - **窗口尺寸**：打开常用分辨率预设（854×480、1280×720、1366×768、1600×900、1920×1080、2560×1440、3840×2160），选择 `Custom…` 可手动输入任意 `宽x高`。  
+   - **数据目录**：留空使用默认 `.minecraft`；也可以输入绝对路径或 `~/...`。切换后会立即重新扫描已安装版本，并保留原有配置文件位置。  
+   - **Microsoft 客户端 ID**：留空使用内置公开客户端；只有使用自己注册的 Azure 应用时才需要填写 GUID。自定义 Entra 应用需要获得 Mojang 批准，否则 Minecraft 服务可能返回 403。  
+   - **语言**：打开语言选择器，第一项“跟随系统”会跟随操作系统区域设置。
 
 ## 快捷键
 
@@ -125,8 +137,8 @@ Windows 下输出文件为 `mclauncher.exe`。
 | 页面 | 键与作用 |
 | --- | --- |
 | Instances | `n` 新建实例 · `e` 编辑 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
-| Versions | `/` 筛选 · `t` 切换类型 · `enter` 安装并创建实例 · `i` 仅安装 · `r` 刷新 · `o` 打开版本目录 |
-| Accounts | `a` / `n` 添加离线账户 · `enter` 设为当前 · `d` 移除账户 |
+| Versions | `/` 筛选 · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `r` 刷新 · `o` 打开版本目录 |
+| Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 |
 
@@ -165,26 +177,11 @@ Windows 下输出文件为 `mclauncher.exe`。
 
 ## 数据目录
 
-默认位置：
-
-| 平台 | 路径 |
-| --- | --- |
-| Windows | `%APPDATA%\mclauncher` |
-| macOS | `~/Library/Application Support/mclauncher` |
-| Linux | `$XDG_DATA_HOME/mclauncher` 或 `~/.local/share/mclauncher` |
-
-可通过环境变量或命令行参数覆盖：
-
-```bash
-MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
-./mclauncher --data-dir ./portable-data
-```
-
-目录结构：
+默认使用**便携模式**：所有游戏数据放在启动器当前工作目录的 `.minecraft` 中，启动器不会写入 `%APPDATA%` 或用户主目录。
 
 ```text
-mclauncher/
-├── config.json                 # 账户、实例与设置
+<当前目录>/.minecraft/
+├── config.json                 # 账户、实例与设置（固定保存在启动根目录）
 ├── versions/<id>/              # 版本 JSON、client jar、natives、安装标记
 ├── libraries/                  # 全局共享依赖
 ├── assets/
@@ -197,6 +194,21 @@ mclauncher/
 └── cache/
 ```
 
+可以在 `Settings → Data directory` 中把**游戏数据**改到其他位置，例如 `D:\MCLauncher\.minecraft` 或 `~/mc-data`。切换后启动器会立即使用新目录并在下次启动时继续生效；`config.json` 仍留在原来的启动根目录，避免改路径后丢失设置。清空该设置即可恢复默认 `.minecraft`。
+
+也可以通过环境变量或命令行参数覆盖启动根目录：
+
+```bash
+MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
+./mclauncher --data-dir ./portable-data
+```
+
+`--data-dir` 和 `MCLAUNCHER_DATA_DIR` 的优先级高于设置中的自定义路径；使用它们时，`config.json` 和游戏数据都会落在指定目录。
+
+从旧版本升级时，`%APPDATA%\mclauncher`（或其他旧数据目录）不会自动迁移。用 `--data-dir` / `MCLAUNCHER_DATA_DIR` 指向旧目录即可直接沿用旧配置、版本和存档；也可以把旧 `config.json` 复制到当前的 `.minecraft`，再在设置中把游戏数据指向旧目录。
+
+> Microsoft 登录令牌保存在 `config.json` 中（明文 JSON）。请勿把该文件提交到公开仓库或分享给他人；移除账户会同时删除对应令牌。
+
 删除实例只会从启动器配置中移除条目，`instances/<id>/` 中的文件会保留。
 
 ## 命令行参数
@@ -206,7 +218,7 @@ mclauncher/
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress | language | java
+--preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress | language | java | account-type | microsoft | microsoft-error | resolution
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```
@@ -233,7 +245,7 @@ internal/install/       下载、校验、资源索引与安装标记
 internal/launch/        Java 命令行构建、进程启动、输出流
 internal/java/          Java 运行时扫描、版本解析与选择
 internal/config/        配置持久化、账户与实例管理
-internal/auth/          离线用户名校验与离线 UUID
+internal/auth/          离线用户名校验、离线 UUID、Microsoft OAuth / Xbox / Minecraft 登录
 internal/paths/         数据目录布局
 internal/util/          路径安全、原子 JSON、参数解析、格式化
 internal/version/       版本注入
@@ -257,13 +269,13 @@ go run scripts/ansi2html.go preview-home.ansi preview-home.html mclauncher
 
 ```bash
 # 1. 编写并提交发布说明
-git add docs/releases/v0.1.1.md
-git commit -m "docs: add v0.1.1 release notes"
+git add docs/releases/v0.2.0.md
+git commit -m "docs: add v0.2.0 release notes"
 git push
 
 # 2. 打标签并触发发布
-git tag -a v0.1.1 -m "v0.1.1"
-git push origin v0.1.1
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin v0.2.0
 ```
 
 Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoReleaser 的 `--release-notes` 写入 Release 页面；说明文件缺失时工作流会直接失败，确保每个版本都有更新详情。
@@ -278,7 +290,7 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 
 ## 已知限制
 
-- **仅支持离线账户**：未实现 Microsoft / OAuth 登录，`auth_access_token` 固定为占位值。
+- **Microsoft 登录依赖网络与浏览器**：设备代码流程需要访问 Microsoft 登录页；部分账户首次使用前可能需要先在 `xbox.com` 创建 Xbox 档案。自定义 Entra 客户端需要 Mojang 审批，内置客户端开箱即用。
 - **仅支持 Minecraft 原版**：尚未集成 Forge、Fabric、Quilt、OptiFine 等模组加载器。
 - **不管理 Java 安装**：只检测和选择已安装的 Java；不会下载 JDK。
 - **退出启动器不会终止游戏**：启动器退出后游戏继续运行，但后续 stdout/stderr 输出可能丢失。需要停止游戏时请先在 Console 中按 `x`。

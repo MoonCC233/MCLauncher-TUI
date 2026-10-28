@@ -56,6 +56,9 @@ const (
 	modalProgress
 	modalAlert
 	modalLanguage
+	modalAccountAdd
+	modalMicrosoft
+	modalResolution
 )
 
 type formKind int
@@ -73,6 +76,8 @@ const (
 	promptResolution
 	promptThreads
 	promptJavaPath
+	promptDataDir
+	promptMicrosoftClientID
 )
 
 type confirmKind int
@@ -201,11 +206,15 @@ type Model struct {
 	accountOffset  int
 	settingsCursor int
 
-	versionScope int // 0 all, 1 releases, 2 snapshots
+	versionScope int // 0 all, 1 releases, 2 snapshots, 3 ancient, 4 April Fools
 	filter       string
 	filterActive bool
 	search       textinput.Model
 	visible      []mojang.VersionSummary
+
+	accountTypePick int
+	resolutionPick  int
+	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
 	javaScanned  bool
@@ -430,6 +439,19 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case toastMsg:
 		m.setToast(msg.text, msg.kind)
 		return m, nil
+	case microsoftCodeMsg:
+		return m.handleMicrosoftCode(msg)
+	case microsoftTickMsg:
+		if m.modal != modalMicrosoft || msg.attempt != m.ms.Attempt || m.ms.Stage != "waiting" {
+			return m, nil
+		}
+		return m, pollMicrosoftCmd(m.client, m.ms.ClientID, m.ms.Code)
+	case microsoftPollMsg:
+		return m.handleMicrosoftPoll(msg)
+	case microsoftSessionMsg:
+		return m.handleMicrosoftSession(msg)
+	case microsoftRefreshedMsg:
+		return m.handleMicrosoftRefreshed(msg)
 	}
 	return m, nil
 }
@@ -520,11 +542,24 @@ func (m *Model) rebuildVersions() {
 	scope := m.versionScope
 	out := make([]mojang.VersionSummary, 0, len(m.manifest.Versions))
 	for _, v := range m.manifest.Versions {
-		if scope == 1 && v.Type != "release" {
-			continue
-		}
-		if scope == 2 && v.Type == "release" {
-			continue
+		april := isAprilFoolsVersion(v.ID)
+		switch scope {
+		case 1:
+			if v.Type != "release" || april {
+				continue
+			}
+		case 2:
+			if v.Type != "snapshot" || april {
+				continue
+			}
+		case 3:
+			if v.Type != "old_beta" && v.Type != "old_alpha" {
+				continue
+			}
+		case 4:
+			if !april {
+				continue
+			}
 		}
 		if filter != "" && !strings.Contains(strings.ToLower(v.ID), filter) {
 			continue
@@ -558,7 +593,7 @@ func (m *Model) ensureVersionVisible() {
 }
 
 func (m *Model) listHeight() int {
-	h := m.bodyHeight() - 7
+	h := m.bodyHeight() - 6 - m.filterBarHeight(m.contentWidth())
 	if h < 4 {
 		h = 4
 	}
@@ -647,11 +682,28 @@ func (m *Model) startFilter() tea.Cmd {
 }
 
 func (m *Model) switchScope() {
-	m.versionScope = (m.versionScope + 1) % 3
+	m.versionScope = (m.versionScope + 1) % 5
 	m.versionCursor = 0
 	m.versionOffset = 0
 	m.rebuildVersions()
 }
+
+// aprilFoolsVersions lists the Minecraft Java Edition releases that were
+// published as April Fools jokes. They keep their real manifest type (release
+// or snapshot), so a whitelist is the only reliable way to group them.
+var aprilFoolsVersions = map[string]bool{
+	"2.0":                  true,
+	"15w14a":               true,
+	"1.RV-Pre1":            true,
+	"3D Shareware v1.34":   true,
+	"20w14infinite":        true,
+	"22w13oneblockatatime": true,
+	"23w13a_or_b":          true,
+	"24w14potato":          true,
+	"25w14craftmine":       true,
+}
+
+func isAprilFoolsVersion(id string) bool { return aprilFoolsVersions[id] }
 
 func (m *Model) saveConfig() {
 	if err := m.cfg.Save(); err != nil {
@@ -805,6 +857,10 @@ func (m *Model) settingsRows() []settingsRow {
 	if m.cfg.Settings.Language != "" {
 		language = i18n.NativeName(m.lang)
 	}
+	microsoft := m.t("Built-in")
+	if m.cfg.Settings.MicrosoftClientID != "" {
+		microsoft = util.Truncate(m.cfg.Settings.MicrosoftClientID, 40)
+	}
 	return []settingsRow{
 		{ID: "memory", Label: m.t("Memory"), Value: fmt.Sprintf("%d MB", m.cfg.Settings.MemoryMB),
 			Description: m.t("Memory limit used by instances that do not set their own value.")},
@@ -820,6 +876,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Interface language. System follows your operating system locale.")},
 		{ID: "data", Label: m.t("Data directory"), Value: util.ShortenPath(m.layout.Root, 56),
 			Description: m.t("Versions, assets, libraries and instance game directories.")},
+		{ID: "microsoft", Label: m.t("Microsoft Client ID"), Value: microsoft,
+			Description: m.t("Optional Azure application (client) ID. Leave empty to use the built-in client.")},
 		{ID: "version", Label: m.t("Launcher version"), Value: m.AppVersion,
 			Description: m.t("mclauncher is built with Go, Bubble Tea and Lip Gloss.")},
 	}

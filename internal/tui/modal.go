@@ -25,6 +25,12 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateJavaPicker(msg)
 	case modalLanguage:
 		return m.updateLanguagePicker(msg)
+	case modalAccountAdd:
+		return m.updateAccountType(msg)
+	case modalMicrosoft:
+		return m.updateMicrosoft(msg)
+	case modalResolution:
+		return m.updateResolutionPicker(msg)
 	case modalProgress:
 		if msg.String() == "esc" {
 			m.cancelTask()
@@ -266,13 +272,13 @@ func (m *Model) helpContent(width int) []string {
 		}},
 		{m.t("Versions"), []entry{
 			{"/", m.t("filter by version id")},
-			{"t", m.t("all → releases → snapshots")},
+			{"t", m.t("cycle version filters")},
 			{"enter", m.t("install if needed, then create instance")},
 			{"i", m.t("install without creating an instance")},
 			{"r", m.t("refresh the Mojang manifest")},
 		}},
 		{m.t("Accounts & settings"), []entry{
-			{"a", m.t("add an offline account")},
+			{"a", m.t("add account")},
 			{"enter", m.t("set the active account")},
 			{"s", m.t("rescan Java runtimes")},
 			{"← → / - +", m.t("adjust memory or download threads")},

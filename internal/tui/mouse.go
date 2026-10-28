@@ -16,6 +16,8 @@ const (
 	hitFormField
 	hitJavaRow
 	hitLanguageRow
+	hitAccountTypeRow
+	hitResolutionRow
 )
 
 // hitRegion is a clickable rectangle recorded while the frame is rendered.
@@ -33,6 +35,33 @@ type hitRegion struct {
 func (m *Model) addHit(x, y, w, h int, region hitRegion) {
 	if w <= 0 || h <= 0 {
 		return
+	}
+	// Mouse coordinates can only land inside the terminal. Trim regions that
+	// stick out and drop the ones that are completely off screen, otherwise
+	// clipped content can still steal clicks from visible rows.
+	if m.width > 0 {
+		if x < 0 {
+			w += x
+			x = 0
+		}
+		if w <= 0 || x >= m.width {
+			return
+		}
+		if x+w > m.width {
+			w = m.width - x
+		}
+	}
+	if m.height > 0 {
+		if y < 0 {
+			h += y
+			y = 0
+		}
+		if h <= 0 || y >= m.height {
+			return
+		}
+		if y+h > m.height {
+			h = m.height - y
+		}
 	}
 	region.X, region.Y, region.W, region.H = x, y, w, h
 	m.hits = append(m.hits, region)
@@ -162,6 +191,20 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 			return m.chooseLanguage()
 		}
 		return m, nil
+	case hitAccountTypeRow:
+		double := m.registerClick(hit)
+		m.accountTypePick = hit.Index
+		if double {
+			return m.chooseAccountType()
+		}
+		return m, nil
+	case hitResolutionRow:
+		double := m.registerClick(hit)
+		m.resolutionPick = hit.Index
+		if double {
+			return m.chooseResolution()
+		}
+		return m, nil
 	}
 	return m, nil
 }
@@ -218,6 +261,14 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 	case modalLanguage:
 		if n := m.languagePickerCount(); n > 0 {
 			m.languagePick = clampInt(m.languagePick+dir, 0, n-1)
+		}
+		return m, nil
+	case modalAccountAdd:
+		m.accountTypePick = clampInt(m.accountTypePick+dir, 0, 1)
+		return m, nil
+	case modalResolution:
+		if n := m.resolutionPickerCount(); n > 0 {
+			m.resolutionPick = clampInt(m.resolutionPick+dir, 0, n-1)
 		}
 		return m, nil
 	case modalNone:

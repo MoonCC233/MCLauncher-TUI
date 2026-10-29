@@ -31,11 +31,12 @@ const (
 	ScreenAccounts
 	ScreenSettings
 	ScreenConsole
+	ScreenDownloads
 	screenCount
 )
 
-var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console"}
-var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸"}
+var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console", "Downloads"}
+var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸", "↓"}
 
 type settingsRow struct {
 	ID          string
@@ -117,6 +118,7 @@ type TaskState struct {
 	InstanceID   string
 	CreateName   string
 	CreateMemory int
+	Backgrounded bool
 	Stage        string
 	Detail       string
 	Done         int64
@@ -127,6 +129,22 @@ type TaskState struct {
 	Cancel       context.CancelFunc
 	Cancelled    bool
 	Err          error
+}
+
+type TaskRecord struct {
+	Kind       taskKind
+	Title      string
+	VersionID  string
+	Stage      string
+	Detail     string
+	Status     string
+	Started    time.Time
+	Finished   time.Time
+	Done       int64
+	Total      int64
+	FilesDone  int
+	FilesTotal int
+	Err        string
 }
 
 type FormState struct {
@@ -236,13 +254,14 @@ type Model struct {
 	modalW int
 	modalH int
 
-	modal      modalKind
-	helpScroll int
-	form       FormState
-	prompt     PromptState
-	confirm    ConfirmState
-	alert      AlertState
-	task       *TaskState
+	modal       modalKind
+	helpScroll  int
+	form        FormState
+	prompt      PromptState
+	confirm     ConfirmState
+	alert       AlertState
+	task        *TaskState
+	taskHistory []TaskRecord
 
 	hits []hitRegion
 
@@ -474,7 +493,7 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "shift+tab":
 		m.switchScreen((m.screen + screenCount - 1) % screenCount)
 		return m, nil
-	case "1", "2", "3", "4", "5", "6":
+	case "1", "2", "3", "4", "5", "6", "7":
 		idx := int(msg.String()[0] - '1')
 		if idx >= 0 && idx < int(screenCount) {
 			m.switchScreen(Screen(idx))
@@ -500,6 +519,8 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateSettings(msg)
 	case ScreenConsole:
 		return m.updateConsole(msg)
+	case ScreenDownloads:
+		return m.updateDownloads(msg)
 	}
 	return m, nil
 }

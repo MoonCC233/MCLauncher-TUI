@@ -30,6 +30,7 @@ var previewScreens = []string{
 	"accounts",
 	"settings",
 	"console",
+	"downloads",
 	"help",
 	"form",
 	"progress",

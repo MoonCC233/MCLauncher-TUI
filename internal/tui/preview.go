@@ -115,6 +115,59 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.screen = ScreenSettings
 	case "console":
 		m.screen = ScreenConsole
+	case "downloads":
+		m.screen = ScreenDownloads
+		m.task = &TaskState{
+			Kind:         taskInstall,
+			Title:        m.tf("Installing %s", "1.21.4"),
+			VersionID:    "1.21.4",
+			Stage:        "Downloading game files",
+			Detail:       "museum_ui/bedrock_footprint.png",
+			Done:         148_200_000,
+			Total:        283_400_000,
+			FilesDone:    271,
+			FilesTotal:   512,
+			Started:      now.Add(-32 * time.Second),
+			Backgrounded: true,
+		}
+		m.taskHistory = []TaskRecord{
+			{
+				Kind:       taskInstall,
+				Title:      m.tf("Installing %s", "1.21.4"),
+				VersionID:  "1.21.4",
+				Stage:      "Completed",
+				Status:     "completed",
+				Started:    now.Add(-26 * time.Minute),
+				Finished:   now.Add(-24*time.Minute - 12*time.Second),
+				Done:       283_400_000,
+				Total:      283_400_000,
+				FilesDone:  512,
+				FilesTotal: 512,
+			},
+			{
+				Kind:       taskInstall,
+				Title:      m.tf("Installing %s", "1.20.1"),
+				VersionID:  "1.20.1",
+				Stage:      "Downloading game files",
+				Status:     "cancelled",
+				Started:    now.Add(-2*time.Hour - 8*time.Minute),
+				Finished:   now.Add(-2*time.Hour - 6*time.Minute),
+				Done:       42_100_000,
+				Total:      244_800_000,
+				FilesDone:  96,
+				FilesTotal: 438,
+			},
+			{
+				Kind:      taskInstall,
+				Title:     m.tf("Installing %s", "1.21.3"),
+				VersionID: "1.21.3",
+				Stage:     "Downloading game files",
+				Status:    "failed",
+				Started:   now.Add(-26 * time.Hour),
+				Finished:  now.Add(-26*time.Hour + 41*time.Second),
+				Err:       "download https://piston-data.mojang.com/...: connection reset by peer",
+			},
+		}
 	case "theme":
 		m.screen = ScreenSettings
 		m.settingsCursor = 6

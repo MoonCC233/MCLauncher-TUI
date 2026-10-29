@@ -34,8 +34,13 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case modalTheme:
 		return m.updateThemePicker(msg)
 	case modalProgress:
-		if msg.String() == "esc" {
+		switch msg.String() {
+		case "esc":
 			m.cancelTask()
+		case "b":
+			m.backgroundTask(false)
+		case "d":
+			m.backgroundTask(true)
 		}
 		return m, nil
 	case modalAlert:
@@ -255,7 +260,7 @@ func (m *Model) helpContent(width int) []string {
 	}{
 		{m.t("Sections"), []entry{
 			{"tab / shift+tab", m.t("next / previous section")},
-			{"1 … 6", m.t("jump directly to a section")},
+			{"1 … 7", m.t("jump directly to a section")},
 			{"esc", m.t("back to Home")},
 			{"ctrl+c", m.t("quit launcher")},
 		}},

@@ -446,15 +446,24 @@ func (m *Model) handleInstallEvent(ev install.Event) {
 
 func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	task := m.task
+	backgrounded := task != nil && task.Backgrounded
 	m.task = nil
-	m.modal = modalNone
+	if !backgrounded && m.modal == modalProgress {
+		m.modal = modalNone
+	}
 	if msg.cancelled || errors.Is(msg.err, context.Canceled) {
+		m.recordTask(task, "cancelled", nil)
 		m.addLog("launcher", "task cancelled")
 		m.setToast(m.t("Cancelled"), toastInfo)
 		return m, nil
 	}
 	if msg.err != nil {
+		m.recordTask(task, "failed", msg.err)
 		m.addLog("error", msg.err.Error())
+		if backgrounded {
+			m.setToast(m.t("Task failed — see Downloads"), toastError)
+			return m, nil
+		}
 		title := m.t("Installation failed")
 		if msg.kind == taskLaunch {
 			title = m.t("Could not launch Minecraft")
@@ -463,17 +472,28 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalAlert
 		return m, nil
 	}
+	m.recordTask(task, "completed", nil)
 	m.installed = install.InstalledSet(m.layout)
 	if msg.kind == taskInstall && task != nil && task.CreateName != "" {
-		inst, err := m.cfg.AddInstance(task.CreateName, task.VersionID, task.CreateMemory)
+		versionID := task.VersionID
+		if msg.versionID != "" {
+			versionID = msg.versionID
+		}
+		inst, err := m.cfg.AddInstance(task.CreateName, versionID, task.CreateMemory)
 		if err != nil {
 			m.alert = AlertState{Title: m.t("Could not create instance"), Body: err.Error()}
+			if backgrounded {
+				m.setToast(m.t("Could not create instance"), toastError)
+				return m, nil
+			}
 			m.modal = modalAlert
 			return m, nil
 		}
 		m.instanceCursor = len(m.cfg.Instances) - 1
 		m.homeCursor = 0
-		m.screen = ScreenHome
+		if !backgrounded {
+			m.screen = ScreenHome
+		}
 		m.setToast(m.tf("Created %s", inst.Name), toastSuccess)
 		m.addLog("launcher", "created instance "+inst.Name)
 		return m, nil

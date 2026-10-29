@@ -178,7 +178,11 @@ func (m *Model) modalView() string {
 			title = m.t("Working")
 		}
 		body = m.progressBody(contentW)
-		footer = []hintSpec{hintAction("esc", m.t("cancel"), "esc")}
+		footer = []hintSpec{
+			hintAction("b", m.t("background"), "b"),
+			hintAction("d", m.t("downloads"), "d"),
+			hintAction("esc", m.t("cancel"), "esc"),
+		}
 	case modalAlert:
 		accent = colRed
 		title = styleRed.Render(m.alert.Title)

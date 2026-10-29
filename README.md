@@ -20,6 +20,7 @@
 - **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数；窗口尺寸提供从 854×480 到 4K 的常用预设，也可手动输入自定义分辨率。
 - **可靠的下载**：多线程下载、SHA-1 校验、原子写入配置文件。
 - **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录。
+- **后台任务与下载记录**：安装和游戏启动可发送到后台，在 `Downloads` 页面查看进度、重开进度弹窗或取消任务；最近 20 条任务会保留在历史记录中。
 - **版本分类**：正式版、快照、远古版（Beta / Alpha）与愚人节版独立筛选；正式版和快照分类会自动排除愚人节版本；旧版 assets 的 virtual / map_to_resources 索引也有处理。
 - **便携数据目录**：默认把游戏数据放在当前目录的 `.minecraft`，可在设置中改到任意路径。
 
@@ -112,7 +113,10 @@ Windows 下输出文件为 `mclauncher.exe`。
 4. **查看日志 / 停止游戏**  
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录。
 
-5. **调整设置**  
+5. **后台任务与下载记录**  
+   安装或启动时按 `b` 将任务留在后台，按 `d` 直接打开 `Downloads`。在 `Downloads` 中按 `enter` 重开进度弹窗，按 `x` 取消任务；完成、失败和取消的任务会保留在历史记录中。
+
+6. **调整设置**  
    在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数、界面语言、主题、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。  
    - **窗口尺寸**：打开常用分辨率预设（854×480、1280×720、1366×768、1600×900、1920×1080、2560×1440、3840×2160），选择 `Custom…` 可手动输入任意 `宽x高`。  
    - **主题**：打开主题选择器，选择预设或 `Custom accent…` 输入十六进制颜色；`Reset accent` 恢复主题默认强调色。  
@@ -125,7 +129,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 | 键 | 作用 |
 | --- | --- |
 | `tab` / `shift+tab` | 切换页面 |
-| `1` … `6` | 直接跳转到指定页面 |
+| `1` … `7` | 直接跳转到指定页面 |
 | `↑` `↓` / `k` `j` | 移动光标 |
 | `pgup` / `pgdown` | 翻页 |
 | `home` / `end` | 跳到首项 / 末项 |
@@ -143,6 +147,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 |
+| Downloads | `enter` 重开当前进度 · `x` 取消当前任务 |
 
 ### 鼠标操作
 
@@ -220,7 +225,7 @@ MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution
+--preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```

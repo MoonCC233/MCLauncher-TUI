@@ -359,7 +359,11 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 			if versionJSON.Logging != nil && versionJSON.Logging.Client != nil {
 				candidate := install.LogConfigPath(layout, versionJSON)
 				if st, statErr := os.Stat(candidate); statErr == nil && !st.IsDir() {
-					logConfig = candidate
+					if consoleConfig, configErr := install.ConsoleLogConfig(layout, candidate); configErr == nil {
+						logConfig = consoleConfig
+					} else {
+						logConfig = candidate
+					}
 				}
 			}
 

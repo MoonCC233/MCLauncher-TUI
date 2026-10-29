@@ -11,6 +11,7 @@ import (
 	"github.com/muesli/termenv"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 )
@@ -192,6 +193,18 @@ func TestApplyDataDirBlockedWhileBusy(t *testing.T) {
 			t.Errorf("data directory changed while the game was running")
 		}
 	})
+}
+
+func TestQuitAppStopsRunningGame(t *testing.T) {
+	m := newTestModel(t)
+	m.game = &GameState{Session: &launch.Session{}}
+	m.quitApp()
+	if !m.quit {
+		t.Error("quitApp did not mark the model as quitting")
+	}
+	if !m.game.Stopping {
+		t.Error("quitApp did not ask the game session to stop")
+	}
 }
 
 func TestHomeTitleIsAsciiArt(t *testing.T) {

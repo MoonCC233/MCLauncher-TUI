@@ -414,9 +414,13 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 			if checkCancel() {
 				return
 			}
-			session, err := launch.Start(spec)
+			session, err := launch.Start(ctx, spec)
 			if err != nil {
 				fail(err)
+				return
+			}
+			if checkCancel() {
+				_ = session.Stop()
 				return
 			}
 			started := time.Now()

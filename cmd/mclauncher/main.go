@@ -142,9 +142,17 @@ func main() {
 	model := tui.New(cfg, layout, util.NewHTTPClient(), version.Full(), notice)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	model.SetSender(program.Send)
-	if _, err := program.Run(); err != nil {
-		log.Printf("tui error: %v", err)
-		fmt.Fprintln(os.Stderr, "mclauncher:", err)
+	final, runErr := program.Run()
+	// Bubble Tea can exit on input errors as well as the quit key; make sure a
+	// game started by the launcher does not survive that path.
+	if finalModel, ok := final.(*tui.Model); ok {
+		finalModel.Shutdown()
+	} else {
+		model.Shutdown()
+	}
+	if runErr != nil {
+		log.Printf("tui error: %v", runErr)
+		fmt.Fprintln(os.Stderr, "mclauncher:", runErr)
 		os.Exit(1)
 	}
 	if err := cfg.Save(); err != nil {

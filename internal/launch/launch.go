@@ -2,6 +2,7 @@ package launch
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -240,11 +241,16 @@ type Session struct {
 	stopErr  error
 }
 
-func Start(spec *Spec) (*Session, error) {
+func Start(ctx context.Context, spec *Spec) (*Session, error) {
 	if spec == nil {
 		return nil, fmt.Errorf("missing launch spec")
 	}
-	cmd := exec.Command(spec.Path, spec.Args...)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	// Bind the process to the task context so quitting the launcher while Java
+	// is starting cannot leave an orphan behind.
+	cmd := exec.CommandContext(ctx, spec.Path, spec.Args...)
 	cmd.Dir = spec.Dir
 	cmd.Env = spec.Env
 	hideWindow(cmd)
@@ -334,6 +340,20 @@ func (s *Session) Stop() error {
 		s.stopErr = terminate(s.cmd)
 	})
 	return s.stopErr
+}
+
+// Kill forcefully terminates the process tree without waiting for a graceful
+// shutdown. It is used when the launcher is about to exit.
+func (s *Session) Kill() error {
+	if s == nil {
+		return nil
+	}
+	select {
+	case <-s.done:
+		return nil
+	default:
+	}
+	return forceKill(s.cmd)
 }
 
 func ExitCode(err error) int {

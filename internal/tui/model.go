@@ -382,7 +382,51 @@ func (m *Model) quitApp() (tea.Model, tea.Cmd) {
 	if m.task != nil && m.task.Cancel != nil {
 		m.task.Cancel()
 	}
+	m.stopGameForQuit()
 	return m, tea.Quit
+}
+
+// Shutdown stops any game process owned by the launcher. It is safe to call
+// after the Bubble Tea program has returned.
+func (m *Model) Shutdown() {
+	m.stopGameForQuit()
+}
+
+// stopGameForQuit makes sure no Minecraft process is left behind when the
+// launcher exits. Stop() is graceful; fall back to Kill() so a stuck JVM does
+// not survive the launcher.
+func (m *Model) stopGameForQuit() {
+	if m.game == nil || m.game.Session == nil {
+		return
+	}
+	if !m.game.Stopping {
+		m.addLog("launcher", "stopping Minecraft before exit…")
+	}
+	m.game.Stopping = true
+	session := m.game.Session
+	if session.Pid() == 0 {
+		return
+	}
+	stopped := make(chan struct{})
+	go func() {
+		_ = session.Stop()
+		close(stopped)
+	}()
+	select {
+	case <-session.Done():
+		return
+	case <-stopped:
+	case <-time.After(2 * time.Second):
+	}
+	select {
+	case <-session.Done():
+	case <-time.After(time.Second):
+		_ = session.Kill()
+		select {
+		case <-session.Done():
+		case <-time.After(time.Second):
+		}
+	}
 }
 
 // Update runs the message through the model and then makes sure the title

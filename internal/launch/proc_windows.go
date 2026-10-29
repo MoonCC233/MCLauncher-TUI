@@ -16,6 +16,10 @@ func hideWindow(cmd *exec.Cmd) {
 }
 
 func terminate(cmd *exec.Cmd) error {
+	return forceKill(cmd)
+}
+
+func forceKill(cmd *exec.Cmd) error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}

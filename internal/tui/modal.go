@@ -319,7 +319,6 @@ func (m *Model) helpContent(width int) []string {
 			{"p", m.t("open resources & mods")},
 			{"d", m.t("delete instance (files are kept)")},
 			{"o", m.t("open the instance folder")},
-			{"m", m.t("manage mods for the selected instance")},
 			{"x", m.t("stop the running game")},
 		}},
 		{m.t("Versions"), []entry{

@@ -161,6 +161,15 @@ func (m *Model) modalView() string {
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("cancel")),
 		}
+	case modalTheme:
+		title = m.t("Theme")
+		pickerBody, pickerHits := m.themePickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {

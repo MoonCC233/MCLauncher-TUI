@@ -13,6 +13,7 @@
 - **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏；首页使用五线像素字 “MCLAUNCHER” 标志，字距随窗口宽度自适应，窗口过窄时回退为渐变文字。
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
+- **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
 - **Java 运行时管理**：自动扫描常见安装位置，也可手动指定；按版本要求选择 Java，并在版本过旧时提示。
@@ -112,8 +113,9 @@ Windows 下输出文件为 `mclauncher.exe`。
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录。
 
 5. **调整设置**  
-   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数、界面语言、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。  
+   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数、界面语言、主题、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。  
    - **窗口尺寸**：打开常用分辨率预设（854×480、1280×720、1366×768、1600×900、1920×1080、2560×1440、3840×2160），选择 `Custom…` 可手动输入任意 `宽x高`。  
+   - **主题**：打开主题选择器，选择预设或 `Custom accent…` 输入十六进制颜色；`Reset accent` 恢复主题默认强调色。  
    - **数据目录**：留空使用默认 `.minecraft`；也可以输入绝对路径或 `~/...`。切换后会立即重新扫描已安装版本，并保留原有配置文件位置。  
    - **Microsoft 客户端 ID**：留空使用内置公开客户端；只有使用自己注册的 Azure 应用时才需要填写 GUID。自定义 Entra 应用需要获得 Mojang 批准，否则 Minecraft 服务可能返回 403。  
    - **语言**：打开语言选择器，第一项“跟随系统”会跟随操作系统区域设置。
@@ -218,7 +220,7 @@ MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress | language | java | account-type | microsoft | microsoft-error | resolution
+--preview-screen <name> home | instances | versions | accounts | settings | console | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```

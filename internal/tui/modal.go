@@ -31,6 +31,8 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateMicrosoft(msg)
 	case modalResolution:
 		return m.updateResolutionPicker(msg)
+	case modalTheme:
+		return m.updateThemePicker(msg)
 	case modalProgress:
 		if msg.String() == "esc" {
 			m.cancelTask()

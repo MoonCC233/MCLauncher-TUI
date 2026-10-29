@@ -33,6 +33,7 @@ var previewScreens = []string{
 	"help",
 	"form",
 	"progress",
+	"theme",
 	"language",
 	"java",
 	"account-type",

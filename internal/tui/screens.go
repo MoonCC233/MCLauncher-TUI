@@ -319,6 +319,13 @@ func (m *Model) adjustSetting(key string) {
 		m.cfg.Settings.Height = preset.Height
 		m.saveConfig()
 		m.setToast(m.tf("Resolution: %d × %d", preset.Width, preset.Height), toastSuccess)
+	case "theme":
+		idx := m.currentThemePreset()
+		n := len(themePresets)
+		idx = (idx + delta + n) % n
+		preset := themePresets[idx]
+		m.setTheme(preset.ID, m.cfg.Settings.ThemeAccent)
+		m.setToast(m.tf("Theme: %s", preset.Name), toastSuccess)
 	}
 }
 
@@ -336,6 +343,8 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openPrompt(promptThreads, m.t("Download threads"), fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), m.t("1–32 parallel downloads"), 4)
 	case "language":
 		m.openLanguagePicker()
+	case "theme":
+		m.openThemePicker()
 	case "data":
 		m.openPrompt(promptDataDir, m.t("Data directory"), m.cfg.Settings.DataDir, m.t("Leave empty to use the default .minecraft folder."), 260)
 	case "microsoft":
@@ -419,6 +428,16 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		m.saveConfig()
 		m.modal = modalNone
 		m.setToast(m.t("Settings saved"), toastSuccess)
+		return m, nil
+	case promptThemeAccent:
+		accent, ok := util.NormalizeHexColor(value)
+		if !ok {
+			m.setToast(m.t("Use a hex color such as #fab283"), toastError)
+			return m, nil
+		}
+		m.setTheme(m.cfg.Settings.Theme, accent)
+		m.modal = modalNone
+		m.setToast(m.tf("Accent color: %s", accent), toastSuccess)
 		return m, nil
 	}
 	m.saveConfig()

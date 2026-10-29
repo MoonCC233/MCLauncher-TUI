@@ -115,6 +115,11 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.screen = ScreenSettings
 	case "console":
 		m.screen = ScreenConsole
+	case "theme":
+		m.screen = ScreenSettings
+		m.settingsCursor = 6
+		m.openThemePicker()
+		m.themePick = 2
 	case "help":
 		m.screen = ScreenHome
 		m.modal = modalHelp

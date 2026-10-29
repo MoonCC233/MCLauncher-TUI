@@ -610,6 +610,8 @@ func (m *Model) versionLabelStyle(v mojang.VersionSummary) lipgloss.Style {
 		switch meta.Kind {
 		case loader.Forge:
 			color = colBlue
+		case loader.NeoForge:
+			color = colYellow
 		case loader.Quilt:
 			color = colPurple
 		case loader.OptiFine:

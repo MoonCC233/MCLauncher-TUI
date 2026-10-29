@@ -325,7 +325,7 @@ func (m *Model) helpContent(width int) []string {
 			{"t", m.t("cycle version filters")},
 			{"enter", m.t("install if needed, then create instance")},
 			{"i", m.t("install without creating an instance")},
-			{"l", m.t("install Fabric, Quilt, Forge or OptiFine")},
+			{"l", m.t("install Fabric, Quilt, Forge, NeoForge or OptiFine")},
 			{"d", m.t("uninstall installed version")},
 			{"r", m.t("refresh the Mojang manifest")},
 		}},

@@ -179,6 +179,8 @@ func loaderVersionID(kind loader.Kind, minecraft, version string) string {
 		return fmt.Sprintf("quilt-loader-%s-%s", version, minecraft)
 	case loader.Forge:
 		return loader.ForgeVersionID(minecraft, version)
+	case loader.NeoForge:
+		return loader.NeoForgeVersionID(minecraft, version)
 	}
 	return ""
 }
@@ -356,6 +358,8 @@ func loaderKindName(kind loader.Kind) string {
 		return "Quilt"
 	case loader.Forge:
 		return "Forge"
+	case loader.NeoForge:
+		return "NeoForge"
 	case loader.OptiFine:
 		return "OptiFine"
 	}

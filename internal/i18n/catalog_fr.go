@@ -402,6 +402,7 @@ var frCatalog = map[string]string{
 	"Removed %s":                                                "%s supprimé",
 	"manage mods for the selected instance":                     "gérer les mods de l'instance sélectionnée",
 	"install Fabric, Quilt, Forge or OptiFine":                  "installer Fabric, Quilt, Forge ou OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "installer Fabric, Quilt, Forge, NeoForge ou OptiFine",
 	"Add mod":                      "Ajouter un mod",
 	"Full path to a .jar mod file": "Chemin complet vers un fichier .jar de mod",
 	"Remove mod?":                  "Supprimer le mod ?",

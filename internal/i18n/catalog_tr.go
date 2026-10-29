@@ -402,6 +402,7 @@ var trCatalog = map[string]string{
 	"Removed %s":                                                "%s kaldırıldı",
 	"manage mods for the selected instance":                     "seçili örneğin modlarını yönet",
 	"install Fabric, Quilt, Forge or OptiFine":                  "Fabric, Quilt, Forge veya OptiFine kur",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "Fabric, Quilt, Forge, NeoForge veya OptiFine kur",
 	"Add mod":                      "Mod ekle",
 	"Full path to a .jar mod file": ".jar mod dosyasının tam yolu",
 	"Remove mod?":                  "Mod kaldırılsın mı?",

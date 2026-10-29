@@ -46,6 +46,9 @@ func TestScanReadsAllLoaderFormats(t *testing.T) {
 	writeJar(t, filepath.Join(dir, "forge.jar"), map[string]string{
 		"META-INF/mods.toml": "modLoader=\"javafml\"\n[[mods]]\nmodId=\"jei\"\ndisplayName=\"JEI\"\nversion=\"15.2\"\ndescription='''Multi\nline'''\nauthors=\"me\"\n",
 	})
+	writeJar(t, filepath.Join(dir, "neoforge.jar"), map[string]string{
+		"META-INF/neoforge.mods.toml": "modLoader=\"javafml\"\n[[mods]]\nmodId=\"neomap\"\ndisplayName=\"NeoMap\"\nversion=\"1.0\"\n",
+	})
 	writeJar(t, filepath.Join(dir, "legacy.jar"), map[string]string{
 		"mcmod.info": `[{"modid":"old","name":"Old Mod","version":"1.2","description":"Legacy","authorList":["Ann"]}]`,
 	})
@@ -61,8 +64,8 @@ func TestScanReadsAllLoaderFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list) != 6 {
-		t.Fatalf("scan returned %d mods, want 6", len(list))
+	if len(list) != 7 {
+		t.Fatalf("scan returned %d mods, want 7", len(list))
 	}
 	byName := map[string]Mod{}
 	for _, mod := range list {
@@ -76,6 +79,9 @@ func TestScanReadsAllLoaderFormats(t *testing.T) {
 	}
 	if got := byName["forge.jar"]; got.Name != "JEI" || got.Description != "Multi\nline" || got.Loaders[0] != "forge" {
 		t.Errorf("forge mod = %+v", got)
+	}
+	if got := byName["neoforge.jar"]; got.Name != "NeoMap" || got.Version != "1.0" || got.Loaders[0] != "neoforge" {
+		t.Errorf("neoforge mod = %+v", got)
 	}
 	if got := byName["legacy.jar"]; got.Name != "Old Mod" || got.Authors != "Ann" || got.Loaders[0] != "forge" {
 		t.Errorf("legacy mod = %+v", got)

@@ -402,6 +402,7 @@ var arCatalog = map[string]string{
 	"Removed %s":                                                "تمت إزالة %s",
 	"manage mods for the selected instance":                     "إدارة مودات النسخة المحددة",
 	"install Fabric, Quilt, Forge or OptiFine":                  "تثبيت Fabric أو Quilt أو Forge أو OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "تثبيت Fabric أو Quilt أو Forge أو NeoForge أو OptiFine",
 	"Add mod":                      "إضافة مود",
 	"Full path to a .jar mod file": "المسار الكامل لملف مود .jar",
 	"Remove mod?":                  "إزالة المود؟",

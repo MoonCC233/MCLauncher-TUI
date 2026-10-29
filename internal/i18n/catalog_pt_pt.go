@@ -402,6 +402,7 @@ var ptPTCatalog = map[string]string{
 	"Removed %s":                                                "%s removido",
 	"manage mods for the selected instance":                     "gerir mods da instância selecionada",
 	"install Fabric, Quilt, Forge or OptiFine":                  "instalar Fabric, Quilt, Forge ou OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "instalar Fabric, Quilt, Forge, NeoForge ou OptiFine",
 	"Add mod":                      "Adicionar mod",
 	"Full path to a .jar mod file": "Caminho completo para um ficheiro .jar de mod",
 	"Remove mod?":                  "Remover mod?",

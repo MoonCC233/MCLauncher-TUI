@@ -1,4 +1,4 @@
-// Package loader installs mod loaders (Fabric, Quilt, Forge and OptiFine) as
+// Package loader installs mod loaders (Fabric, Quilt, Forge, NeoForge and OptiFine) as
 // standalone local versions. The vanilla version stays untouched and every
 // loader profile uses inheritsFrom, so the shared libraries and assets are
 // reused instead of copied.
@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,10 +29,11 @@ const (
 	Fabric   Kind = "fabric"
 	Quilt    Kind = "quilt"
 	Forge    Kind = "forge"
+	NeoForge Kind = "neoforge"
 	OptiFine Kind = "optifine"
 )
 
-var Kinds = []Kind{Fabric, Quilt, Forge, OptiFine}
+var Kinds = []Kind{Fabric, Quilt, Forge, NeoForge, OptiFine}
 
 func ValidKind(kind Kind) bool {
 	for _, k := range Kinds {
@@ -99,9 +101,10 @@ type RemoteVersion struct {
 }
 
 const (
-	fabricMetaBase = "https://meta.fabricmc.net/v2"
-	quiltMetaBase  = "https://meta.quiltmc.org/v3"
-	forgeMavenBase = "https://maven.minecraftforge.net"
+	fabricMetaBase    = "https://meta.fabricmc.net/v2"
+	quiltMetaBase     = "https://meta.quiltmc.org/v3"
+	forgeMavenBase    = "https://maven.minecraftforge.net"
+	neoforgeMavenBase = "https://maven.neoforged.net/releases"
 )
 
 // fabricMetaURL resolves a path against the official Fabric meta service or
@@ -170,6 +173,8 @@ func FetchVersions(ctx context.Context, client *http.Client, kind Kind, minecraf
 		return fetchQuiltVersions(ctx, client, minecraft)
 	case Forge:
 		return fetchForgeVersions(ctx, client, minecraft)
+	case NeoForge:
+		return fetchNeoForgeVersions(ctx, client, minecraft)
 	case OptiFine:
 		return nil, fmt.Errorf("OptiFine is installed from a local jar")
 	default:
@@ -257,6 +262,72 @@ func parseForgeMetadata(body []byte, minecraft string) ([]RemoteVersion, error) 
 	return out, nil
 }
 
+func neoforgeGroupAndPrefix(minecraft string) (group, prefix string, err error) {
+	if minecraft == "1.20.1" {
+		return "net/neoforged/forge", "1.20.1-", nil
+	}
+	parts := strings.Split(minecraft, ".")
+	if len(parts) < 2 || parts[0] != "1" {
+		return "", "", fmt.Errorf("NeoForge does not support Minecraft %s", minecraft)
+	}
+	minor, parseErr := strconv.Atoi(parts[1])
+	if parseErr != nil {
+		return "", "", fmt.Errorf("NeoForge does not support Minecraft %s", minecraft)
+	}
+	patch := 0
+	if len(parts) > 2 {
+		patch, parseErr = strconv.Atoi(parts[2])
+		if parseErr != nil {
+			return "", "", fmt.Errorf("NeoForge does not support Minecraft %s", minecraft)
+		}
+	}
+	if minor < 20 || (minor == 20 && patch < 2) {
+		return "", "", fmt.Errorf("NeoForge does not support Minecraft %s", minecraft)
+	}
+	return "net/neoforged/neoforge", fmt.Sprintf("%d.%d.", minor, patch), nil
+}
+
+func fetchNeoForgeVersions(ctx context.Context, client *http.Client, minecraft string) ([]RemoteVersion, error) {
+	group, prefix, err := neoforgeGroupAndPrefix(minecraft)
+	if err != nil {
+		return nil, err
+	}
+	url := neoforgeMavenURL(group + "/maven-metadata.xml")
+	body, err := fetchText(ctx, client, url)
+	if err != nil {
+		return nil, err
+	}
+	return parseNeoForgeMetadata([]byte(body), prefix)
+}
+
+func parseNeoForgeMetadata(body []byte, prefix string) ([]RemoteVersion, error) {
+	var meta mavenMetadata
+	if err := xml.Unmarshal(body, &meta); err != nil {
+		return nil, fmt.Errorf("parse NeoForge metadata: %w", err)
+	}
+	out := make([]RemoteVersion, 0, len(meta.Versions))
+	for _, full := range meta.Versions {
+		if !strings.HasPrefix(full, prefix) {
+			continue
+		}
+		version := full
+		// 1.20.1 NeoForge versions are "1.20.1-47.1.106"; the launcher stores
+		// them as 47.1.106. Modern versions ("21.1.265") have no MC prefix.
+		if strings.HasSuffix(prefix, "-") {
+			version = strings.TrimPrefix(full, prefix)
+		}
+		if version == "" || strings.Contains(version, "-installer") {
+			continue
+		}
+		out = append(out, RemoteVersion{Version: version, Stable: !strings.Contains(version, "-")})
+	}
+	// Maven metadata is ordered oldest first; the picker expects newest first.
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out, nil
+}
+
 // Installer creates a loader version. The vanilla base version is installed
 // first when needed, so a loader always has a complete parent.
 type Installer struct {
@@ -297,6 +368,8 @@ func (in *Installer) VersionID() string {
 		return fmt.Sprintf("quilt-loader-%s-%s", in.LoaderVersion, in.Minecraft)
 	case Forge:
 		return ForgeVersionID(in.Minecraft, in.LoaderVersion)
+	case NeoForge:
+		return NeoForgeVersionID(in.Minecraft, in.LoaderVersion)
 	case OptiFine:
 		_, edition, _ := ParseOptiFineJarName(filepath.Base(in.OptiFineJar))
 		return OptiFineVersionID(in.Minecraft, edition)
@@ -306,6 +379,10 @@ func (in *Installer) VersionID() string {
 
 func ForgeVersionID(minecraft, forge string) string {
 	return fmt.Sprintf("%s-forge-%s", minecraft, forge)
+}
+
+func NeoForgeVersionID(minecraft, neoforge string) string {
+	return fmt.Sprintf("%s-neoforge-%s", minecraft, neoforge)
 }
 
 func OptiFineVersionID(minecraft, edition string) string {
@@ -354,6 +431,8 @@ func (in *Installer) Install(ctx context.Context) error {
 		versionID, err = in.installProfile(ctx, quiltMetaURL("versions/loader/"+in.Minecraft+"/"+in.LoaderVersion+"/profile/json"), Quilt)
 	case Forge:
 		versionID, err = in.installForge(ctx)
+	case NeoForge:
+		versionID, err = in.installNeoForge(ctx)
 	case OptiFine:
 		versionID, err = in.installOptiFine(ctx)
 	}

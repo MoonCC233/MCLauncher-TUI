@@ -13,8 +13,8 @@
 - **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏；首页标题是四行 ASCII 大字 “MCTL”，带渐变高光，字形（方块 / 线条）与动效（`Sheen` / `Wave` / `Breathe` / `Off`）都能在设置里切换，窄终端自动回退成单行文字。
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
-- **模组加载器**：在 `Versions` 按 `l` 安装 Fabric、Quilt、Forge 或 OptiFine。加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例继续引用该版本；OptiFine 可使用本地下载的 `OptiFine_<version>_<edition>.jar` 生成补丁客户端。
-- **实例模组管理**：在 `Instances` 按 `m` 打开模组面板，添加 `.jar`、启用/禁用、删除或打开模组目录。启动器会读取 Fabric、Quilt、Forge 与旧版 Forge 的元数据，显示模组名称、版本和适用加载器；禁用的模组会重命名为 `.jar.disabled`。
+- **模组加载器**：在 `Versions` 按 `l` 安装 Fabric、Quilt、Forge、NeoForge 或 OptiFine。加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例继续引用该版本；OptiFine 可使用本地下载的 `OptiFine_<version>_<edition>.jar` 生成补丁客户端。
+- **实例模组管理**：在 `Instances` 按 `m` 打开模组面板，添加 `.jar`、启用/禁用、删除或打开模组目录。启动器会读取 Fabric、Quilt、Forge、NeoForge 与旧版 Forge 的元数据，显示模组名称、版本和适用加载器；禁用的模组会重命名为 `.jar.disabled`。
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
@@ -104,12 +104,13 @@ Windows 下输出文件为 `mclauncher.exe`。
   ```bash
   # 中科大 / CERNET 的 BMCLAPI 直连节点，Maven 下载通常比 BMCLAPI 的 302 跳转更稳定
   MCLAUNCHER_FORGE_MIRROR=https://unicom.mirrors.ustc.edu.cn/bmclapi
+  MCLAUNCHER_NEOFORGE_MIRROR=https://unicom.mirrors.ustc.edu.cn/bmclapi
   MCLAUNCHER_FABRIC_MAVEN_MIRROR=https://unicom.mirrors.ustc.edu.cn/bmclapi
   # Fabric 的 meta 列表仍使用 BMCLAPI
   MCLAUNCHER_FABRIC_MIRROR=https://bmclapi2.bangbang93.com/fabric-meta/v2
   ./mclauncher
   ```
-  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。镜像由第三方提供，请自行确认可用性与信任程度。
+  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge/NeoForge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。镜像由第三方提供，请自行确认可用性与信任程度。
 - 现代终端：支持真彩色与完整 Unicode 制表符（Windows Terminal、iTerm2、Kitty、WezTerm 等）。
 
 ## 使用流程
@@ -127,7 +128,7 @@ Windows 下输出文件为 `mclauncher.exe`。
    - `r`：重新拉取 Mojang 版本清单。
 
 3. **安装模组加载器（可选）**  
-   在 `Versions` 中选中一个原版版本，按 `l` 打开加载器面板。依次选择 Fabric、Quilt、Forge 或 OptiFine，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。安装完成后加载器会作为独立版本出现在列表中，按 `enter` 即可基于它创建实例。
+   在 `Versions` 中选中一个原版版本，按 `l` 打开加载器面板。依次选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge/NeoForge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。安装完成后加载器会作为独立版本出现在列表中，按 `enter` 即可基于它创建实例。
 
 4. **创建并启动实例**  
    在表单中填写实例名、可选内存上限，按 `enter` 创建。回到 `Instances` 或 `Home`，按 `enter` 启动。
@@ -282,7 +283,7 @@ internal/tui/           Bubble Tea 模型、页面、弹窗、鼠标命中区域
 internal/i18n/          界面语言目录、区域设置检测、复数与相对时间
 internal/mojang/        版本清单、规则判断、参数替换、依赖解析、版本继承合并、natives 解压
 internal/install/       下载、校验、资源索引与安装标记
-internal/loader/        Fabric / Quilt / Forge / OptiFine 安装与加载器元数据
+internal/loader/        Fabric / Quilt / Forge / NeoForge / OptiFine 安装与加载器元数据
 internal/mods/          模组扫描、元数据解析、启用/禁用与删除
 internal/launch/        Java 命令行构建、进程启动、输出流
 internal/java/          Java 运行时扫描、版本解析与选择
@@ -334,7 +335,6 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 ## 已知限制
 
 - **Microsoft 登录依赖网络与浏览器**：设备代码流程需要访问 Microsoft 登录页；部分账户首次使用前可能需要先在 `xbox.com` 创建 Xbox 档案。自定义 Entra 客户端需要 Mojang 审批，内置客户端开箱即用。
-- **仅支持 Minecraft 原版**：尚未集成 Forge、Fabric、Quilt、OptiFine 等模组加载器。
 - **不管理 Java 安装**：只检测和选择已安装的 Java；不会下载 JDK。
 - **退出启动器不会终止游戏**：启动器退出后游戏继续运行，但后续 stdout/stderr 输出可能丢失。需要停止游戏时请先在 Console 中按 `x`。
 - **无自动更新**：请关注 Releases 页面获取新版本。

@@ -402,6 +402,7 @@ var deCatalog = map[string]string{
 	"Removed %s":                                                "%s entfernt",
 	"manage mods for the selected instance":                     "Mods der ausgewählten Instanz verwalten",
 	"install Fabric, Quilt, Forge or OptiFine":                  "Fabric, Quilt, Forge oder OptiFine installieren",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "Fabric, Quilt, Forge, NeoForge oder OptiFine installieren",
 	"Add mod":                      "Mod hinzufügen",
 	"Full path to a .jar mod file": "Vollständiger Pfad zu einer .jar-Mod-Datei",
 	"Remove mod?":                  "Mod entfernen?",

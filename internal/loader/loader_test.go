@@ -111,6 +111,8 @@ func TestRewriteMavenURL(t *testing.T) {
 	}
 }
 
+var testForgeBases = []string{"https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"}
+
 func TestRewriteForgeVersionMirror(t *testing.T) {
 	layout := paths.New(t.TempDir())
 	if err := os.MkdirAll(layout.Versions, 0o755); err != nil {
@@ -139,7 +141,7 @@ func TestRewriteForgeVersionMirror(t *testing.T) {
 	if err := util.WriteJSONAtomic(path, body); err != nil {
 		t.Fatal(err)
 	}
-	if err := rewriteForgeVersionMirror(layout, "1.20.1-forge-47.2.0", "https://mirror.test/maven"); err != nil {
+	if err := rewriteForgeVersionMirror(layout, "1.20.1-forge-47.2.0", "https://mirror.test/maven", testForgeBases); err != nil {
 		t.Fatal(err)
 	}
 	var got struct {
@@ -170,6 +172,109 @@ func TestRewriteForgeVersionMirror(t *testing.T) {
 	}
 	if got := lib.Downloads.Classifiers["natives"].URL; got != "https://mirror.test/maven/net/minecraftforge/demo/1.0/demo-1.0-natives.jar" {
 		t.Errorf("classifier url = %q", got)
+	}
+}
+
+func TestNeoForgeGroupAndPrefix(t *testing.T) {
+	cases := []struct {
+		minecraft string
+		group     string
+		prefix    string
+		ok        bool
+	}{
+		{"1.20.1", "net/neoforged/forge", "1.20.1-", true},
+		{"1.20.2", "net/neoforged/neoforge", "20.2.", true},
+		{"1.20.4", "net/neoforged/neoforge", "20.4.", true},
+		{"1.21", "net/neoforged/neoforge", "21.0.", true},
+		{"1.21.1", "net/neoforged/neoforge", "21.1.", true},
+		{"1.19.2", "", "", false},
+		{"1.20", "", "", false},
+	}
+	for _, tc := range cases {
+		group, prefix, err := neoforgeGroupAndPrefix(tc.minecraft)
+		if (err == nil) != tc.ok || group != tc.group || prefix != tc.prefix {
+			t.Errorf("neoforgeGroupAndPrefix(%q) = %q, %q, %v; want %q, %q, ok=%v",
+				tc.minecraft, group, prefix, err, tc.group, tc.prefix, tc.ok)
+		}
+	}
+}
+
+func TestParseNeoForgeMetadata(t *testing.T) {
+	body := []byte(`<metadata><versioning><versions>
+  <version>1.20.1-47.1.105</version>
+  <version>1.20.1-47.1.106</version>
+  <version>1.20.1-47.1.106-installer</version>
+  <version>47.1.106</version>
+</versions></versioning></metadata>`)
+	got, err := parseNeoForgeMetadata(body, "1.20.1-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Version != "47.1.106" || got[1].Version != "47.1.105" {
+		t.Errorf("versions = %#v", got)
+	}
+	if !got[0].Stable || !got[1].Stable {
+		t.Errorf("stable flags = %#v", got)
+	}
+
+	modern := []byte(`<metadata><versioning><versions>
+  <version>21.1.264</version>
+  <version>21.1.265</version>
+</versions></versioning></metadata>`)
+	got, err = parseNeoForgeMetadata(modern, "21.1.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Version != "21.1.265" || got[1].Version != "21.1.264" {
+		t.Errorf("modern versions = %#v", got)
+	}
+}
+
+func TestNeoForgeVersionID(t *testing.T) {
+	if got, want := NeoForgeVersionID("1.21.1", "21.1.265"), "1.21.1-neoforge-21.1.265"; got != want {
+		t.Errorf("NeoForgeVersionID = %q, want %q", got, want)
+	}
+}
+
+func TestNeoForgeLibraryURLs(t *testing.T) {
+	const (
+		mirror = "https://mirror.test/bmclapi"
+		rel    = "net/neoforged/neoforge/21.1.265/neoforge-21.1.265-universal.jar"
+	)
+	official := "https://maven.neoforged.net/releases/" + rel
+	got := forgeLibraryURLs(
+		forgeTestLibrary("net.neoforged:neoforge:21.1.265:universal", official, "", rel),
+		mirror,
+		[]string{"https://maven.neoforged.net/releases/"},
+	)
+	if len(got) != 2 || got[0] != mirror+"/"+rel || got[1] != official {
+		t.Errorf("NeoForge library URLs = %#v", got)
+	}
+}
+
+func TestAdoptVersion(t *testing.T) {
+	layout := paths.New(t.TempDir())
+	oldID, newID := "neoforge-21.1.265", "1.21.1-neoforge-21.1.265"
+	oldDir := layout.VersionDir(oldID)
+	if err := os.MkdirAll(oldDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	body := map[string]any{"id": oldID, "mainClass": "cpw.mods.bootstraplauncher.BootstrapLauncher"}
+	if err := util.WriteJSONAtomic(filepath.Join(oldDir, oldID+".json"), body); err != nil {
+		t.Fatal(err)
+	}
+	if err := adoptVersion(layout, oldID, newID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(oldDir); !os.IsNotExist(err) {
+		t.Errorf("old version directory still exists")
+	}
+	var got map[string]any
+	if err := util.ReadJSON(layout.VersionJSON(newID), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["id"] != newID {
+		t.Errorf("id = %v, want %s", got["id"], newID)
 	}
 }
 
@@ -228,26 +333,26 @@ func TestForgeLibraryURLs(t *testing.T) {
 		rel    = "net/minecraftforge/forge/1.20.1-47.2.0/forge-1.20.1-47.2.0-universal.jar"
 	)
 	official := "https://maven.minecraftforge.net/" + rel
-	got := forgeLibraryURLs(forgeTestLibrary("net.minecraftforge:forge:1.20.1-47.2.0:universal", official, "", rel), mirror)
+	got := forgeLibraryURLs(forgeTestLibrary("net.minecraftforge:forge:1.20.1-47.2.0:universal", official, "", rel), mirror, testForgeBases)
 	if len(got) != 2 || got[0] != mirror+"/"+rel || got[1] != official {
 		t.Errorf("mirrored URLs = %#v", got)
 	}
 
 	// Libraries hosted by Mojang must keep their original URL.
 	mojangURL := "https://libraries.minecraft.net/com/google/guava/guava/20.0/guava-20.0.jar"
-	got = forgeLibraryURLs(forgeTestLibrary("com.google.guava:guava:20.0", mojangURL, "", "com/google/guava/guava/20.0/guava-20.0.jar"), mirror)
+	got = forgeLibraryURLs(forgeTestLibrary("com.google.guava:guava:20.0", mojangURL, "", "com/google/guava/guava/20.0/guava-20.0.jar"), mirror, testForgeBases)
 	if len(got) != 1 || got[0] != mojangURL {
 		t.Errorf("Mojang library URLs = %#v", got)
 	}
 
 	// Old install profiles only have a repository base URL.
-	got = forgeLibraryURLs(forgeTestLibrary("com.example:demo:1.0", "", "https://maven.minecraftforge.net/", "com/example/demo/1.0/demo-1.0.jar"), mirror)
+	got = forgeLibraryURLs(forgeTestLibrary("com.example:demo:1.0", "", "https://maven.minecraftforge.net/", "com/example/demo/1.0/demo-1.0.jar"), mirror, testForgeBases)
 	if len(got) != 2 || got[0] != mirror+"/com/example/demo/1.0/demo-1.0.jar" {
 		t.Errorf("legacy profile URLs = %#v", got)
 	}
 
 	// Without a mirror, the official Maven URL is the only candidate.
-	got = forgeLibraryURLs(forgeTestLibrary("com.example:demo:1.0", "", "", "com/example/demo/1.0/demo-1.0.jar"), "")
+	got = forgeLibraryURLs(forgeTestLibrary("com.example:demo:1.0", "", "", "com/example/demo/1.0/demo-1.0.jar"), "", testForgeBases)
 	if len(got) != 1 || got[0] != "https://maven.minecraftforge.net/com/example/demo/1.0/demo-1.0.jar" {
 		t.Errorf("official URLs = %#v", got)
 	}

@@ -133,6 +133,12 @@ func readJarMeta(path string) *jarMeta {
 					meta.merge(*info)
 				}
 			}
+		case "meta-inf/neoforge.mods.toml":
+			if data := readZipFile(file, 4<<20); data != nil {
+				if info := parseModsTOMLFor(data, "neoforge"); info != nil {
+					meta.merge(*info)
+				}
+			}
 		case "mcmod.info":
 			if data := readZipFile(file, 4<<20); data != nil {
 				if info := parseMcmodInfo(data); info != nil {
@@ -288,10 +294,14 @@ func parseMcmodInfo(data []byte) *jarMeta {
 // parseModsTOML reads the first [[mods]] section. The launcher only needs a few
 // display fields, so a full TOML parser would be unnecessary weight.
 func parseModsTOML(data []byte) *jarMeta {
+	return parseModsTOMLFor(data, "forge")
+}
+
+func parseModsTOMLFor(data []byte, loader string) *jarMeta {
 	text := strings.ReplaceAll(string(data), "\r\n", "\n")
 	start := strings.Index(text, "[[mods]]")
 	if start < 0 {
-		return &jarMeta{Loaders: []string{"forge"}}
+		return &jarMeta{Loaders: []string{loader}}
 	}
 	section := text[start+len("[[mods]]"):]
 	if next := strings.Index(section, "[["); next >= 0 {
@@ -304,7 +314,7 @@ func parseModsTOML(data []byte) *jarMeta {
 		Version:     fields["version"],
 		Description: fields["description"],
 		Authors:     fields["authors"],
-		Loaders:     []string{"forge"},
+		Loaders:     []string{loader},
 	}
 	if info.Name == "" {
 		info.Name = info.ID

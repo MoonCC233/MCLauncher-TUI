@@ -402,6 +402,7 @@ var koCatalog = map[string]string{
 	"Removed %s":                                                "%s 제거됨",
 	"manage mods for the selected instance":                     "선택한 인스턴스의 모드 관리",
 	"install Fabric, Quilt, Forge or OptiFine":                  "Fabric, Quilt, Forge 또는 OptiFine 설치",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "Fabric, Quilt, Forge, NeoForge 또는 OptiFine 설치",
 	"Add mod":                      "모드 추가",
 	"Full path to a .jar mod file": ".jar 모드 파일의 전체 경로",
 	"Remove mod?":                  "모드를 제거할까요?",

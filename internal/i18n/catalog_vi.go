@@ -402,6 +402,7 @@ var viCatalog = map[string]string{
 	"Removed %s":                                                "Đã xóa %s",
 	"manage mods for the selected instance":                     "quản lý mod của phiên bản đã chọn",
 	"install Fabric, Quilt, Forge or OptiFine":                  "cài Fabric, Quilt, Forge hoặc OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "cài Fabric, Quilt, Forge, NeoForge hoặc OptiFine",
 	"Add mod":                      "Thêm mod",
 	"Full path to a .jar mod file": "Đường dẫn đầy đủ đến tệp mod .jar",
 	"Remove mod?":                  "Xóa mod?",

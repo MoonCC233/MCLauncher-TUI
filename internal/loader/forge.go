@@ -58,15 +58,68 @@ func (p *forgeInstallProfile) allLibraries() []forgeLibrary {
 	return out
 }
 
+// forgeVariant describes the differences between the Forge and NeoForge
+// installers. Both are the same installer codebase with a different Maven
+// repository and version naming scheme.
+type forgeVariant struct {
+	kind         Kind
+	label        string
+	mavenBase    string
+	mavenBases   []string
+	mirror       string
+	installerRel string
+	cacheDir     string
+	targetID     string
+}
+
 func (in *Installer) installForge(ctx context.Context) (string, error) {
 	coord := in.Minecraft + "-" + in.LoaderVersion
-	expected := ForgeVersionID(in.Minecraft, in.LoaderVersion)
-	mirror := forgeMirror()
-	installerRel := fmt.Sprintf("net/minecraftforge/forge/%s/forge-%s-installer.jar", coord, coord)
-	url := forgeMavenURL(installerRel)
-	installerPath := filepath.Join(in.Layout.Cache, "forge", "forge-"+coord+"-installer.jar")
+	return in.installForgeLike(ctx, forgeVariant{
+		kind:       Forge,
+		label:      "Forge",
+		mavenBase:  forgeMavenBase,
+		mavenBases: []string{"https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"},
+		mirror:     forgeMirror(),
+		installerRel: fmt.Sprintf(
+			"net/minecraftforge/forge/%s/forge-%s-installer.jar", coord, coord),
+		cacheDir: "forge",
+		targetID: ForgeVersionID(in.Minecraft, in.LoaderVersion),
+	})
+}
 
-	in.emit(install.Event{Type: install.EventStage, Stage: "Downloading Forge installer", Detail: coord})
+func (in *Installer) installNeoForge(ctx context.Context) (string, error) {
+	var installerRel string
+	if in.Minecraft == "1.20.1" {
+		coord := "1.20.1-" + in.LoaderVersion
+		installerRel = fmt.Sprintf("net/neoforged/forge/%s/forge-%s-installer.jar", coord, coord)
+	} else {
+		installerRel = fmt.Sprintf("net/neoforged/neoforge/%s/neoforge-%s-installer.jar",
+			in.LoaderVersion, in.LoaderVersion)
+	}
+	return in.installForgeLike(ctx, forgeVariant{
+		kind:         NeoForge,
+		label:        "NeoForge",
+		mavenBase:    neoforgeMavenBase,
+		mavenBases:   []string{"https://maven.neoforged.net/releases/", "https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"},
+		mirror:       neoforgeMirror(),
+		installerRel: installerRel,
+		cacheDir:     "neoforge",
+		targetID:     NeoForgeVersionID(in.Minecraft, in.LoaderVersion),
+	})
+}
+
+func (in *Installer) installForgeLike(ctx context.Context, v forgeVariant) (string, error) {
+	url := v.mavenBase + "/" + v.installerRel
+	if v.mirror != "" {
+		url = v.mirror + "/" + v.installerRel
+	}
+	installerPath := filepath.Join(in.Layout.Cache, v.cacheDir, filepath.Base(v.installerRel))
+
+	in.emit(install.Event{
+		Type:   install.EventStage,
+		Stage:  "Downloading " + v.label + " installer",
+		Detail: filepath.Base(v.installerRel),
+	})
 	sha1 := fetchOptionalSHA1(ctx, in.client(), url+".sha1")
 	needDownload := !util.VerifyFile(installerPath, sha1, 0)
 	if !needDownload {
@@ -83,44 +136,49 @@ func (in *Installer) installForge(ctx context.Context) (string, error) {
 			Dest: installerPath,
 			SHA1: sha1,
 		}, nil); err != nil {
-			return "", fmt.Errorf("download Forge installer: %w", err)
+			return "", fmt.Errorf("download %s installer: %w", v.label, err)
 		}
 		if _, err := readForgeProfile(installerPath); err != nil {
 			_ = os.Remove(installerPath)
-			return "", fmt.Errorf("Forge installer is corrupt: %w", err)
+			return "", fmt.Errorf("%s installer is corrupt: %w", v.label, err)
 		}
 	}
 
 	profile, profileErr := readForgeProfile(installerPath)
-	if profileErr == nil {
-		if profile.Version != "" {
-			expected = profile.Version
-		}
-		if profile.Minecraft != "" && profile.Minecraft != in.Minecraft {
-			return "", fmt.Errorf("Forge installer is for Minecraft %s, not %s", profile.Minecraft, in.Minecraft)
-		}
+	if profileErr == nil && profile.Minecraft != "" && profile.Minecraft != in.Minecraft {
+		return "", fmt.Errorf("%s installer is for Minecraft %s, not %s", v.label, profile.Minecraft, in.Minecraft)
 	}
 
 	if err := ensureLauncherProfiles(in.Layout); err != nil {
 		return "", err
 	}
 
-	// The Forge installer probes https://files.minecraftforge.net/ before doing
-	// anything useful and its URLConnection has no timeout, so a filtered host
-	// can hang the whole installation forever. It also gives up after one try
-	// on a slow mirror. Fetch the libraries ourselves with retries, then let the
-	// installer run offline against the validated local files.
+	// The installers probe the Forge site before doing anything useful and
+	// their URLConnection has no timeout, so a filtered host can hang the whole
+	// installation forever. They also give up after one try on a slow mirror.
+	// Fetch the libraries ourselves with retries, then let the installer run
+	// offline against the validated local files.
 	offline := false
 	if profileErr == nil {
-		if libs := profile.allLibraries(); len(libs) > 0 {
-			if err := in.prepareForgeLibraries(ctx, libs, mirror); err != nil {
+		libs := profile.allLibraries()
+		// NeoForge 1.20.1 keeps the FancyModLoader runtime libraries in the
+		// embedded version.json rather than install_profile.json.
+		if extra, err := readForgeVersionLibraries(installerPath); err == nil {
+			libs = append(libs, extra...)
+		}
+		if len(libs) > 0 {
+			if err := in.prepareForgeLibraries(ctx, libs, v.mirror, v.mavenBases, v.label); err != nil {
 				return "", err
 			}
 			offline = true
 		}
 	}
 
-	in.emit(install.Event{Type: install.EventStage, Stage: "Running Forge installer", Detail: coord})
+	in.emit(install.Event{
+		Type:   install.EventStage,
+		Stage:  "Running " + v.label + " installer",
+		Detail: v.targetID,
+	})
 	javaPath := in.JavaPath
 	if javaPath == "" {
 		javaPath = "java"
@@ -136,41 +194,59 @@ func (in *Installer) installForge(ctx context.Context) (string, error) {
 	args = append(args, "-jar", installerPath, "--installClient", in.Layout.Root)
 	if offline {
 		args = append(args, "--offline")
-	} else if mirror != "" {
-		// Forge concatenates the mirror URL with the maven path directly, so the
-		// trailing slash is required or it requests /mavenorg/ow2/asm/....
-		args = append(args, "--mirror", mirror+"/")
+	} else if v.mirror != "" {
+		// The installer concatenates the mirror URL with the maven path
+		// directly, so the trailing slash is required or it requests
+		// /mavenorg/ow2/asm/....
+		args = append(args, "--mirror", v.mirror+"/")
 	}
 	if err := runJava(ctx, javaPath, args, in.Layout.Root, func(line string) {
-		in.emit(install.Event{Type: install.EventLog, Stage: "Running Forge installer", Detail: line})
+		in.emit(install.Event{Type: install.EventLog, Stage: "Running " + v.label + " installer", Detail: line})
 	}); err != nil {
-		return "", fmt.Errorf("Forge installer: %w", err)
+		return "", fmt.Errorf("%s installer: %w", v.label, err)
 	}
 
-	versionID := expected
-	if _, err := os.Stat(in.Layout.VersionJSON(versionID)); err != nil {
-		versionID = findForgeVersion(in.Layout, in.Minecraft)
+	generatedID := ""
+	if profileErr == nil {
+		generatedID = profile.Version
 	}
-	if versionID == "" {
-		return "", fmt.Errorf("Forge installer finished but no version file was created")
+	if generatedID == "" {
+		generatedID = in.findGeneratedVersion(v)
+	} else if _, err := os.Stat(in.Layout.VersionJSON(generatedID)); err != nil {
+		generatedID = in.findGeneratedVersion(v)
 	}
-	if err := normalizeVersionID(in.Layout, versionID); err != nil {
+	if generatedID == "" {
+		return "", fmt.Errorf("%s installer finished but no version file was created", v.label)
+	}
+	if generatedID != v.targetID {
+		if err := adoptVersion(in.Layout, generatedID, v.targetID); err != nil {
+			return "", fmt.Errorf("adopt %s version: %w", v.label, err)
+		}
+	}
+	if err := normalizeVersionID(in.Layout, v.targetID); err != nil {
 		return "", err
 	}
-	if err := rewriteForgeVersionMirror(in.Layout, versionID, mirror); err != nil {
+	if err := rewriteForgeVersionMirror(in.Layout, v.targetID, v.mirror, v.mavenBases); err != nil {
 		return "", err
 	}
 	meta := Meta{
-		Kind:          Forge,
+		Kind:          v.kind,
 		Minecraft:     in.Minecraft,
 		LoaderVersion: in.LoaderVersion,
-		VersionID:     versionID,
+		VersionID:     v.targetID,
 		InstalledAt:   time.Now().Unix(),
 	}
 	if err := WriteMeta(in.Layout, meta); err != nil {
 		return "", err
 	}
-	return versionID, nil
+	return v.targetID, nil
+}
+
+func (in *Installer) findGeneratedVersion(v forgeVariant) string {
+	if v.kind == NeoForge {
+		return findNeoForgeVersion(in.Layout, in.Minecraft, in.LoaderVersion, v.targetID)
+	}
+	return findForgeVersion(in.Layout, in.Minecraft)
 }
 
 func readForgeProfile(path string) (*forgeInstallProfile, error) {
@@ -198,13 +274,45 @@ func readForgeProfile(path string) (*forgeInstallProfile, error) {
 	return nil, fmt.Errorf("install_profile.json not found")
 }
 
+func readForgeVersionLibraries(path string) ([]forgeLibrary, error) {
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	for _, file := range reader.File {
+		if file.Name != "version.json" {
+			continue
+		}
+		rc, err := file.Open()
+		if err != nil {
+			return nil, err
+		}
+		var payload struct {
+			Libraries []forgeLibrary `json:"libraries"`
+		}
+		err = json.NewDecoder(rc).Decode(&payload)
+		rc.Close()
+		if err != nil {
+			return nil, err
+		}
+		return payload.Libraries, nil
+	}
+	return nil, nil
+}
+
 // prepareForgeLibraries downloads every artifact listed in install_profile.json
-// before the installer starts. The Forge installer only retries a failed mirror
-// URL once and then falls back to the (often unreachable) official host, so
-// doing the transfers here gives each file several retries and a proper
-// timeout. The installer is then run with --offline and only validates the
-// local files.
-func (in *Installer) prepareForgeLibraries(ctx context.Context, libs []forgeLibrary, mirror string) error {
+// before the installer starts. The installer only retries a failed mirror URL
+// once and then falls back to the (often unreachable) official host, so doing
+// the transfers here gives each file several retries and a proper timeout. The
+// installer is then run with --offline and only validates the local files.
+func (in *Installer) prepareForgeLibraries(
+	ctx context.Context,
+	libs []forgeLibrary,
+	mirror string,
+	bases []string,
+	label string,
+) error {
 	unique := make([]forgeLibrary, 0, len(libs))
 	seen := make(map[string]bool, len(libs))
 	for _, lib := range libs {
@@ -231,19 +339,19 @@ func (in *Installer) prepareForgeLibraries(ctx context.Context, libs []forgeLibr
 		artifact := lib.Downloads.Artifact
 		dest, err := util.SafeJoin(in.Layout.Libraries, artifact.Path)
 		if err != nil {
-			return fmt.Errorf("Forge library %s: %w", lib.Name, err)
+			return fmt.Errorf("%s library %s: %w", label, lib.Name, err)
 		}
 		if util.VerifyFile(dest, artifact.SHA1, artifact.Size) {
 			continue
 		}
 		in.emit(install.Event{
 			Type:   install.EventStage,
-			Stage:  "Preparing Forge libraries",
+			Stage:  "Preparing " + label + " libraries",
 			Detail: fmt.Sprintf("%d/%d %s", i+1, len(unique), filepath.Base(artifact.Path)),
 		})
 
 		var lastErr error
-		for _, url := range forgeLibraryURLs(lib, mirror) {
+		for _, url := range forgeLibraryURLs(lib, mirror, bases) {
 			for attempt := 0; attempt < 2; attempt++ {
 				fileCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 				lastErr = util.DownloadFile(fileCtx, in.client(), util.DownloadSpec{
@@ -265,27 +373,35 @@ func (in *Installer) prepareForgeLibraries(ctx context.Context, libs []forgeLibr
 			}
 		}
 		if lastErr != nil {
-			return fmt.Errorf("prepare Forge library %s: %w", lib.Name, lastErr)
+			return fmt.Errorf("prepare %s library %s: %w", label, lib.Name, lastErr)
 		}
 	}
 	return nil
 }
 
-func forgeLibraryURLs(lib forgeLibrary, mirror string) []string {
+func forgeLibraryURLs(lib forgeLibrary, mirror string, bases []string) []string {
 	artifact := lib.Downloads.Artifact
 	url := strings.TrimSpace(artifact.URL)
 	if url == "" {
 		base := strings.TrimSpace(lib.URL)
+		if base == "" && len(bases) > 0 {
+			base = bases[0]
+		}
 		if base == "" {
 			base = forgeMavenBase + "/"
 		}
 		url = strings.TrimRight(base, "/") + "/" + strings.TrimLeft(artifact.Path, "/")
 	}
 	urls := []string{url}
-	if mirror != "" && strings.HasPrefix(url, forgeMavenBase+"/") {
-		urls = []string{mirror + "/" + strings.TrimPrefix(url, forgeMavenBase+"/"), url}
+	if mirror != "" {
+		for _, base := range bases {
+			if strings.HasPrefix(url, base) {
+				urls = []string{mirror + "/" + strings.TrimPrefix(url, base), url}
+				break
+			}
+		}
 	}
-	out := urls[:0]
+	out := make([]string, 0, len(urls))
 	seen := map[string]bool{}
 	for _, u := range urls {
 		if u == "" || seen[u] {
@@ -347,6 +463,77 @@ func findForgeVersion(layout paths.Layout, minecraft string) string {
 	return best
 }
 
+func findNeoForgeVersion(layout paths.Layout, minecraft, loaderVersion, targetID string) string {
+	for _, id := range []string{
+		targetID,
+		"neoforge-" + loaderVersion,
+		minecraft + "-forge-" + loaderVersion,
+	} {
+		if _, err := os.Stat(layout.VersionJSON(id)); err == nil {
+			return id
+		}
+	}
+	entries, err := os.ReadDir(layout.Versions)
+	if err != nil {
+		return ""
+	}
+	best := ""
+	var bestTime time.Time
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasPrefix(name, "neoforge-") && !strings.HasPrefix(name, minecraft+"-neoforge-") {
+			continue
+		}
+		if _, err := os.Stat(layout.VersionJSON(name)); err != nil {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		if best == "" || info.ModTime().After(bestTime) {
+			best = name
+			bestTime = info.ModTime()
+		}
+	}
+	return best
+}
+
+// adoptVersion renames the installer's version directory to the launcher's
+// stable loader ID. NeoForge 1.20.1 reuses Forge's "1.20.1-forge-<version>"
+// name, which would otherwise collide with a real Forge installation.
+func adoptVersion(layout paths.Layout, oldID, newID string) error {
+	if oldID == newID {
+		return nil
+	}
+	oldDir := layout.VersionDir(oldID)
+	newDir := layout.VersionDir(newID)
+	if _, err := os.Stat(newDir); err == nil {
+		if err := os.RemoveAll(newDir); err != nil {
+			return err
+		}
+	}
+	if err := os.Rename(oldDir, newDir); err != nil {
+		return err
+	}
+	oldJSON := filepath.Join(newDir, oldID+".json")
+	newJSON := layout.VersionJSON(newID)
+	if oldJSON != newJSON {
+		if err := os.Rename(oldJSON, newJSON); err != nil {
+			return err
+		}
+	}
+	var raw map[string]any
+	if err := util.ReadJSON(newJSON, &raw); err != nil {
+		return err
+	}
+	raw["id"] = newID
+	return util.WriteJSONAtomic(newJSON, raw)
+}
+
 func normalizeVersionID(layout paths.Layout, versionID string) error {
 	var version map[string]any
 	path := layout.VersionJSON(versionID)
@@ -372,7 +559,7 @@ func normalizeVersionID(layout paths.Layout, versionID string) error {
 // Maven mirror. The installer only knows about install_profile libraries;
 // finish() also installs the generated version's libraries and would otherwise
 // fall back to the official host.
-func rewriteForgeVersionMirror(layout paths.Layout, versionID, mirror string) error {
+func rewriteForgeVersionMirror(layout paths.Layout, versionID, mirror string, bases []string) error {
 	if mirror == "" {
 		return nil
 	}
@@ -392,7 +579,7 @@ func rewriteForgeVersionMirror(layout paths.Layout, versionID, mirror string) er
 			return value
 		}
 		out := url
-		for _, base := range []string{"https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"} {
+		for _, base := range bases {
 			out = rewriteMavenURL(out, base, mirror)
 		}
 		if out != url {
@@ -449,6 +636,17 @@ func forgeMavenURL(rel string) string {
 		return mirror + "/" + strings.TrimLeft(rel, "/")
 	}
 	return forgeMavenBase + "/" + strings.TrimLeft(rel, "/")
+}
+
+func neoforgeMirror() string {
+	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/")
+}
+
+func neoforgeMavenURL(rel string) string {
+	if mirror := neoforgeMirror(); mirror != "" {
+		return mirror + "/" + strings.TrimLeft(rel, "/")
+	}
+	return neoforgeMavenBase + "/" + strings.TrimLeft(rel, "/")
 }
 
 func fetchOptionalSHA1(ctx context.Context, client *http.Client, url string) string {

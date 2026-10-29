@@ -402,6 +402,7 @@ var ruCatalog = map[string]string{
 	"Removed %s":                                                "%s удалён",
 	"manage mods for the selected instance":                     "управлять модами выбранного экземпляра",
 	"install Fabric, Quilt, Forge or OptiFine":                  "установить Fabric, Quilt, Forge или OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "установить Fabric, Quilt, Forge, NeoForge или OptiFine",
 	"Add mod":                      "Добавить мод",
 	"Full path to a .jar mod file": "Полный путь к .jar-файлу мода",
 	"Remove mod?":                  "Удалить мод?",

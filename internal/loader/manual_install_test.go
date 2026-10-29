@@ -18,6 +18,25 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
+func TestManualNeoForgeVersions(t *testing.T) {
+	if os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR") == "" {
+		t.Skip("set MCLAUNCHER_NEOFORGE_MIRROR to exercise the NeoForge metadata endpoint")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	client := util.NewHTTPClient()
+	for _, minecraft := range []string{"1.20.1", "1.21.1"} {
+		versions, err := FetchVersions(ctx, client, NeoForge, minecraft)
+		if err != nil {
+			t.Fatalf("Minecraft %s: %v", minecraft, err)
+		}
+		if len(versions) == 0 {
+			t.Fatalf("Minecraft %s: no NeoForge versions", minecraft)
+		}
+		t.Logf("Minecraft %s: %d versions, newest %s", minecraft, len(versions), versions[0].Version)
+	}
+}
+
 func TestManualInstall(t *testing.T) {
 	root := os.Getenv("MANUAL_ROOT")
 	if root == "" {

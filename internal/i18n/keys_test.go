@@ -400,6 +400,7 @@ var requiredCatalogKeys = []string{
 	"Removed %s",
 	"manage mods for the selected instance",
 	"install Fabric, Quilt, Forge or OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine",
 	"Add mod",
 	"Full path to a .jar mod file",
 	"Remove mod?",

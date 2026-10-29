@@ -402,6 +402,7 @@ var zhHansCatalog = map[string]string{
 	"Removed %s":                                                "已删除 %s",
 	"manage mods for the selected instance":                     "管理所选实例的模组",
 	"install Fabric, Quilt, Forge or OptiFine":                  "安装 Fabric、Quilt、Forge 或 OptiFine",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "安装 Fabric、Quilt、Forge、NeoForge 或 OptiFine",
 	"Add mod":                      "添加模组",
 	"Full path to a .jar mod file": ".jar 模组文件的完整路径",
 	"Remove mod?":                  "删除模组？",

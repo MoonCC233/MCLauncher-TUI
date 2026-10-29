@@ -402,6 +402,7 @@ var jaCatalog = map[string]string{
 	"Removed %s":                                                "%s を削除しました",
 	"manage mods for the selected instance":                     "選択したインスタンスの MOD を管理",
 	"install Fabric, Quilt, Forge or OptiFine":                  "Fabric、Quilt、Forge、OptiFine をインストール",
+	"install Fabric, Quilt, Forge, NeoForge or OptiFine":        "Fabric、Quilt、Forge、NeoForge、OptiFine をインストール",
 	"Add mod":                      "MOD を追加",
 	"Full path to a .jar mod file": ".jar MOD ファイルのフルパス",
 	"Remove mod?":                  "MOD を削除しますか?",

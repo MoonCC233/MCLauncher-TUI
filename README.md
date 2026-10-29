@@ -20,8 +20,8 @@
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
 - **Java 运行时管理**：自动扫描 PATH、JAVA_HOME、Windows 注册表、各本地磁盘的常见安装目录以及 IDE 自带运行时，也可手动指定；可在 Java 选择器里下载 Adoptium Temurin JDK 8/17/21，下载优先走 GitHub 镜像；按版本要求选择 Java，并在版本过旧时提示。
 - **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数；窗口尺寸提供从 854×480 到 4K 的常用预设，也可手动输入自定义分辨率。
-- **可靠的下载**：多线程下载、SHA-1 校验、原子写入配置文件。
-- **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录；退出启动器时会先停止由它启动的游戏进程。
+- **可靠的下载**：多线程下载、SHA-1 / SHA-512 校验、原子写入配置文件。
+- **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录；默认退出启动器时停止由它启动的游戏进程，也可在设置中开启 `Keep game running` 保留游戏。
 - **后台任务与下载记录**：安装和游戏启动可发送到后台，在 `Downloads` 页面查看进度、重开进度弹窗或取消任务；最近 20 条任务会持久化到 `downloads-history.json`，重启启动器后仍可查看，可用 `↑` / `↓`、`pgup` / `pgdown` 翻看。
 - **版本搜索与分类**：标题右侧的搜索框可按版本 ID 即时搜索；正式版、快照、远古版（Beta / Alpha）与愚人节版独立筛选；正式版和快照分类会自动排除愚人节版本；旧版 assets 的 virtual / map_to_resources 索引也有处理。
 - **应用内更新**：在 `Settings` 的 `Launcher version` 行按 `enter` 检查更新；发现新版本后会下载并替换启动器，重启后生效。GitHub 无法直连时会自动尝试镜像，也可以用 `MCLAUNCHER_UPDATE_MIRROR` 指定镜像。
@@ -37,9 +37,9 @@
 | --- | --- |
 | ![控制台](docs/console.png) | ![帮助](docs/help.png) |
 
-| 安装加载器 | 模组管理 |
+| 安装加载器 | 资源与模组 |
 | --- | --- |
-| ![加载器](docs/loader.png) | ![模组](docs/mods.png) |
+| ![加载器](docs/loader.png) | ![资源与模组](docs/content.png) |
 
 <details>
 <summary>更多截图</summary>
@@ -147,8 +147,9 @@ Windows 下输出文件为 `mclauncher.exe`。
    安装或启动时按 `b` 将任务留在后台，按 `d` 直接打开 `Downloads`。在 `Downloads` 中按 `enter` 重开进度弹窗，按 `x` 取消任务；完成、失败和取消的任务会保留在历史记录中。
 
 8. **调整设置**  
-在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数、游戏窗口标题、界面语言、主题、标题字形、标题动画、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。
-- **窗口尺寸**：打开常用分辨率预设（854×480、1280×720、1366×768、1600×900、1920×1080、2560×1440、3840×2160），选择 `Custom…` 可手动输入任意 `宽x高`。  
+   在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、退出时是否保留游戏、下载线程数、游戏窗口标题、界面语言、主题、标题字形、标题动画、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。
+   - **退出时保留游戏**：开启 `Keep game running` 后，退出启动器不会停止 Minecraft；默认关闭，保持退出即停止游戏的行为。
+   - **窗口尺寸**：打开常用分辨率预设（854×480、1280×720、1366×768、1600×900、1920×1080、2560×1440、3840×2160），选择 `Custom…` 可手动输入任意 `宽x高`。
    - **游戏窗口标题**：填写后会在游戏窗口出现时改名（目前仅 Windows 支持，通过 Win32 窗口 API 实现）；留空则保持 Minecraft 自带标题。启动器自己的终端窗口标题固定为 `MCLauncher TUI`。
    - **主题**：打开主题选择器，选择预设或 `Custom accent…` 输入十六进制颜色；`Reset accent` 恢复主题默认强调色。  
    - **标题字形**：打开选择器切换首页标题的字形——`Block`（实心方块）或 `Line`（线条 ASCII），选择器里会直接预览当前高亮字形。  
@@ -291,6 +292,9 @@ internal/mojang/        版本清单、规则判断、参数替换、依赖解�
 internal/install/       下载、校验、资源索引与安装标记
 internal/loader/        Fabric / Quilt / Forge / NeoForge / OptiFine 安装与加载器元数据
 internal/mods/          模组扫描、元数据解析、启用/禁用与删除
+internal/packs/         资源包、光影与模组的安装、启停和目录扫描
+internal/catalog/       Modrinth 搜索与下载元数据
+internal/gametitle/     Windows 游戏窗口标题修改
 internal/update/        GitHub Release 检查、镜像下载与启动器替换
 internal/launch/        Java 命令行构建、进程启动、输出流
 internal/java/          Java 运行时扫描、版本解析、选择与 JDK 下载

@@ -44,7 +44,7 @@ var previewScreens = []string{
 	"loader",
 	"loader-versions",
 	"loader-java",
-	"mods",
+	"content",
 }
 
 func TestPreviewFrames(t *testing.T) {

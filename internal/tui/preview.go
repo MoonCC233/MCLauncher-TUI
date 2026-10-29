@@ -46,7 +46,7 @@ func Preview(screenName string, width, height int, language ...string) string {
 	}
 
 	layout := paths.New(`C:\Users\MoonCC\MCLauncher\.minecraft`)
-	m := New(cfg, layout, nil, "0.2.2", "")
+	m := New(cfg, layout, nil, "0.2.3", "")
 	// Previews must be deterministic and must not read a real data directory.
 	m.taskHistory = nil
 	m.width = width
@@ -101,7 +101,7 @@ func Preview(screenName string, width, height int, language ...string) string {
 	push := func(source, text string, ago time.Duration) {
 		m.logs = append(m.logs, LogLine{At: now.Add(-ago), Source: source, Text: text})
 	}
-	push("system", "mclauncher 0.2.2", 62*time.Second)
+	push("system", "mclauncher 0.2.3", 62*time.Second)
 	push("launcher", "version manifest: network · 27 versions", 61*time.Second)
 	push("launcher", "java scan: 3 runtimes", 60*time.Second)
 	push("launcher", "installed 1.21.4 · 512 files · 283.4 MB", 59*time.Second)

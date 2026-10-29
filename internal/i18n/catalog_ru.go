@@ -287,6 +287,8 @@ var ruCatalog = map[string]string{
 	"scroll lists, help and console":                        "прокрутка списков, справки и консоли",
 	"scroll through game output":                            "прокрутка вывода игры",
 	"scrolled %d lines · G to follow":                       "прокручено %d строк · G — следить",
+	"search":                                                "поиск",
+	"search versions":                                       "Поиск версий",
 	"sections":                                              "разделы",
 	"Sections":                                              "Разделы",
 	"select ; click again to open":                          "выбрать ; повторный клик — открыть",

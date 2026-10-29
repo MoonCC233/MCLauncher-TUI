@@ -287,6 +287,8 @@ var ptPTCatalog = map[string]string{
 	"scroll lists, help and console":                        "deslocar listas, ajuda e consola",
 	"scroll through game output":                            "deslocar a saída do jogo",
 	"scrolled %d lines · G to follow":                       "%d linhas deslocadas · G para seguir",
+	"search":                                                "pesquisar",
+	"search versions":                                       "Pesquisar versões",
 	"sections":                                              "secções",
 	"Sections":                                              "Secções",
 	"select ; click again to open":                          "selecionar ; clique novamente para abrir",

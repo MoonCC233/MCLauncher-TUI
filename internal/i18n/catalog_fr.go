@@ -287,6 +287,8 @@ var frCatalog = map[string]string{
 	"scroll lists, help and console":                        "faire défiler les listes, l'aide et la console",
 	"scroll through game output":                            "parcourir la sortie du jeu",
 	"scrolled %d lines · G to follow":                       "%d lignes parcourues · G pour suivre",
+	"search":                                                "rechercher",
+	"search versions":                                       "Rechercher des versions",
 	"sections":                                              "sections",
 	"Sections":                                              "Sections",
 	"select ; click again to open":                          "sélectionner ; recliquez pour ouvrir",

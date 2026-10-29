@@ -287,6 +287,8 @@ var esCatalog = map[string]string{
 	"scroll lists, help and console":                        "desplazar las listas, la ayuda y la consola",
 	"scroll through game output":                            "desplazarse por la salida del juego",
 	"scrolled %d lines · G to follow":                       "%d líneas desplazadas · G para seguir",
+	"search":                                                "buscar",
+	"search versions":                                       "Buscar versiones",
 	"sections":                                              "secciones",
 	"Sections":                                              "Secciones",
 	"select ; click again to open":                          "seleccionar ; clic otra vez para abrir",

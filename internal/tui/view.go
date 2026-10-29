@@ -362,7 +362,7 @@ func (m *Model) screenHints() []hintSpec {
 		return []hintSpec{
 			hint("enter", m.t("create")),
 			hint("i", m.t("install")),
-			hint("/", m.t("filter")),
+			hint("/", m.t("search")),
 			hint("t", m.t("type")),
 			hint("r", m.t("refresh")),
 		}

@@ -287,6 +287,8 @@ var viCatalog = map[string]string{
 	"scroll lists, help and console":                        "cuộn danh sách, trợ giúp và bảng điều khiển",
 	"scroll through game output":                            "cuộn đầu ra trò chơi",
 	"scrolled %d lines · G to follow":                       "đã cuộn %d dòng · G để theo dõi",
+	"search":                                                "tìm kiếm",
+	"search versions":                                       "Tìm kiếm phiên bản",
 	"sections":                                              "mục",
 	"Sections":                                              "Mục",
 	"select ; click again to open":                          "chọn ; nhấp lại để mở",

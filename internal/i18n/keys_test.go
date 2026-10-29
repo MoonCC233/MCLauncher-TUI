@@ -288,6 +288,8 @@ var requiredCatalogKeys = []string{
 	"scroll lists, help and console",
 	"scroll through game output",
 	"scrolled %d lines · G to follow",
+	"search",
+	"search versions",
 	"sections",
 	"Sections",
 	"select ; click again to open",

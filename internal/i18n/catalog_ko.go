@@ -287,6 +287,8 @@ var koCatalog = map[string]string{
 	"scroll lists, help and console":                        "목록, 도움말, 콘솔을 스크롤",
 	"scroll through game output":                            "게임 출력을 스크롤",
 	"scrolled %d lines · G to follow":                       "%d줄 스크롤됨 · G로 따라가기",
+	"search":                                                "검색",
+	"search versions":                                       "버전 검색",
 	"sections":                                              "섹션",
 	"Sections":                                              "섹션",
 	"select ; click again to open":                          "선택 ; 다시 클릭하여 열기",

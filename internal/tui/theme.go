@@ -174,6 +174,13 @@ func applyTheme(themeID, accent string) {
 	styleBlue = lipgloss.NewStyle().Foreground(colBlue)
 	styleBorder = lipgloss.NewStyle().Foreground(colBorder)
 
+	styleSearchBar = lipgloss.NewStyle().Background(colPanelAlt)
+	styleSearchPrompt = lipgloss.NewStyle().Background(colPanelAlt).Foreground(colPrimary).Bold(true)
+	styleSearchText = lipgloss.NewStyle().Background(colPanelAlt).Foreground(colYellow)
+	styleSearchPlaceholder = lipgloss.NewStyle().Background(colPanelAlt).Foreground(colDim)
+	styleSearchHint = lipgloss.NewStyle().Background(colPanelAlt).Foreground(colDim)
+	styleSearchCursor = lipgloss.NewStyle().Background(colPrimary).Foreground(colBackground)
+
 	accentGradientColors = buildAccentGradient(preset.Primary)
 }
 
@@ -185,6 +192,18 @@ func buildAccentGradient(base string) []lipgloss.Color {
 	}
 	return colors
 }
+
+// The version search bar is a filled strip: every segment carries the panel
+// background so the bar keeps its shape on terminals without truecolor. The
+// styles are rebuilt by applyTheme so they follow theme and accent changes.
+var (
+	styleSearchBar         lipgloss.Style
+	styleSearchPrompt      lipgloss.Style
+	styleSearchText        lipgloss.Style
+	styleSearchPlaceholder lipgloss.Style
+	styleSearchHint        lipgloss.Style
+	styleSearchCursor      lipgloss.Style
+)
 
 func accentGradient(line string, index int) string {
 	if len(accentGradientColors) == 0 {

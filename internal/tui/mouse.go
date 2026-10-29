@@ -13,6 +13,7 @@ const (
 	hitNav
 	hitRow
 	hitChip
+	hitSearch
 	hitFormField
 	hitJavaRow
 	hitLanguageRow
@@ -133,6 +134,13 @@ func (m *Model) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	if m.filterActive {
+		if hit, ok := m.hitAt(msg.X, msg.Y); ok && hit.Kind == hitSearch {
+			return m.activateHit(hit)
+		}
+		m.filterActive = false
+		m.search.Blur()
+	}
 	if hit, ok := m.hitAt(msg.X, msg.Y); ok {
 		return m.activateHit(hit)
 	}
@@ -159,6 +167,11 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 		m.versionOffset = 0
 		m.rebuildVersions()
 		return m, nil
+	case hitSearch:
+		if m.filterActive {
+			return m, nil
+		}
+		return m, m.startFilter()
 	case hitRow:
 		double := m.registerClick(hit)
 		m.selectRow(hit)

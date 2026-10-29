@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 )
@@ -36,6 +38,21 @@ func TestApplyThemeCustomAccent(t *testing.T) {
 	applyTheme("midnight", "")
 	if got := string(colPrimary); got != "#7aa2f7" {
 		t.Errorf("midnight primary = %q", got)
+	}
+}
+
+func TestApplyThemeRestylesSearchBar(t *testing.T) {
+	defer applyTheme(config.DefaultTheme, "")
+	applyTheme("forest", "#112233")
+	preset, _ := themeByID("forest")
+	if got := string(styleSearchBar.GetBackground().(lipgloss.Color)); got != preset.PanelAlt {
+		t.Errorf("search bar background = %q, want %q", got, preset.PanelAlt)
+	}
+	if got := string(styleSearchPrompt.GetForeground().(lipgloss.Color)); got != "#112233" {
+		t.Errorf("search prompt foreground = %q, want accent", got)
+	}
+	if got := string(styleSearchCursor.GetBackground().(lipgloss.Color)); got != "#112233" {
+		t.Errorf("search cursor background = %q, want accent", got)
 	}
 }
 

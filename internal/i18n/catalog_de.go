@@ -287,6 +287,8 @@ var deCatalog = map[string]string{
 	"scroll lists, help and console":                        "Listen, Hilfe und Konsole scrollen",
 	"scroll through game output":                            "durch die Spielausgabe scrollen",
 	"scrolled %d lines · G to follow":                       "%d Zeilen gescrollt · G zum Folgen",
+	"search":                                                "suchen",
+	"search versions":                                       "Versionen suchen",
 	"sections":                                              "Bereiche",
 	"Sections":                                              "Bereiche",
 	"select ; click again to open":                          "auswählen ; erneut klicken zum Öffnen",

@@ -287,6 +287,8 @@ var zhHansCatalog = map[string]string{
 	"scroll lists, help and console":                        "滚动列表、帮助和控制台",
 	"scroll through game output":                            "滚动查看游戏输出",
 	"scrolled %d lines · G to follow":                       "已滚动 %d 行 · 按 G 跟随",
+	"search":                                                "搜索",
+	"search versions":                                       "搜索版本",
 	"sections":                                              "区域",
 	"Sections":                                              "区域",
 	"select ; click again to open":                          "选择；再次单击以打开",

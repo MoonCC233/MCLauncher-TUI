@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/x/ansi"
 
@@ -300,5 +301,167 @@ func TestFooterHelpHitMatchesRenderedPosition(t *testing.T) {
 	mouseClick(m, col, m.height-1)
 	if m.modal != modalHelp {
 		t.Fatalf("modal = %v, want help after clicking the footer hint", m.modal)
+	}
+}
+
+func TestVersionSearchBarSharesTitleRow(t *testing.T) {
+	cases := []struct {
+		name  string
+		lang  i18n.Lang
+		width int
+	}{
+		{"english-wide", i18n.EN, 120},
+		{"english-narrow", i18n.EN, 80},
+		{"chinese", i18n.ZHHans, 100},
+		{"arabic", i18n.AR, 100},
+		{"german-narrow", i18n.DE, 64},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newTestModel(t)
+			m.width, m.height = tc.width, 32
+			m.lang = tc.lang
+			m.manifest = demoManifest(time.Now())
+			m.manifestAt = time.Now().Add(-12 * time.Minute)
+			m.switchScreen(ScreenVersions)
+			lines := plainView(m)
+
+			row := lines[bodyTop]
+			if cellIndex(row, m.t("Versions")) < 0 {
+				t.Fatalf("title is not on the first body row: %q", row)
+			}
+			placeholder := cellIndex(row, m.t("search versions"))
+			if placeholder < 0 {
+				t.Fatalf("search placeholder is not on the title row: %q", row)
+			}
+			hit := findHit(t, m, func(h hitRegion) bool { return h.Kind == hitSearch })
+			if hit.Y != bodyTop {
+				t.Errorf("search hit row = %d, want %d", hit.Y, bodyTop)
+			}
+			if placeholder < hit.X || placeholder >= hit.X+hit.W {
+				t.Errorf("placeholder column %d is outside the search hit %+v", placeholder, hit)
+			}
+			if cellIndex(lines[bodyTop+2], " "+m.t("all")+" ") < 0 {
+				t.Errorf("version chips did not move under the search row: %q", lines[bodyTop+2])
+			}
+		})
+	}
+}
+
+func TestVersionSearchHitFocusAndClear(t *testing.T) {
+	m := newTestModel(t)
+	m.width, m.height = 120, 38
+	m.lang = i18n.EN
+	m.manifest = demoManifest(time.Now())
+	m.manifestAt = time.Now().Add(-12 * time.Minute)
+	m.switchScreen(ScreenVersions)
+	plainView(m)
+
+	hit := findHit(t, m, func(h hitRegion) bool { return h.Kind == hitSearch })
+	mouseClick(m, hit.X+2, hit.Y)
+	if !m.filterActive {
+		t.Fatal("clicking the search bar did not focus the filter")
+	}
+
+	m.Update(keyMsg("1.21"))
+	if m.filter != "1.21" {
+		t.Fatalf("filter = %q, want 1.21 after typing", m.filter)
+	}
+	lines := plainView(m)
+	if cellIndex(lines[bodyTop], "1.21") < 0 {
+		t.Fatalf("typed query is not rendered in the title search bar: %q", lines[bodyTop])
+	}
+
+	m.Update(keyMsg("enter"))
+	if m.filterActive || m.filter != "1.21" {
+		t.Fatalf("after enter: active=%v filter=%q", m.filterActive, m.filter)
+	}
+	m.Update(keyMsg("esc"))
+	if m.filter != "" || m.screen != ScreenVersions {
+		t.Fatalf("esc should clear the search without leaving versions: screen=%v filter=%q", m.screen, m.filter)
+	}
+}
+
+func TestVersionsHeaderKeepsSearchWidth(t *testing.T) {
+	for _, width := range []int{56, 64, 80, 100, 120, 160} {
+		for _, lang := range []i18n.Lang{i18n.EN, i18n.ZHHans, i18n.AR, i18n.DE} {
+			t.Run(fmt.Sprintf("%s/%d", lang, width), func(t *testing.T) {
+				m := newTestModel(t)
+				m.width, m.height = width, 32
+				m.lang = lang
+				m.manifest = demoManifest(time.Now())
+				m.manifestAt = time.Now().Add(-12 * time.Minute)
+				m.switchScreen(ScreenVersions)
+
+				contentW := m.contentWidth()
+				titleW, barW, metaW, showMeta := m.versionsHeaderGeometry(contentW)
+				if barW < 8 {
+					t.Fatalf("search bar width = %d, want at least 8", barW)
+				}
+				if showMeta && barW < versionsBarMinWidth {
+					t.Errorf("metadata shown with only %d search cells", barW)
+				}
+				used := titleW + versionsHeaderGap + barW
+				if showMeta {
+					used += versionsHeaderGap + metaW
+				}
+				if used > contentW {
+					t.Errorf("title row uses %d cells, content width is %d", used, contentW)
+				}
+			})
+		}
+	}
+}
+
+func TestVersionsLayoutWithManifestWarning(t *testing.T) {
+	for _, width := range []int{70, 100, 120} {
+		for _, warning := range []string{"", "manifest warning: using the cached copy"} {
+			t.Run(fmt.Sprintf("%d/%v", width, warning != ""), func(t *testing.T) {
+				m := newTestModel(t)
+				m.width, m.height = width, 34
+				m.lang = i18n.EN
+				m.manifest = demoManifest(time.Now())
+				m.manifestAt = time.Now().Add(-12 * time.Minute)
+				m.switchScreen(ScreenVersions)
+				m.manifestErr = warning
+				lines := plainView(m)
+
+				if cellIndex(lines[m.height-2], "enter create instance") < 0 {
+					t.Fatalf("version detail row was pushed out of the frame: %q", lines[m.height-2])
+				}
+				if warning != "" {
+					if cellIndex(strings.Join(lines, "\n"), "manifest warning") < 0 {
+						t.Error("manifest warning is not rendered")
+					}
+					if got := m.filterBarHeight(m.contentWidth()); got < 2 {
+						t.Errorf("filter bar height = %d, want a row for chips plus the warning", got)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestSearchBarKeepsExactWidth(t *testing.T) {
+	m := newTestModel(t)
+	m.lang = i18n.EN
+	queries := []string{"", "1.21.4", strings.Repeat("snapshot-", 8), "快照版本"}
+	for _, width := range []int{5, 8, 16, 26, 40, 80} {
+		for _, query := range queries {
+			for _, active := range []bool{false, true} {
+				m.filter = query
+				m.filterActive = active
+				m.search.Focus()
+				m.search.SetValue(query)
+				m.search.CursorEnd()
+				bar := m.searchBar(width)
+				if got := ansi.StringWidth(bar); got != width {
+					t.Errorf("width=%d query=%q active=%v: bar width=%d: %q", width, query, active, got, ansi.Strip(bar))
+				}
+				if strings.Contains(bar, "\n") {
+					t.Errorf("width=%d query=%q active=%v: bar contains a newline", width, query, active)
+				}
+			}
+		}
 	}
 }

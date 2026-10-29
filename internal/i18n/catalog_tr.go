@@ -287,6 +287,8 @@ var trCatalog = map[string]string{
 	"scroll lists, help and console":                        "listeleri, yardımı ve konsolu kaydır",
 	"scroll through game output":                            "oyun çıktısında gezin",
 	"scrolled %d lines · G to follow":                       "%d satır kaydırıldı · takip için G",
+	"search":                                                "ara",
+	"search versions":                                       "Sürüm ara",
 	"sections":                                              "bölümler",
 	"Sections":                                              "Bölümler",
 	"select ; click again to open":                          "seç ; açmak için tekrar tıkla",

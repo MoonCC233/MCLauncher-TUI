@@ -301,13 +301,13 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 		logFollow:       true,
 		search:          textinput.New(),
 	}
-	m.search.Placeholder = m.t("filter versions")
+	m.search.Placeholder = m.t("search versions")
 	m.search.Prompt = "/ "
 	m.search.CharLimit = 48
-	m.search.PromptStyle = stylePrimary
-	m.search.TextStyle = styleText
-	m.search.PlaceholderStyle = styleDim
-	m.search.Cursor.Style = stylePrimary
+	m.search.PromptStyle = styleSearchPrompt
+	m.search.TextStyle = styleSearchText
+	m.search.PlaceholderStyle = styleSearchPlaceholder
+	m.search.Cursor.Style = styleSearchCursor
 	m.addLog("system", "mclauncher "+appVersion)
 	if notice != "" {
 		m.addLog("error", notice)
@@ -509,6 +509,12 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "esc":
+		if m.screen == ScreenVersions && m.filter != "" {
+			m.filter = ""
+			m.search.SetValue("")
+			m.rebuildVersions()
+			return m, nil
+		}
 		if m.screen != ScreenHome {
 			m.switchScreen(ScreenHome)
 		}
@@ -713,7 +719,8 @@ func (m *Model) updateFilter(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) startFilter() tea.Cmd {
 	m.filterActive = true
-	m.search.Width = util.Clamp(m.contentWidth()-44, 12, 40)
+	_, barW, _, _ := m.versionsHeaderGeometry(m.contentWidth())
+	m.search.Width = util.Clamp(barW-5, 1, 1<<20)
 	m.search.Focus()
 	m.search.SetValue(m.filter)
 	m.search.CursorEnd()
@@ -960,7 +967,7 @@ func (m *Model) setLanguage(lang i18n.Lang) {
 	}
 	m.lang = lang
 	m.cfg.Settings.Language = string(lang)
-	m.search.Placeholder = m.t("filter versions")
+	m.search.Placeholder = m.t("search versions")
 	m.saveConfig()
 	m.setToast(m.tf("Language: %s", i18n.NativeName(lang)), toastSuccess)
 }
@@ -986,10 +993,10 @@ func (m *Model) setTheme(id, accent string) {
 }
 
 func (m *Model) restyleTextInputs() {
-	m.search.PromptStyle = stylePrimary
-	m.search.TextStyle = styleText
-	m.search.PlaceholderStyle = styleDim
-	m.search.Cursor.Style = stylePrimary
+	m.search.PromptStyle = styleSearchPrompt
+	m.search.TextStyle = styleSearchText
+	m.search.PlaceholderStyle = styleSearchPlaceholder
+	m.search.Cursor.Style = styleSearchCursor
 	if len(m.form.Fields) > 0 {
 		for i := range m.form.Fields {
 			m.form.Fields[i].PromptStyle = stylePrimary
@@ -1007,7 +1014,7 @@ func (m *Model) restyleTextInputs() {
 func (m *Model) useSystemLanguage() {
 	m.lang = i18n.Resolve("")
 	m.cfg.Settings.Language = ""
-	m.search.Placeholder = m.t("filter versions")
+	m.search.Placeholder = m.t("search versions")
 	m.saveConfig()
 	m.setToast(m.tf("Language: System (%s)", i18n.NativeName(m.lang)), toastSuccess)
 }

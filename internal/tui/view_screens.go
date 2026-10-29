@@ -284,19 +284,9 @@ func (m *Model) instanceRow(inst config.Instance, selected bool, w int) string {
 }
 
 func (m *Model) viewVersions(w, h int) []string {
-	source := m.t("manifest")
-	right := m.t("loading…")
-	if m.manifest != nil {
-		source = m.manifest.Source
-		right = m.tf("%s · %s", source, m.count(len(m.visible), "version", "versions"))
-		if m.manifestAt.After(time.Time{}) {
-			right += " · " + m.relTime(m.manifestAt.Unix())
-		}
-	}
-	lines := []string{
-		m.sectionHeader(m.t("Versions"), right, w),
-		"",
-	}
+	header, searchX, searchW := m.versionsHeader(w)
+	lines := []string{header, ""}
+	m.addHit(m.contentX()+searchX, bodyTop, searchW, 1, hitRegion{Kind: hitSearch, Screen: ScreenVersions})
 	lines = append(lines, m.filterBarLines(w, bodyTop+len(lines))...)
 	lines = append(lines, "")
 	if m.manifest == nil {
@@ -360,6 +350,141 @@ func (m *Model) viewVersions(w, h int) []string {
 	return lines
 }
 
+const (
+	versionsHeaderGap   = 2
+	versionsBarMinWidth = 26
+)
+
+func (m *Model) versionsMeta() string {
+	if m.manifest == nil {
+		return m.t("loading…")
+	}
+	meta := m.tf("%s · %s", m.manifest.Source, m.count(len(m.manifest.Versions), "version", "versions"))
+	if m.manifestAt.After(time.Time{}) {
+		meta += " · " + m.relTime(m.manifestAt.Unix())
+	}
+	return meta
+}
+
+// versionsHeaderGeometry splits the title row between the title, the flexible
+// search bar and the manifest metadata. The metadata is dropped first so the
+// search bar keeps a usable width on narrow terminals.
+func (m *Model) versionsHeaderGeometry(w int) (titleW, barW, metaW int, showMeta bool) {
+	titleW = 2 + ansi.StringWidth(m.t("Versions"))
+	metaW = ansi.StringWidth(m.versionsMeta())
+	if metaW > 0 && w-titleW-versionsHeaderGap-versionsHeaderGap-metaW >= versionsBarMinWidth {
+		showMeta = true
+	} else {
+		metaW = 0
+	}
+	barW = w - titleW - versionsHeaderGap
+	if showMeta {
+		barW -= versionsHeaderGap + metaW
+	}
+	if barW < 8 {
+		barW = 8
+	}
+	return titleW, barW, metaW, showMeta
+}
+
+// versionsHeader renders the title row and returns the search bar's offset and
+// width in content cells for the mouse hit region.
+func (m *Model) versionsHeader(w int) (string, int, int) {
+	titleW, barW, metaW, showMeta := m.versionsHeaderGeometry(w)
+	title := stylePrimary.Render("▌") + " " + styleBold.Render(m.t("Versions"))
+	bar := m.searchBar(barW)
+	gap := strings.Repeat(" ", versionsHeaderGap)
+	meta := ""
+	if showMeta {
+		meta = styleDim.Render(m.versionsMeta())
+	}
+
+	var line string
+	x := 0
+	if m.rtl() {
+		if showMeta {
+			line = meta + gap
+			x = metaW + versionsHeaderGap
+		}
+		line += bar + gap + title
+	} else {
+		line = title + gap
+		x = titleW + versionsHeaderGap
+		line += bar
+		if showMeta {
+			line += gap + meta
+		}
+	}
+	return fitLine(line, w), x, barW
+}
+
+// searchBar draws the filled, flexible version search field. It owns the
+// textinput while editing and renders the same strip by hand when blurred so
+// the placeholder and the clear hint keep the bar background.
+func (m *Model) searchBar(width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if width == 1 {
+		return styleSearchBar.Render(" ")
+	}
+	inner := width - 2
+	if inner < 1 {
+		inner = 1
+	}
+	pad := func(n int) string {
+		if n <= 0 {
+			return ""
+		}
+		return styleSearchBar.Render(strings.Repeat(" ", n))
+	}
+
+	if m.filterActive {
+		m.search.Width = max(1, inner-3)
+		body := m.search.View()
+		if bodyW := ansi.StringWidth(body); bodyW > inner {
+			body = ansi.Truncate(body, inner, "…")
+		}
+		return styleSearchBar.Render(" ") + body + pad(inner-ansi.StringWidth(body)) + styleSearchBar.Render(" ")
+	}
+
+	if inner < 3 {
+		return styleSearchBar.Render(strings.Repeat(" ", width))
+	}
+	right := ""
+	if m.filter != "" {
+		right = m.t("esc clear")
+	}
+	avail := inner - 2
+	if right != "" {
+		rightW := ansi.StringWidth(right)
+		if inner-4-rightW >= 8 {
+			avail = inner - 4 - rightW
+		} else {
+			right = ""
+		}
+	}
+	if avail < 0 {
+		avail = 0
+	}
+
+	text := m.filter
+	textStyle := styleSearchText
+	if text == "" {
+		text = m.t("search versions")
+		textStyle = styleSearchPlaceholder
+	}
+	text = ansi.Truncate(text, avail, "…")
+
+	line := styleSearchBar.Render(" ") + styleSearchPrompt.Render("/ ") + textStyle.Render(text)
+	line += pad(avail - ansi.StringWidth(text))
+	if right != "" {
+		line += pad(2) + styleSearchHint.Render(right)
+	}
+	line += styleSearchBar.Render(" ")
+	return line
+}
+
 func (m *Model) filterChips() []string {
 	return []string{m.t("all"), m.t("releases"), m.t("snapshots"), m.t("ancient"), m.t("April Fools")}
 }
@@ -372,7 +497,8 @@ func (m *Model) filterChipOrder() []int {
 	return order
 }
 
-// filterBarHeight counts the wrapped chip rows plus the filter/status line.
+// filterBarHeight counts the wrapped chip rows plus an optional manifest
+// warning line. The search field lives in the title row and is not counted.
 func (m *Model) filterBarHeight(w int) int {
 	chips := m.filterChips()
 	rows, cur := 1, 2
@@ -395,12 +521,15 @@ func (m *Model) filterBarHeight(w int) int {
 		cur += width
 		hasChip = true
 	}
-	return rows + 1
+	if m.manifestErr != "" {
+		rows++
+	}
+	return rows
 }
 
-// filterBarLines renders the version category chips and the filter status.
-// Chips wrap on narrow terminals instead of being truncated. y0 is the screen
-// row of the first chip line, used for mouse hit regions.
+// filterBarLines renders the version category chips and an optional manifest
+// warning. Chips wrap on narrow terminals instead of being truncated. y0 is
+// the screen row of the first chip line, used for mouse hit regions.
 func (m *Model) filterBarLines(w, y0 int) []string {
 	chips := m.filterChips()
 	order := m.filterChipOrder()
@@ -451,22 +580,9 @@ func (m *Model) filterBarLines(w, y0 int) []string {
 		out = append(out, fitLine("  "+strings.Join(items, styleBorder.Render(" ")), w))
 	}
 
-	var status string
-	if m.filterActive {
-		m.search.Width = util.Clamp(w-8, 12, 40)
-		status = m.search.View()
-	} else if m.filter != "" {
-		status = styleYellow.Render("/ "+m.filter) + styleDim.Render("  "+m.t("esc clear"))
-	} else {
-		status = styleDim.Render("/ " + m.t("filter"))
-	}
 	if m.manifestErr != "" {
-		avail := w - 4 - ansi.StringWidth(status)
-		if avail > 8 {
-			status += "  " + styleRed.Render("· "+util.Truncate(m.manifestErr, avail))
-		}
+		out = append(out, fitLine("  "+styleRed.Render("! "+util.Truncate(m.manifestErr, w-6)), w))
 	}
-	out = append(out, fitLine("  "+status, w))
 	return out
 }
 

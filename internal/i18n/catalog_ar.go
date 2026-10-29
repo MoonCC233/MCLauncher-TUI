@@ -287,6 +287,8 @@ var arCatalog = map[string]string{
 	"scroll lists, help and console":                        "تمرير القوائم والمساعدة والطرفية",
 	"scroll through game output":                            "التمرير في ناتج اللعبة",
 	"scrolled %d lines · G to follow":                       "تم التمرير %d سطرًا · G للمتابعة",
+	"search":                                                "بحث",
+	"search versions":                                       "ابحث عن الإصدارات",
 	"sections":                                              "الأقسام",
 	"Sections":                                              "الأقسام",
 	"select ; click again to open":                          "اختيار ; انقر مجددًا للفتح",

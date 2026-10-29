@@ -287,6 +287,8 @@ var zhHantCatalog = map[string]string{
 	"scroll lists, help and console":                        "捲動清單、說明和主控台",
 	"scroll through game output":                            "捲動查看遊戲輸出",
 	"scrolled %d lines · G to follow":                       "已捲動 %d 行 · 按 G 跟隨",
+	"search":                                                "搜尋",
+	"search versions":                                       "搜尋版本",
 	"sections":                                              "區段",
 	"Sections":                                              "區段",
 	"select ; click again to open":                          "選擇；再次點擊以開啟",

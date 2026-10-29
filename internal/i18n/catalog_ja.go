@@ -287,6 +287,8 @@ var jaCatalog = map[string]string{
 	"scroll lists, help and console":                        "リスト、ヘルプ、コンソールをスクロール",
 	"scroll through game output":                            "ゲーム出力をスクロール",
 	"scrolled %d lines · G to follow":                       "%d 行スクロール · G で追従",
+	"search":                                                "検索",
+	"search versions":                                       "バージョンを検索",
 	"sections":                                              "セクション",
 	"Sections":                                              "セクション",
 	"select ; click again to open":                          "選択；もう一度クリックで開く",

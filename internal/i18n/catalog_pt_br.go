@@ -287,6 +287,8 @@ var ptBRCatalog = map[string]string{
 	"scroll lists, help and console":                        "rolar listas, ajuda e console",
 	"scroll through game output":                            "rolar pela saída do jogo",
 	"scrolled %d lines · G to follow":                       "%d linhas roladas · G para seguir",
+	"search":                                                "buscar",
+	"search versions":                                       "Buscar versões",
 	"sections":                                              "seções",
 	"Sections":                                              "Seções",
 	"select ; click again to open":                          "selecionar ; clique novamente para abrir",

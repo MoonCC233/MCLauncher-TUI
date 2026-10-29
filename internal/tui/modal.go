@@ -132,6 +132,14 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.clampAccountCursor()
 			m.setToast(m.t("Account removed"), toastSuccess)
 			m.addLog("launcher", "removed account")
+		case confirmUninstallVersion:
+			target := m.confirm.Target
+			if err := m.uninstallVersion(target); err != nil {
+				m.alert = AlertState{Title: m.t("Could not uninstall version"), Body: err.Error()}
+				m.modal = modalAlert
+				return m, nil
+			}
+			m.setToast(m.tf("Uninstalled %s", target), toastSuccess)
 		}
 		m.modal = modalNone
 	case "esc", "n", "N":
@@ -282,6 +290,7 @@ func (m *Model) helpContent(width int) []string {
 			{"t", m.t("cycle version filters")},
 			{"enter", m.t("install if needed, then create instance")},
 			{"i", m.t("install without creating an instance")},
+			{"d", m.t("uninstall installed version")},
 			{"r", m.t("refresh the Mojang manifest")},
 		}},
 		{m.t("Accounts & settings"), []entry{

@@ -160,6 +160,19 @@ func (m *Model) startInstall(versionID string, createName string, createMemory i
 	}
 }
 
+func (m *Model) uninstallVersion(id string) error {
+	if id == "" || !m.installed[id] {
+		return fmt.Errorf("version %s is not installed", id)
+	}
+	if err := os.RemoveAll(m.layout.VersionDir(id)); err != nil {
+		return err
+	}
+	delete(m.installed, id)
+	m.rebuildVersions()
+	m.addLog("launcher", "uninstalled "+id)
+	return nil
+}
+
 func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 	if m.task != nil {
 		m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation to finish.")}

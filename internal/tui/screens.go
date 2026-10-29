@@ -174,6 +174,32 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.startInstall(v.ID, "", 0)
+	case "d":
+		v := m.currentVersion()
+		if v == nil {
+			return m, nil
+		}
+		if !m.installed[v.ID] {
+			m.setToast(m.t("Install this version first"), toastInfo)
+			return m, nil
+		}
+		if m.game != nil {
+			m.alert = AlertState{Title: m.t("Instance is running"), Body: m.t("Stop the game from the Console screen before deleting this instance.")}
+			m.modal = modalAlert
+			return m, nil
+		}
+		if m.task != nil && m.task.VersionID == v.ID {
+			m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation to finish.")}
+			m.modal = modalAlert
+			return m, nil
+		}
+		m.confirm = ConfirmState{
+			Kind:   confirmUninstallVersion,
+			Title:  m.t("Uninstall version?"),
+			Body:   m.tf("Delete installed files for %s? Instances using it will reinstall on next launch.", v.ID),
+			Target: v.ID,
+		}
+		m.modal = modalConfirm
 	case "t":
 		m.switchScope()
 	case "/":

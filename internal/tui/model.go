@@ -88,6 +88,7 @@ type confirmKind int
 const (
 	confirmDeleteInstance confirmKind = iota
 	confirmRemoveAccount
+	confirmUninstallVersion
 )
 
 type taskKind string
@@ -532,6 +533,7 @@ func (m *Model) switchScreen(screen Screen) {
 	m.screen = screen
 	m.filterActive = false
 	if screen == ScreenVersions {
+		m.installed = install.InstalledSet(m.layout)
 		m.rebuildVersions()
 	}
 	if screen == ScreenAccounts {

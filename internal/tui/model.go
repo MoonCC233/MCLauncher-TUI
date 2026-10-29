@@ -61,6 +61,8 @@ const (
 	modalMicrosoft
 	modalResolution
 	modalTheme
+	modalTitleAnim
+	modalTitleFont
 )
 
 type formKind int
@@ -236,6 +238,8 @@ type Model struct {
 	accountTypePick int
 	resolutionPick  int
 	themePick       int
+	titleAnimPick   int
+	titleFontPick   int
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -277,6 +281,10 @@ type Model struct {
 	toast   ToastState
 	spinner int
 	clock   int
+	// animFrame advances a few times per second and drives the wordmark sheen.
+	// animRunning tracks whether a tick is already scheduled.
+	animFrame   int
+	animRunning bool
 
 	quit bool
 }
@@ -337,7 +345,21 @@ func (m *Model) quitApp() (tea.Model, tea.Cmd) {
 	return m, tea.Quit
 }
 
+// Update runs the message through the model and then makes sure the title
+// animation is running only while it is actually on screen.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	model, cmd := m.updateMsg(msg)
+	next, ok := model.(*Model)
+	if !ok || next == nil {
+		return model, cmd
+	}
+	if anim := next.ensureAnimTick(); anim != nil {
+		return next, tea.Batch(cmd, anim)
+	}
+	return next, cmd
+}
+
+func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -364,6 +386,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.toast = ToastState{}
 		}
 		return m, tickCmd()
+	case animTickMsg:
+		m.animRunning = false
+		if m.animVisible() {
+			m.animFrame++
+		}
+		return m, nil
 	case manifestMsg:
 		m.manifestLoading = false
 		if msg.manifest != nil {
@@ -751,11 +779,16 @@ var aprilFoolsVersions = map[string]bool{
 
 func isAprilFoolsVersion(id string) bool { return aprilFoolsVersions[id] }
 
-func (m *Model) saveConfig() {
-	if err := m.cfg.Save(); err != nil {
-		m.setToast(m.tf("Could not save config: %s", err.Error()), toastError)
-		m.addLog("error", "save config: "+err.Error())
+// saveConfig persists the config and reports a failure both as a toast and to
+// the caller, so a later success message cannot hide it.
+func (m *Model) saveConfig() error {
+	err := m.cfg.Save()
+	if err == nil {
+		return nil
 	}
+	m.setToast(m.tf("Could not save config: %s", err.Error()), toastError)
+	m.addLog("error", "save config: "+err.Error())
+	return err
 }
 
 func (m *Model) setToast(text string, kind toastKind) {
@@ -922,6 +955,10 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Interface language. System follows your operating system locale.")},
 		{ID: "theme", Label: m.t("Theme"), Value: m.themeValue(),
 			Description: m.t("Color palette used by the launcher. Custom accent overrides the primary color.")},
+		{ID: "titlefont", Label: m.t("Title style"), Value: m.titleFontLabel(),
+			Description: m.t("The glyph style used by the home title.")},
+		{ID: "titleanim", Label: m.t("Title animation"), Value: m.titleAnimLabel(),
+			Description: m.t("Animation shown on the home title.")},
 		{ID: "data", Label: m.t("Data directory"), Value: util.ShortenPath(m.layout.Root, 56),
 			Description: m.t("Versions, assets, libraries and instance game directories.")},
 		{ID: "microsoft", Label: m.t("Microsoft Client ID"), Value: microsoft,

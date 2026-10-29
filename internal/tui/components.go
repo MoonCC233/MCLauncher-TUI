@@ -201,69 +201,6 @@ func (m *Model) progressBar(done, total int64, width int) string {
 		stylePrimary.Render(strings.Repeat("█", filled))
 }
 
-// logoGlyphs is a compact 5×5 uppercase pixel font for the wordmark. Every
-// letter uses the same cell height so the logo stays five lines tall.
-var logoGlyphs = map[rune][]string{
-	'M': {"#   #", "## ##", "# # #", "#   #", "#   #"},
-	'C': {" ### ", "#   #", "#    ", "#   #", " ### "},
-	'L': {"#    ", "#    ", "#    ", "#    ", "#####"},
-	'A': {" ### ", "#   #", "#####", "#   #", "#   #"},
-	'U': {"#   #", "#   #", "#   #", "#   #", " ### "},
-	'N': {"#   #", "##  #", "# # #", "#  ##", "#   #"},
-	'H': {"#   #", "#   #", "#####", "#   #", "#   #"},
-	'E': {"#####", "#    ", "#### ", "#    ", "#####"},
-	'R': {"#### ", "#   #", "#### ", "#  # ", "#   #"},
-}
-
-func logoLines(gap int) []string {
-	const wordmark = "MCLAUNCHER"
-	if gap < 1 {
-		gap = 1
-	}
-	spacer := strings.Repeat(" ", gap)
-	rows := make([]string, 5)
-	for _, r := range wordmark {
-		glyph, ok := logoGlyphs[r]
-		if !ok {
-			continue
-		}
-		for i := range rows {
-			if rows[i] != "" {
-				rows[i] += spacer
-			}
-			rows[i] += glyph[i]
-		}
-	}
-	for i := range rows {
-		rows[i] = strings.TrimRight(strings.ReplaceAll(rows[i], "#", "█"), " ")
-	}
-	return rows
-}
-
-func renderLogo(width int) []string {
-	for _, gap := range []int{2, 1} {
-		lines := logoLines(gap)
-		if len(lines) == 0 {
-			continue
-		}
-		widest := 0
-		for _, line := range lines {
-			if w := ansi.StringWidth(line); w > widest {
-				widest = w
-			}
-		}
-		if widest+2 > width {
-			continue
-		}
-		out := make([]string, len(lines))
-		for i, line := range lines {
-			out[i] = accentGradient(line, i)
-		}
-		return out
-	}
-	return []string{accentGradient("MCLAUNCHER", 0)}
-}
-
 func wrapPlain(text string, width int) []string {
 	if width < 4 {
 		width = 4

@@ -33,6 +33,10 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateResolutionPicker(msg)
 	case modalTheme:
 		return m.updateThemePicker(msg)
+	case modalTitleAnim:
+		return m.updateTitleAnimPicker(msg)
+	case modalTitleFont:
+		return m.updateTitleFontPicker(msg)
 	case modalProgress:
 		switch msg.String() {
 		case "esc":

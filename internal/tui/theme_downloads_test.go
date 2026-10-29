@@ -32,8 +32,17 @@ func TestApplyThemeCustomAccent(t *testing.T) {
 	if got := string(colPrimary); got != "#112233" {
 		t.Errorf("primary = %q", got)
 	}
-	if len(accentGradientColors) == 0 || string(accentGradientColors[0]) != "#112233" {
-		t.Errorf("gradient = %+v", accentGradientColors)
+	found := false
+	for _, color := range titlePalette {
+		if string(color) == "#112233" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("logo palette should be built from the custom accent: %+v", titlePalette)
+	}
+	if len(titleStyles) != len(titlePalette) {
+		t.Errorf("logo styles = %d, want %d", len(titleStyles), len(titlePalette))
 	}
 	applyTheme("midnight", "")
 	if got := string(colPrimary); got != "#7aa2f7" {

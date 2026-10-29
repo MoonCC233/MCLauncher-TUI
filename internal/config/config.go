@@ -29,6 +29,36 @@ func ValidTheme(id string) bool {
 	return false
 }
 
+// DefaultTitleAnim is the animation used by the home screen title.
+const DefaultTitleAnim = "sheen"
+
+// DefaultTitleFont is the glyph style used by the home screen title.
+const DefaultTitleFont = "block"
+
+// TitleFontIDs lists the selectable title fonts, in picker order.
+var TitleFontIDs = []string{"block", "line"}
+
+func ValidTitleFont(id string) bool {
+	for _, candidate := range TitleFontIDs {
+		if candidate == id {
+			return true
+		}
+	}
+	return false
+}
+
+// TitleAnimIDs lists the selectable title animations, in picker order.
+var TitleAnimIDs = []string{"sheen", "wave", "breathe", "off"}
+
+func ValidTitleAnim(id string) bool {
+	for _, candidate := range TitleAnimIDs {
+		if candidate == id {
+			return true
+		}
+	}
+	return false
+}
+
 type Account struct {
 	Username     string `json:"username"`
 	UUID         string `json:"uuid"`
@@ -65,8 +95,13 @@ type Settings struct {
 	Language          string `json:"language,omitempty"`
 	Theme             string `json:"theme,omitempty"`
 	ThemeAccent       string `json:"theme_accent,omitempty"`
+	TitleAnim         string `json:"title_anim,omitempty"`
+	TitleFont         string `json:"title_font,omitempty"`
 	DataDir           string `json:"data_dir,omitempty"`
 	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
+
+	// preserved holds keys written by a newer launcher (see preserve.go).
+	preserved *preservedFields
 }
 
 func DefaultSettings() Settings {
@@ -76,6 +111,8 @@ func DefaultSettings() Settings {
 		Height:          480,
 		DownloadThreads: 8,
 		Theme:           DefaultTheme,
+		TitleAnim:       DefaultTitleAnim,
+		TitleFont:       DefaultTitleFont,
 	}
 }
 
@@ -86,6 +123,9 @@ type Config struct {
 	Settings          Settings   `json:"settings"`
 	Accounts          []Account  `json:"accounts"`
 	Instances         []Instance `json:"instances"`
+
+	// preserved holds keys written by a newer launcher (see preserve.go).
+	preserved *preservedFields
 }
 
 func Load(path string) (*Config, error) {
@@ -143,6 +183,14 @@ func (c *Config) normalize() {
 		c.Settings.ThemeAccent = accent
 	} else {
 		c.Settings.ThemeAccent = ""
+	}
+	c.Settings.TitleAnim = strings.ToLower(strings.TrimSpace(c.Settings.TitleAnim))
+	if !ValidTitleAnim(c.Settings.TitleAnim) {
+		c.Settings.TitleAnim = DefaultTitleAnim
+	}
+	c.Settings.TitleFont = strings.ToLower(strings.TrimSpace(c.Settings.TitleFont))
+	if !ValidTitleFont(c.Settings.TitleFont) {
+		c.Settings.TitleFont = DefaultTitleFont
 	}
 	c.Settings.DataDir = strings.TrimSpace(c.Settings.DataDir)
 	c.Settings.MicrosoftClientID = strings.TrimSpace(c.Settings.MicrosoftClientID)

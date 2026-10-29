@@ -113,7 +113,10 @@ var (
 	styleBorder   lipgloss.Style
 )
 
-var accentGradientColors []lipgloss.Color
+var (
+	titlePalette []lipgloss.Color
+	titleStyles  []lipgloss.Style
+)
 
 func themeByID(id string) (themePalette, bool) {
 	id = normalizeThemeID(id)
@@ -181,11 +184,18 @@ func applyTheme(themeID, accent string) {
 	styleSearchHint = lipgloss.NewStyle().Background(colPanelAlt).Foreground(colDim)
 	styleSearchCursor = lipgloss.NewStyle().Background(colPrimary).Foreground(colBackground)
 
-	accentGradientColors = buildAccentGradient(preset.Primary)
+	titlePalette = buildTitlePalette(preset.Primary)
+	titleStyles = make([]lipgloss.Style, len(titlePalette))
+	for i, color := range titlePalette {
+		titleStyles[i] = lipgloss.NewStyle().Foreground(color).Bold(true)
+	}
 }
 
-func buildAccentGradient(base string) []lipgloss.Color {
-	factors := []float64{1.0, 0.96, 0.91, 0.86, 0.81, 0.76}
+// buildTitlePalette returns the shades used by the animated home title, ordered
+// from dim to bright. One bright level is the travelling highlight, the rest
+// form the resting gradient.
+func buildTitlePalette(base string) []lipgloss.Color {
+	factors := []float64{0.60, 0.66, 0.72, 0.78, 0.84, 0.90, 0.96, 1.00, 1.06, 1.12, 1.18, 1.24}
 	colors := make([]lipgloss.Color, 0, len(factors))
 	for _, factor := range factors {
 		colors = append(colors, lipgloss.Color(util.ShadeHex(base, factor)))
@@ -204,15 +214,3 @@ var (
 	styleSearchHint        lipgloss.Style
 	styleSearchCursor      lipgloss.Style
 )
-
-func accentGradient(line string, index int) string {
-	if len(accentGradientColors) == 0 {
-		return line
-	}
-	if index < 0 {
-		index = 0
-	}
-	return lipgloss.NewStyle().
-		Foreground(accentGradientColors[index%len(accentGradientColors)]).
-		Render(line)
-}

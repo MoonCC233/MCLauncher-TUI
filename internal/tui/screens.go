@@ -352,6 +352,10 @@ func (m *Model) adjustSetting(key string) {
 		preset := themePresets[idx]
 		m.setTheme(preset.ID, m.cfg.Settings.ThemeAccent)
 		m.setToast(m.tf("Theme: %s", preset.Name), toastSuccess)
+	case "titlefont":
+		m.cycleTitleFont(delta)
+	case "titleanim":
+		m.cycleTitleAnim(delta)
 	}
 }
 
@@ -371,6 +375,10 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openLanguagePicker()
 	case "theme":
 		m.openThemePicker()
+	case "titlefont":
+		m.openTitleFontPicker()
+	case "titleanim":
+		m.openTitleAnimPicker()
 	case "data":
 		m.openPrompt(promptDataDir, m.t("Data directory"), m.cfg.Settings.DataDir, m.t("Leave empty to use the default .minecraft folder."), 260)
 	case "microsoft":

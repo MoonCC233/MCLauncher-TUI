@@ -1,6 +1,7 @@
 # Build output
 /mclauncher
 /mclauncher.exe
+/mclauncher.exe~
 /dist/
 .minecraft
 

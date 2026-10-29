@@ -16,6 +16,19 @@ import (
 
 const DataVersion = 1
 
+const DefaultTheme = "opencode"
+
+var ThemeIDs = []string{"opencode", "midnight", "forest", "rose", "mono"}
+
+func ValidTheme(id string) bool {
+	for _, candidate := range ThemeIDs {
+		if candidate == id {
+			return true
+		}
+	}
+	return false
+}
+
 type Account struct {
 	Username     string `json:"username"`
 	UUID         string `json:"uuid"`
@@ -50,6 +63,8 @@ type Settings struct {
 	Height            int    `json:"height"`
 	DownloadThreads   int    `json:"download_threads"`
 	Language          string `json:"language,omitempty"`
+	Theme             string `json:"theme,omitempty"`
+	ThemeAccent       string `json:"theme_accent,omitempty"`
 	DataDir           string `json:"data_dir,omitempty"`
 	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
 }
@@ -60,6 +75,7 @@ func DefaultSettings() Settings {
 		Width:           854,
 		Height:          480,
 		DownloadThreads: 8,
+		Theme:           DefaultTheme,
 	}
 }
 
@@ -118,6 +134,15 @@ func (c *Config) normalize() {
 			// An unknown language means "follow the system locale".
 			c.Settings.Language = ""
 		}
+	}
+	c.Settings.Theme = strings.ToLower(strings.TrimSpace(c.Settings.Theme))
+	if !ValidTheme(c.Settings.Theme) {
+		c.Settings.Theme = DefaultTheme
+	}
+	if accent, ok := util.NormalizeHexColor(c.Settings.ThemeAccent); ok {
+		c.Settings.ThemeAccent = accent
+	} else {
+		c.Settings.ThemeAccent = ""
 	}
 	c.Settings.DataDir = strings.TrimSpace(c.Settings.DataDir)
 	c.Settings.MicrosoftClientID = strings.TrimSpace(c.Settings.MicrosoftClientID)
@@ -359,6 +384,9 @@ func (c *Config) AddInstance(name, versionID string, memoryMB int) (*Instance, e
 	}
 	c.Instances = append(c.Instances, inst)
 	if err := c.Save(); err != nil {
+		// Roll the in-memory addition back so the UI never shows an instance
+		// that did not reach disk.
+		c.Instances = c.Instances[:len(c.Instances)-1]
 		return nil, err
 	}
 	return &c.Instances[len(c.Instances)-1], nil

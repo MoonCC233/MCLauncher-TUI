@@ -117,6 +117,68 @@ func TestLogConfigPath(t *testing.T) {
 	}
 }
 
+func TestConsoleLogConfigReplacesXMLLayout(t *testing.T) {
+	layout := paths.New(t.TempDir())
+	if err := layout.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(layout.LogConfigs, "client-1.12.xml")
+	raw := `<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+  <Appenders>
+    <Console name="SysOut" target="SYSTEM_OUT">
+      <LegacyXMLLayout />
+    </Console>
+  </Appenders>
+</Configuration>`
+	if err := os.WriteFile(source, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dest, err := ConsoleLogConfig(layout, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dest == source {
+		t.Fatal("XML console config should be rewritten to a separate file")
+	}
+	data, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "LegacyXMLLayout") {
+		t.Error("rewritten config still uses LegacyXMLLayout")
+	}
+	if !strings.Contains(string(data), "PatternLayout") {
+		t.Error("rewritten console appender should use PatternLayout")
+	}
+	if sourceData, err := os.ReadFile(source); err != nil || string(sourceData) != raw {
+		t.Error("source log config should not be modified")
+	}
+	again, err := ConsoleLogConfig(layout, source)
+	if err != nil || again != dest {
+		t.Fatalf("second rewrite = %q, %v; want %q", again, err, dest)
+	}
+}
+
+func TestConsoleLogConfigKeepsPatternLayout(t *testing.T) {
+	layout := paths.New(t.TempDir())
+	if err := layout.Ensure(); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(layout.LogConfigs, "client.xml")
+	raw := `<Configuration><Appenders><Console><PatternLayout pattern="%msg%n" /></Console></Appenders></Configuration>`
+	if err := os.WriteFile(source, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dest, err := ConsoleLogConfig(layout, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dest != source {
+		t.Fatalf("PatternLayout config = %q, want original %q", dest, source)
+	}
+}
+
 func TestThreads(t *testing.T) {
 	cases := []struct {
 		in   int

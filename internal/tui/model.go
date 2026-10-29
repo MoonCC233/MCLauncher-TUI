@@ -31,11 +31,12 @@ const (
 	ScreenAccounts
 	ScreenSettings
 	ScreenConsole
+	ScreenDownloads
 	screenCount
 )
 
-var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console"}
-var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸"}
+var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console", "Downloads"}
+var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸", "↓"}
 
 type settingsRow struct {
 	ID          string
@@ -59,6 +60,7 @@ const (
 	modalAccountAdd
 	modalMicrosoft
 	modalResolution
+	modalTheme
 )
 
 type formKind int
@@ -78,6 +80,7 @@ const (
 	promptJavaPath
 	promptDataDir
 	promptMicrosoftClientID
+	promptThemeAccent
 )
 
 type confirmKind int
@@ -85,6 +88,7 @@ type confirmKind int
 const (
 	confirmDeleteInstance confirmKind = iota
 	confirmRemoveAccount
+	confirmUninstallVersion
 )
 
 type taskKind string
@@ -115,6 +119,7 @@ type TaskState struct {
 	InstanceID   string
 	CreateName   string
 	CreateMemory int
+	Backgrounded bool
 	Stage        string
 	Detail       string
 	Done         int64
@@ -125,6 +130,22 @@ type TaskState struct {
 	Cancel       context.CancelFunc
 	Cancelled    bool
 	Err          error
+}
+
+type TaskRecord struct {
+	Kind       taskKind
+	Title      string
+	VersionID  string
+	Stage      string
+	Detail     string
+	Status     string
+	Started    time.Time
+	Finished   time.Time
+	Done       int64
+	Total      int64
+	FilesDone  int
+	FilesTotal int
+	Err        string
 }
 
 type FormState struct {
@@ -214,6 +235,7 @@ type Model struct {
 
 	accountTypePick int
 	resolutionPick  int
+	themePick       int
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -233,13 +255,16 @@ type Model struct {
 	modalW int
 	modalH int
 
-	modal      modalKind
-	helpScroll int
-	form       FormState
-	prompt     PromptState
-	confirm    ConfirmState
-	alert      AlertState
-	task       *TaskState
+	modal       modalKind
+	helpScroll  int
+	form        FormState
+	prompt      PromptState
+	confirm     ConfirmState
+	alert       AlertState
+	task        *TaskState
+	taskHistory []TaskRecord
+
+	downloadsScroll int
 
 	hits []hitRegion
 
@@ -260,6 +285,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 	if client == nil {
 		client = util.NewHTTPClient()
 	}
+	applyTheme(cfg.Settings.Theme, cfg.Settings.ThemeAccent)
 	m := &Model{
 		cfg:             cfg,
 		layout:          layout,
@@ -408,6 +434,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case taskDoneMsg:
 		return m.handleTaskDone(msg)
 	case gameStartedMsg:
+		backgrounded := m.task != nil && m.task.Backgrounded
+		m.recordTask(m.task, taskStatusCompleted, nil)
 		m.game = &GameState{
 			Session:      msg.session,
 			InstanceID:   msg.instanceID,
@@ -417,9 +445,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Pid:          msg.pid,
 		}
 		m.task = nil
-		m.modal = modalNone
 		m.addLog("launcher", fmt.Sprintf("started %s · pid %d", msg.instanceName, msg.pid))
 		m.setToast(m.t("Minecraft is running"), toastSuccess)
+		if backgrounded {
+			// A backgrounded launch keeps whatever the user is looking at.
+			return m, nil
+		}
+		m.modal = modalNone
 		m.screen = ScreenConsole
 		m.logFollow = true
 		m.logScroll = 0
@@ -470,7 +502,7 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "shift+tab":
 		m.switchScreen((m.screen + screenCount - 1) % screenCount)
 		return m, nil
-	case "1", "2", "3", "4", "5", "6":
+	case "1", "2", "3", "4", "5", "6", "7":
 		idx := int(msg.String()[0] - '1')
 		if idx >= 0 && idx < int(screenCount) {
 			m.switchScreen(Screen(idx))
@@ -496,6 +528,8 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateSettings(msg)
 	case ScreenConsole:
 		return m.updateConsole(msg)
+	case ScreenDownloads:
+		return m.updateDownloads(msg)
 	}
 	return m, nil
 }
@@ -507,6 +541,7 @@ func (m *Model) switchScreen(screen Screen) {
 	m.screen = screen
 	m.filterActive = false
 	if screen == ScreenVersions {
+		m.installed = install.InstalledSet(m.layout)
 		m.rebuildVersions()
 	}
 	if screen == ScreenAccounts {
@@ -514,6 +549,10 @@ func (m *Model) switchScreen(screen Screen) {
 	}
 	if screen == ScreenInstances {
 		m.clampInstanceCursor()
+	}
+	if screen == ScreenDownloads {
+		m.downloadsScroll = 0
+		m.clampDownloadsScroll()
 	}
 }
 
@@ -874,6 +913,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Parallel downloads used while installing game files.")},
 		{ID: "language", Label: m.t("Language"), Value: language,
 			Description: m.t("Interface language. System follows your operating system locale.")},
+		{ID: "theme", Label: m.t("Theme"), Value: m.themeValue(),
+			Description: m.t("Color palette used by the launcher. Custom accent overrides the primary color.")},
 		{ID: "data", Label: m.t("Data directory"), Value: util.ShortenPath(m.layout.Root, 56),
 			Description: m.t("Versions, assets, libraries and instance game directories.")},
 		{ID: "microsoft", Label: m.t("Microsoft Client ID"), Value: microsoft,
@@ -922,6 +963,45 @@ func (m *Model) setLanguage(lang i18n.Lang) {
 	m.search.Placeholder = m.t("filter versions")
 	m.saveConfig()
 	m.setToast(m.tf("Language: %s", i18n.NativeName(lang)), toastSuccess)
+}
+
+func (m *Model) themeValue() string {
+	value := themeName(m.cfg.Settings.Theme)
+	if accent := m.cfg.Settings.ThemeAccent; accent != "" {
+		value += " · " + accent
+	}
+	return value
+}
+
+func (m *Model) setTheme(id, accent string) {
+	m.cfg.Settings.Theme = normalizeThemeID(id)
+	if normalized, ok := util.NormalizeHexColor(accent); ok {
+		m.cfg.Settings.ThemeAccent = normalized
+	} else {
+		m.cfg.Settings.ThemeAccent = ""
+	}
+	applyTheme(m.cfg.Settings.Theme, m.cfg.Settings.ThemeAccent)
+	m.restyleTextInputs()
+	m.saveConfig()
+}
+
+func (m *Model) restyleTextInputs() {
+	m.search.PromptStyle = stylePrimary
+	m.search.TextStyle = styleText
+	m.search.PlaceholderStyle = styleDim
+	m.search.Cursor.Style = stylePrimary
+	if len(m.form.Fields) > 0 {
+		for i := range m.form.Fields {
+			m.form.Fields[i].PromptStyle = stylePrimary
+			m.form.Fields[i].TextStyle = styleText
+			m.form.Fields[i].PlaceholderStyle = styleDim
+			m.form.Fields[i].Cursor.Style = stylePrimary
+		}
+	}
+	m.prompt.Input.PromptStyle = stylePrimary
+	m.prompt.Input.TextStyle = styleText
+	m.prompt.Input.PlaceholderStyle = styleDim
+	m.prompt.Input.Cursor.Style = stylePrimary
 }
 
 func (m *Model) useSystemLanguage() {

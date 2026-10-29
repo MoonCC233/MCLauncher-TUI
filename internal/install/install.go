@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -339,7 +340,9 @@ func (p *progressTracker) progress(idx int, n int64, size int64) {
 		FilesTotal: p.filesTotal,
 	}
 	p.mu.Unlock()
-	p.onEvent(ev)
+	if p.onEvent != nil {
+		p.onEvent(ev)
+	}
 }
 
 func (p *progressTracker) setDetail(detail string) {
@@ -371,7 +374,9 @@ func (p *progressTracker) finish(idx int, size int64) {
 		FilesTotal: p.filesTotal,
 	}
 	p.mu.Unlock()
-	p.onEvent(ev)
+	if p.onEvent != nil {
+		p.onEvent(ev)
+	}
 }
 
 func (in *Installer) downloadAll(ctx context.Context, client *http.Client, tasks []*fileTask, totalBytes int64) error {
@@ -472,6 +477,33 @@ func logConfigPath(layout paths.Layout, version *mojang.VersionJSON) string {
 
 func LogConfigPath(layout paths.Layout, version *mojang.VersionJSON) string {
 	return logConfigPath(layout, version)
+}
+
+const consolePatternLayout = `<PatternLayout pattern="[%d{HH:mm:ss}] [%t/%level]: %msg{nolookups}%n" />`
+
+var xmlLogLayoutPattern = regexp.MustCompile(`(?is)<(?:Legacy)?XMLLayout\s*/>`)
+
+func ConsoleLogConfig(layout paths.Layout, source string) (string, error) {
+	data, err := os.ReadFile(source)
+	if err != nil {
+		return "", err
+	}
+	if !xmlLogLayoutPattern.Match(data) {
+		return source, nil
+	}
+	patched := xmlLogLayoutPattern.ReplaceAll(data, []byte(consolePatternLayout))
+	name := strings.TrimSuffix(filepath.Base(source), filepath.Ext(source))
+	dest := filepath.Join(layout.Cache, "log_configs", name+"-console.xml")
+	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+		return "", err
+	}
+	if existing, readErr := os.ReadFile(dest); readErr == nil && string(existing) == string(patched) {
+		return dest, nil
+	}
+	if err := os.WriteFile(dest, patched, 0o644); err != nil {
+		return "", err
+	}
+	return dest, nil
 }
 
 func materializeVirtual(ctx context.Context, layout paths.Layout, assetID string, index *mojang.AssetIndexFile) error {

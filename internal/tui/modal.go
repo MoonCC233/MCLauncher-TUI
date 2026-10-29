@@ -31,9 +31,16 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateMicrosoft(msg)
 	case modalResolution:
 		return m.updateResolutionPicker(msg)
+	case modalTheme:
+		return m.updateThemePicker(msg)
 	case modalProgress:
-		if msg.String() == "esc" {
+		switch msg.String() {
+		case "esc":
 			m.cancelTask()
+		case "b":
+			m.backgroundTask(false)
+		case "d":
+			m.backgroundTask(true)
 		}
 		return m, nil
 	case modalAlert:
@@ -125,6 +132,14 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.clampAccountCursor()
 			m.setToast(m.t("Account removed"), toastSuccess)
 			m.addLog("launcher", "removed account")
+		case confirmUninstallVersion:
+			target := m.confirm.Target
+			if err := m.uninstallVersion(target); err != nil {
+				m.alert = AlertState{Title: m.t("Could not uninstall version"), Body: err.Error()}
+				m.modal = modalAlert
+				return m, nil
+			}
+			m.setToast(m.tf("Uninstalled %s", target), toastSuccess)
 		}
 		m.modal = modalNone
 	case "esc", "n", "N":
@@ -253,7 +268,7 @@ func (m *Model) helpContent(width int) []string {
 	}{
 		{m.t("Sections"), []entry{
 			{"tab / shift+tab", m.t("next / previous section")},
-			{"1 … 6", m.t("jump directly to a section")},
+			{"1 … 7", m.t("jump directly to a section")},
 			{"esc", m.t("back to Home")},
 			{"ctrl+c", m.t("quit launcher")},
 		}},
@@ -275,6 +290,7 @@ func (m *Model) helpContent(width int) []string {
 			{"t", m.t("cycle version filters")},
 			{"enter", m.t("install if needed, then create instance")},
 			{"i", m.t("install without creating an instance")},
+			{"d", m.t("uninstall installed version")},
 			{"r", m.t("refresh the Mojang manifest")},
 		}},
 		{m.t("Accounts & settings"), []entry{

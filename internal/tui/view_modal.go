@@ -161,6 +161,15 @@ func (m *Model) modalView() string {
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("cancel")),
 		}
+	case modalTheme:
+		title = m.t("Theme")
+		pickerBody, pickerHits := m.themePickerBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {
@@ -169,7 +178,11 @@ func (m *Model) modalView() string {
 			title = m.t("Working")
 		}
 		body = m.progressBody(contentW)
-		footer = []hintSpec{hintAction("esc", m.t("cancel"), "esc")}
+		footer = []hintSpec{
+			hintAction("b", m.t("background"), "b"),
+			hintAction("d", m.t("downloads"), "d"),
+			hintAction("esc", m.t("cancel"), "esc"),
+		}
 	case modalAlert:
 		accent = colRed
 		title = styleRed.Render(m.alert.Title)

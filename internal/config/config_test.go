@@ -445,3 +445,36 @@ func TestBackupCorrupt(t *testing.T) {
 		t.Errorf("backup content = %q, err = %v", data, err)
 	}
 }
+func TestThemeNormalization(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	raw := `{"settings":{"theme":"bogus","theme_accent":"#abc"}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Settings.Theme != DefaultTheme {
+		t.Errorf("invalid theme = %q, want %q", cfg.Settings.Theme, DefaultTheme)
+	}
+	if cfg.Settings.ThemeAccent != "#AABBCC" {
+		t.Errorf("accent = %q, want #AABBCC", cfg.Settings.ThemeAccent)
+	}
+
+	cfg.Settings.Theme = "forest"
+	cfg.Settings.ThemeAccent = "invalid"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Settings.Theme != "forest" {
+		t.Errorf("theme = %q, want forest", reloaded.Settings.Theme)
+	}
+	if reloaded.Settings.ThemeAccent != "" {
+		t.Errorf("invalid accent should be cleared, got %q", reloaded.Settings.ThemeAccent)
+	}
+}

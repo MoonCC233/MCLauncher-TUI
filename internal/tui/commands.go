@@ -160,6 +160,34 @@ func (m *Model) startInstall(versionID string, createName string, createMemory i
 	}
 }
 
+func (m *Model) uninstallVersion(id string) error {
+	if id == "" || !m.installed[id] {
+		return fmt.Errorf("version %s is not installed", id)
+	}
+	dir := m.layout.VersionDir(id)
+	// Move the version aside first so a failure while deleting leaves the
+	// launcher and the game directory consistent: either the version is still
+	// complete, or it is gone and only leftover files remain to clean up.
+	staged := dir + ".uninstall-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	if err := os.Rename(dir, staged); err != nil {
+		if _, statErr := os.Stat(dir); statErr != nil {
+			// Already gone; treat the uninstall as done.
+			staged = ""
+		} else {
+			return err
+		}
+	}
+	m.installed = install.InstalledSet(m.layout)
+	m.rebuildVersions()
+	m.addLog("launcher", "uninstalled "+id)
+	if staged != "" {
+		if err := os.RemoveAll(staged); err != nil {
+			m.addLog("error", fmt.Sprintf("remove %s: %v", staged, err))
+		}
+	}
+	return nil
+}
+
 func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 	if m.task != nil {
 		m.alert = AlertState{Title: m.t("Another task is running"), Body: m.t("Wait for the current installation to finish.")}
@@ -346,7 +374,11 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 			if versionJSON.Logging != nil && versionJSON.Logging.Client != nil {
 				candidate := install.LogConfigPath(layout, versionJSON)
 				if st, statErr := os.Stat(candidate); statErr == nil && !st.IsDir() {
-					logConfig = candidate
+					if consoleConfig, configErr := install.ConsoleLogConfig(layout, candidate); configErr == nil {
+						logConfig = consoleConfig
+					} else {
+						logConfig = candidate
+					}
 				}
 			}
 
@@ -368,6 +400,9 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 			})
 			if err != nil {
 				fail(err)
+				return
+			}
+			if checkCancel() {
 				return
 			}
 			session, err := launch.Start(spec)
@@ -446,15 +481,24 @@ func (m *Model) handleInstallEvent(ev install.Event) {
 
 func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	task := m.task
+	backgrounded := task != nil && task.Backgrounded
 	m.task = nil
-	m.modal = modalNone
+	if !backgrounded && m.modal == modalProgress {
+		m.modal = modalNone
+	}
 	if msg.cancelled || errors.Is(msg.err, context.Canceled) {
+		m.recordTask(task, taskStatusCancelled, nil)
 		m.addLog("launcher", "task cancelled")
 		m.setToast(m.t("Cancelled"), toastInfo)
 		return m, nil
 	}
 	if msg.err != nil {
+		m.recordTask(task, taskStatusFailed, msg.err)
 		m.addLog("error", msg.err.Error())
+		if backgrounded {
+			m.setToast(m.t("Task failed — see Downloads"), toastError)
+			return m, nil
+		}
 		title := m.t("Installation failed")
 		if msg.kind == taskLaunch {
 			title = m.t("Could not launch Minecraft")
@@ -465,19 +509,35 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	}
 	m.installed = install.InstalledSet(m.layout)
 	if msg.kind == taskInstall && task != nil && task.CreateName != "" {
-		inst, err := m.cfg.AddInstance(task.CreateName, task.VersionID, task.CreateMemory)
+		versionID := task.VersionID
+		if msg.versionID != "" {
+			versionID = msg.versionID
+		}
+		inst, err := m.cfg.AddInstance(task.CreateName, versionID, task.CreateMemory)
 		if err != nil {
+			// The files are installed but the instance could not be saved, so the
+			// task has to show up as failed instead of completed.
+			m.recordTask(task, taskStatusFailed, err)
+			m.addLog("error", err.Error())
 			m.alert = AlertState{Title: m.t("Could not create instance"), Body: err.Error()}
+			if backgrounded {
+				m.setToast(m.t("Could not create instance"), toastError)
+				return m, nil
+			}
 			m.modal = modalAlert
 			return m, nil
 		}
+		m.recordTask(task, taskStatusCompleted, nil)
 		m.instanceCursor = len(m.cfg.Instances) - 1
 		m.homeCursor = 0
-		m.screen = ScreenHome
+		if !backgrounded {
+			m.screen = ScreenHome
+		}
 		m.setToast(m.tf("Created %s", inst.Name), toastSuccess)
 		m.addLog("launcher", "created instance "+inst.Name)
 		return m, nil
 	}
+	m.recordTask(task, taskStatusCompleted, nil)
 	if msg.kind == taskInstall {
 		m.setToast(m.tf("Installed %s", msg.versionID), toastSuccess)
 		m.addLog("launcher", "installed "+msg.versionID)

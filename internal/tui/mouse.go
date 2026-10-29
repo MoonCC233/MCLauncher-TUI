@@ -18,6 +18,7 @@ const (
 	hitLanguageRow
 	hitAccountTypeRow
 	hitResolutionRow
+	hitThemeRow
 )
 
 // hitRegion is a clickable rectangle recorded while the frame is rendered.
@@ -205,6 +206,13 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 			return m.chooseResolution()
 		}
 		return m, nil
+	case hitThemeRow:
+		double := m.registerClick(hit)
+		m.themePick = hit.Index
+		if double {
+			return m.chooseTheme()
+		}
+		return m, nil
 	}
 	return m, nil
 }
@@ -271,6 +279,11 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 			m.resolutionPick = clampInt(m.resolutionPick+dir, 0, n-1)
 		}
 		return m, nil
+	case modalTheme:
+		if n := m.themePickerCount(); n > 0 {
+			m.themePick = clampInt(m.themePick+dir, 0, n-1)
+		}
+		return m, nil
 	case modalNone:
 		// handled below
 	default:
@@ -307,6 +320,9 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 				m.logFollow = true
 			}
 		}
+	case ScreenDownloads:
+		m.downloadsScroll += dir * 3
+		m.clampDownloadsScroll()
 	}
 	return m, nil
 }

@@ -454,4 +454,9 @@ var requiredCatalogKeys = []string{
 	"Choose the mod loader, or None for vanilla.",
 	"Choose a mod loader…",
 	"Press enter to pick the loader, its version and the Java runtime.",
+	"Keep game running",
+	"Keep Minecraft running after the launcher quits.",
+	"On",
+	"Minecraft keeps running after the launcher quits",
+	"Quitting the launcher also stops Minecraft",
 }

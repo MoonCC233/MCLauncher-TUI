@@ -460,4 +460,11 @@ var koCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "모드 로더 선택…",
 	"Press enter to pick the loader, its version and the Java runtime.": "enter를 눌러 로더, 버전, Java를 선택하세요.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "게임 계속 실행",
+	"Keep Minecraft running after the launcher quits.": "런처를 종료해도 Minecraft를 계속 실행합니다.",
+	"On": "켜짐",
+	"Minecraft keeps running after the launcher quits": "런처를 종료해도 Minecraft가 계속 실행됩니다",
+	"Quitting the launcher also stops Minecraft":       "런처를 종료하면 Minecraft도 함께 종료됩니다",
 }

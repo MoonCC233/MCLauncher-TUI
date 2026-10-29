@@ -460,4 +460,11 @@ var trCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "Mod yükleyici seç…",
 	"Press enter to pick the loader, its version and the Java runtime.": "Yükleyici, sürüm ve Java için enter'a basın.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "Oyunu açık bırak",
+	"Keep Minecraft running after the launcher quits.": "Başlatıcı kapandığında Minecraft açık kalır.",
+	"On": "Açık",
+	"Minecraft keeps running after the launcher quits": "Başlatıcı kapansa da Minecraft açık kalacak",
+	"Quitting the launcher also stops Minecraft":       "Başlatıcı kapanınca Minecraft da kapanacak",
 }

@@ -460,4 +460,11 @@ var ptBRCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "Escolher um carregador de mods…",
 	"Press enter to pick the loader, its version and the Java runtime.": "Pressione enter para escolher o carregador, a versão e o Java.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "Manter o jogo aberto",
+	"Keep Minecraft running after the launcher quits.": "Deixa o Minecraft em execução ao fechar o launcher.",
+	"On": "Ativado",
+	"Minecraft keeps running after the launcher quits": "O Minecraft continuará aberto ao fechar o launcher",
+	"Quitting the launcher also stops Minecraft":       "Fechar o launcher também encerrará o Minecraft",
 }

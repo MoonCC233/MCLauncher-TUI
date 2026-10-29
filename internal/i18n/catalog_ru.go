@@ -460,4 +460,11 @@ var ruCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "Выбрать загрузчик модов…",
 	"Press enter to pick the loader, its version and the Java runtime.": "Нажмите enter, чтобы выбрать загрузчик, версию и Java.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "Оставить игру запущенной",
+	"Keep Minecraft running after the launcher quits.": "Оставить Minecraft запущенным после выхода из лаунчера.",
+	"On": "Вкл.",
+	"Minecraft keeps running after the launcher quits": "Minecraft продолжит работу после выхода из лаунчера",
+	"Quitting the launcher also stops Minecraft":       "При выходе из лаунчера Minecraft тоже будет остановлен",
 }

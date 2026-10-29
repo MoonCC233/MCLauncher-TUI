@@ -78,8 +78,17 @@ func TestMouseDoubleClickOpensLanguagePicker(t *testing.T) {
 	m.switchScreen(ScreenSettings)
 	m.settingsCursor = 0
 	m.View()
+	languageRow := -1
+	for i, row := range m.settingsRows() {
+		if row.ID == "language" {
+			languageRow = i
+		}
+	}
+	if languageRow < 0 {
+		t.Fatal("settings are missing the language row")
+	}
 	hit := findHit(t, m, func(h hitRegion) bool {
-		return h.Kind == hitRow && h.Screen == ScreenSettings && h.Index == 5
+		return h.Kind == hitRow && h.Screen == ScreenSettings && h.Index == languageRow
 	})
 	x, y := hit.X+2, hit.Y
 	mouseClick(m, x, y)

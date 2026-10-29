@@ -460,4 +460,11 @@ var arCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "اختيار محمّل التعديلات…",
 	"Press enter to pick the loader, its version and the Java runtime.": "اضغط enter لاختيار المحمّل ونسخته وبيئة Java.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "إبقاء اللعبة قيد التشغيل",
+	"Keep Minecraft running after the launcher quits.": "إبقاء Minecraft قيد التشغيل بعد إغلاق المشغّل.",
+	"On": "تشغيل",
+	"Minecraft keeps running after the launcher quits": "سيبقى Minecraft قيد التشغيل بعد إغلاق المشغّل",
+	"Quitting the launcher also stops Minecraft":       "إغلاق المشغّل سيوقف Minecraft أيضًا",
 }

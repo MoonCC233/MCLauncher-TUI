@@ -460,4 +460,11 @@ var deCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "Mod-Loader wählen…",
 	"Press enter to pick the loader, its version and the Java runtime.": "Enter öffnet die Auswahl für Loader, Version und Java-Laufzeit.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "Spiel weiterlaufen lassen",
+	"Keep Minecraft running after the launcher quits.": "Lässt Minecraft weiterlaufen, wenn der Launcher beendet wird.",
+	"On": "An",
+	"Minecraft keeps running after the launcher quits": "Minecraft läuft nach dem Beenden des Launchers weiter",
+	"Quitting the launcher also stops Minecraft":       "Beim Beenden des Launchers wird Minecraft ebenfalls beendet",
 }

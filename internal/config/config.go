@@ -92,6 +92,7 @@ type Settings struct {
 	Width             int    `json:"width"`
 	Height            int    `json:"height"`
 	DownloadThreads   int    `json:"download_threads"`
+	KeepGameRunning   bool   `json:"keep_game_running,omitempty"`
 	Language          string `json:"language,omitempty"`
 	Theme             string `json:"theme,omitempty"`
 	ThemeAccent       string `json:"theme_accent,omitempty"`

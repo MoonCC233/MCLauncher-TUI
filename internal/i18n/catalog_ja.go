@@ -460,4 +460,11 @@ var jaCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "MOD ローダーを選ぶ…",
 	"Press enter to pick the loader, its version and the Java runtime.": "enter でローダー・バージョン・Java を選択します。",
+
+	// Settings: quit behaviour.
+	"Keep game running": "終了後もゲームを続ける",
+	"Keep Minecraft running after the launcher quits.": "ランチャー終了後も Minecraft を動かし続けます。",
+	"On": "オン",
+	"Minecraft keeps running after the launcher quits": "ランチャー終了後も Minecraft は動作を続けます",
+	"Quitting the launcher also stops Minecraft":       "ランチャーを終了すると Minecraft も停止します",
 }

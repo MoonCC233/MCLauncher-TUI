@@ -460,4 +460,11 @@ var esCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "Elegir un cargador de mods…",
 	"Press enter to pick the loader, its version and the Java runtime.": "Pulsa enter para elegir el cargador, su versión y el runtime de Java.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "Mantener el juego abierto",
+	"Keep Minecraft running after the launcher quits.": "Deja Minecraft en ejecución al cerrar el lanzador.",
+	"On": "Activado",
+	"Minecraft keeps running after the launcher quits": "Minecraft seguirá en ejecución al cerrar el lanzador",
+	"Quitting the launcher also stops Minecraft":       "Cerrar el lanzador también detendrá Minecraft",
 }

@@ -460,4 +460,11 @@ var zhHantCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "選擇模組載入器…",
 	"Press enter to pick the loader, its version and the Java runtime.": "按 enter 選擇載入器、版本與 Java 執行環境。",
+
+	// Settings: quit behaviour.
+	"Keep game running": "結束時保留遊戲",
+	"Keep Minecraft running after the launcher quits.": "關閉啟動器時讓 Minecraft 繼續執行。",
+	"On": "開啟",
+	"Minecraft keeps running after the launcher quits": "關閉啟動器後 Minecraft 會繼續執行",
+	"Quitting the launcher also stops Minecraft":       "關閉啟動器時也會結束 Minecraft",
 }

@@ -460,4 +460,11 @@ var viCatalog = map[string]string{
 	// New instance form: loader picker entry.
 	"Choose a mod loader…": "Chọn trình tải mod…",
 	"Press enter to pick the loader, its version and the Java runtime.": "Nhấn enter để chọn trình tải, phiên bản và Java.",
+
+	// Settings: quit behaviour.
+	"Keep game running": "Giữ game chạy tiếp",
+	"Keep Minecraft running after the launcher quits.": "Giữ Minecraft chạy sau khi đóng trình khởi chạy.",
+	"On": "Bật",
+	"Minecraft keeps running after the launcher quits": "Minecraft sẽ tiếp tục chạy sau khi đóng trình khởi chạy",
+	"Quitting the launcher also stops Minecraft":       "Đóng trình khởi chạy cũng sẽ dừng Minecraft",
 }

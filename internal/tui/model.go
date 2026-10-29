@@ -396,14 +396,22 @@ func (m *Model) quitApp() (tea.Model, tea.Cmd) {
 	if m.task != nil && m.task.Cancel != nil {
 		m.task.Cancel()
 	}
-	m.stopGameForQuit()
+	m.stopGameOnQuit()
 	return m, tea.Quit
+}
+
+// stopGameOnQuit stops Minecraft unless the player asked to keep it running.
+func (m *Model) stopGameOnQuit() {
+	if !m.stopsGameOnQuit() {
+		return
+	}
+	m.stopGameForQuit()
 }
 
 // Shutdown stops any game process owned by the launcher. It is safe to call
 // after the Bubble Tea program has returned.
 func (m *Model) Shutdown() {
-	m.stopGameForQuit()
+	m.stopGameOnQuit()
 }
 
 // stopGameForQuit makes sure no Minecraft process is left behind when the
@@ -1117,6 +1125,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Extra space-separated flags passed to the JVM.")},
 		{ID: "resolution", Label: m.t("Resolution"), Value: fmt.Sprintf("%d × %d", m.cfg.Settings.Width, m.cfg.Settings.Height),
 			Description: m.t("Initial Minecraft window size.")},
+		{ID: "quitgame", Label: m.t("Keep game running"), Value: m.onOffLabel(m.cfg.Settings.KeepGameRunning),
+			Description: m.t("Keep Minecraft running after the launcher quits.")},
 		{ID: "threads", Label: m.t("Download threads"), Value: fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads),
 			Description: m.t("Parallel downloads used while installing game files.")},
 		{ID: "language", Label: m.t("Language"), Value: language,

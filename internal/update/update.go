@@ -235,6 +235,11 @@ func comparePrerelease(a, b string) int {
 	return 0
 }
 
+// Candidates lists the mirror-prefixed URLs to try for a GitHub URL, most
+// preferred first. Callers outside this package use it for read-only API and
+// raw.githubusercontent requests.
+func Candidates(raw string) []string { return apiCandidates(raw) }
+
 func apiCandidates(raw string) []string {
 	var out []string
 	if mirror := updateMirror(); mirror != "" {

@@ -102,9 +102,11 @@ Windows 下输出文件为 `mclauncher.exe`。
   - 更旧的版本：通常需要 Java 8
 - **网络**：首次加载版本清单和安装版本时需要访问 Mojang 的 `piston-meta`、`piston-data`、`resources`、`libraries` 服务；安装 Fabric/Quilt 加载器需要访问对应的 meta 与 Maven 服务，Forge 需要访问 Forge Maven。中国大陆网络访问这些服务较慢或失败时，可以在启动前设置镜像，例如：
   ```bash
-  MCLAUNCHER_FORGE_MIRROR=https://bmclapi2.bangbang93.com/maven
+  # 中科大 / CERNET 的 BMCLAPI 直连节点，Maven 下载通常比 BMCLAPI 的 302 跳转更稳定
+  MCLAUNCHER_FORGE_MIRROR=https://unicom.mirrors.ustc.edu.cn/bmclapi
+  MCLAUNCHER_FABRIC_MAVEN_MIRROR=https://unicom.mirrors.ustc.edu.cn/bmclapi
+  # Fabric 的 meta 列表仍使用 BMCLAPI
   MCLAUNCHER_FABRIC_MIRROR=https://bmclapi2.bangbang93.com/fabric-meta/v2
-  MCLAUNCHER_FABRIC_MAVEN_MIRROR=https://bmclapi2.bangbang93.com/maven
   ./mclauncher
   ```
   `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。镜像由第三方提供，请自行确认可用性与信任程度。

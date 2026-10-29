@@ -536,6 +536,8 @@ func (m *Model) applyDataDir(value string) (tea.Model, tea.Cmd) {
 	}
 	m.layout = layout
 	m.DataRoot = layout.Root
+	m.taskHistory = loadTaskHistory(layout)
+	m.downloadsScroll = 0
 	m.installed = install.InstalledSet(layout)
 	m.manifest = nil
 	m.manifestLoading = true

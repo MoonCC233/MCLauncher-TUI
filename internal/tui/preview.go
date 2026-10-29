@@ -47,6 +47,8 @@ func Preview(screenName string, width, height int, language ...string) string {
 
 	layout := paths.New(`C:\Users\MoonCC\MCLauncher\.minecraft`)
 	m := New(cfg, layout, nil, "0.2.1", "")
+	// Previews must be deterministic and must not read a real data directory.
+	m.taskHistory = nil
 	m.width = width
 	m.height = height
 	m.ready = true

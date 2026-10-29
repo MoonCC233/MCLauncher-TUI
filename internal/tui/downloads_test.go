@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
 // TestTaskStatusesTranslated guards the Download history labels: the statuses
@@ -81,6 +83,45 @@ func TestDownloadsHistoryScrolls(t *testing.T) {
 	m.recordTask(&TaskState{Kind: taskInstall, Title: "task 20", Started: time.Now()}, taskStatusCompleted, nil)
 	if m.downloadsScroll != 0 {
 		t.Errorf("downloadsScroll = %d, want 0 after recording a task", m.downloadsScroll)
+	}
+}
+
+func TestTaskHistoryPersists(t *testing.T) {
+	m := historyModel(t, 25)
+	if len(m.taskHistory) != taskHistoryLimit {
+		t.Fatalf("history length = %d, want %d", len(m.taskHistory), taskHistoryLimit)
+	}
+
+	var payload taskHistoryFile
+	if err := util.ReadJSON(m.layout.DownloadsHistory(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Version != 1 || len(payload.Tasks) != taskHistoryLimit {
+		t.Errorf("history file = version %d, %d tasks", payload.Version, len(payload.Tasks))
+	}
+
+	reloaded := New(m.cfg, m.layout, nil, "test", "")
+	if len(reloaded.taskHistory) != taskHistoryLimit {
+		t.Fatalf("reloaded history length = %d, want %d", len(reloaded.taskHistory), taskHistoryLimit)
+	}
+	first := reloaded.taskHistory[0]
+	if first.Title != "task 24" || first.Done != 24 {
+		t.Errorf("newest record = %+v, want task 24", first)
+	}
+	if first.Started.IsZero() || first.Finished.IsZero() {
+		t.Errorf("timestamps were not persisted: %+v", first)
+	}
+	if last := reloaded.taskHistory[len(reloaded.taskHistory)-1]; last.Title != "task 5" {
+		t.Errorf("oldest retained record = %+v, want task 5", last)
+	}
+
+	// A corrupt history file must not prevent the launcher from starting.
+	if err := os.WriteFile(m.layout.DownloadsHistory(), []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	corrupt := New(m.cfg, m.layout, nil, "test", "")
+	if len(corrupt.taskHistory) != 0 {
+		t.Errorf("corrupt history loaded %d records", len(corrupt.taskHistory))
 	}
 }
 

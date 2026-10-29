@@ -22,7 +22,7 @@
 - **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数；窗口尺寸提供从 854×480 到 4K 的常用预设，也可手动输入自定义分辨率。
 - **可靠的下载**：多线程下载、SHA-1 校验、原子写入配置文件。
 - **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录。
-- **后台任务与下载记录**：安装和游戏启动可发送到后台，在 `Downloads` 页面查看进度、重开进度弹窗或取消任务；最近 20 条任务会保留在历史记录中，可用 `↑` / `↓`、`pgup` / `pgdown` 翻看。
+- **后台任务与下载记录**：安装和游戏启动可发送到后台，在 `Downloads` 页面查看进度、重开进度弹窗或取消任务；最近 20 条任务会持久化到 `downloads-history.json`，重启启动器后仍可查看，可用 `↑` / `↓`、`pgup` / `pgdown` 翻看。
 - **版本搜索与分类**：标题右侧的搜索框可按版本 ID 即时搜索；正式版、快照、远古版（Beta / Alpha）与愚人节版独立筛选；正式版和快照分类会自动排除愚人节版本；旧版 assets 的 virtual / map_to_resources 索引也有处理。
 - **便携数据目录**：默认把游戏数据放在当前目录的 `.minecraft`，可在设置中改到任意路径。
 
@@ -221,6 +221,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 ```text
 <当前目录>/.minecraft/
 ├── config.json                 # 账户、实例与设置（固定保存在启动根目录）
+├── downloads-history.json      # 最近 20 条安装 / 启动任务记录
 ├── versions/<id>/              # 版本 JSON、client jar、natives、安装标记
 │   └── .mclauncher-loader.json # 加载器类型、版本与基础版本（仅加载器版本）
 ├── libraries/                  # 全局共享依赖
@@ -230,12 +231,12 @@ Windows 下输出文件为 `mclauncher.exe`。
 │   ├── virtual/                # 旧版本虚拟资源
 │   └── log_configs/
 ├── instances/<id>/             # 每个实例独立的游戏目录（存档、模组、截图等）
-│   └── mods/                   # Fabric / Quilt / Forge 模组
+│   └── mods/                   # Fabric / Quilt / Forge / NeoForge 模组
 ├── logs/
 └── cache/
 ```
 
-可以在 `Settings → Data directory` 中把**游戏数据**改到其他位置，例如 `D:\MCLauncher\.minecraft` 或 `~/mc-data`。切换后启动器会立即使用新目录并在下次启动时继续生效；`config.json` 仍留在原来的启动根目录，避免改路径后丢失设置。清空该设置即可恢复默认 `.minecraft`。
+可以在 `Settings → Data directory` 中把**游戏数据**改到其他位置，例如 `D:\MCLauncher\.minecraft` 或 `~/mc-data`。切换后启动器会立即使用新目录并在下次启动时继续生效；`config.json` 仍留在原来的启动根目录，避免改路径后丢失设置。清空该设置即可恢复默认 `.minecraft`。下载历史同样保存在数据目录中，切换后会显示新目录的历史记录。
 
 也可以通过环境变量或命令行参数覆盖启动根目录：
 
@@ -338,7 +339,6 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 - **不管理 Java 安装**：只检测和选择已安装的 Java；不会下载 JDK。
 - **退出启动器不会终止游戏**：启动器退出后游戏继续运行，但后续 stdout/stderr 输出可能丢失。需要停止游戏时请先在 Console 中按 `x`。
 - **无自动更新**：请关注 Releases 页面获取新版本。
-- **下载历史只保留在当前会话**：`Downloads` 的最近 20 条任务记录保存在内存中，退出启动器后清空。
 - **阿拉伯语显示取决于终端**：启动器会镜像布局，但阿拉伯文字形连写和 BiDi 排序由终端与字体决定；Windows Terminal 的显示效果通常最好。
 - **预编译二进制未签名**：macOS 首次运行可能需要 `xattr -d com.apple.quarantine ./mclauncher`。
 

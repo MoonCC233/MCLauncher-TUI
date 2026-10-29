@@ -86,6 +86,9 @@ func (l Layout) LauncherLog() string { return filepath.Join(l.Logs, "launcher.lo
 func (l Layout) ManifestCache() string {
 	return filepath.Join(l.Cache, "version_manifest_v2.json")
 }
+func (l Layout) DownloadsHistory() string {
+	return filepath.Join(l.Root, "downloads-history.json")
+}
 
 // DefaultRoot resolves the default data directory. Portable installs place
 // everything in .minecraft next to the executable's working directory;

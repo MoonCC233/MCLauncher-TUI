@@ -147,19 +147,19 @@ type TaskState struct {
 }
 
 type TaskRecord struct {
-	Kind       taskKind
-	Title      string
-	VersionID  string
-	Stage      string
-	Detail     string
-	Status     string
-	Started    time.Time
-	Finished   time.Time
-	Done       int64
-	Total      int64
-	FilesDone  int
-	FilesTotal int
-	Err        string
+	Kind       taskKind  `json:"kind"`
+	Title      string    `json:"title"`
+	VersionID  string    `json:"version_id,omitempty"`
+	Stage      string    `json:"stage,omitempty"`
+	Detail     string    `json:"detail,omitempty"`
+	Status     string    `json:"status"`
+	Started    time.Time `json:"started"`
+	Finished   time.Time `json:"finished"`
+	Done       int64     `json:"done,omitempty"`
+	Total      int64     `json:"total,omitempty"`
+	FilesDone  int       `json:"files_done,omitempty"`
+	FilesTotal int       `json:"files_total,omitempty"`
+	Err        string    `json:"error,omitempty"`
 }
 
 type FormState struct {
@@ -343,6 +343,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 		screen:          ScreenHome,
 		installed:       install.InstalledSet(layout),
 		loaderMeta:      loader.Scan(layout),
+		taskHistory:     loadTaskHistory(layout),
 		manifestLoading: true,
 		versionScope:    0,
 		logFollow:       true,

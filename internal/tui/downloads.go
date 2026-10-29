@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -16,6 +17,35 @@ const (
 	taskStatusFailed    = "failed"
 	taskStatusCancelled = "cancelled"
 )
+
+const taskHistoryLimit = 20
+
+type taskHistoryFile struct {
+	Version int          `json:"version"`
+	Tasks   []TaskRecord `json:"tasks"`
+}
+
+func loadTaskHistory(layout paths.Layout) []TaskRecord {
+	var payload taskHistoryFile
+	if err := util.ReadJSON(layout.DownloadsHistory(), &payload); err != nil {
+		return nil
+	}
+	tasks := payload.Tasks
+	if len(tasks) > taskHistoryLimit {
+		tasks = tasks[:taskHistoryLimit]
+	}
+	return tasks
+}
+
+func (m *Model) saveTaskHistory() {
+	if m.layout.Root == "" {
+		return
+	}
+	payload := taskHistoryFile{Version: 1, Tasks: m.taskHistory}
+	if err := util.WriteJSONAtomic(m.layout.DownloadsHistory(), &payload); err != nil {
+		m.addLog("error", "save download history: "+err.Error())
+	}
+}
 
 func (m *Model) backgroundTask(openDownloads bool) {
 	if m.task == nil {
@@ -86,9 +116,10 @@ func (m *Model) recordTask(task *TaskState, status string, err error) {
 		record.Err = err.Error()
 	}
 	m.taskHistory = append([]TaskRecord{record}, m.taskHistory...)
-	if len(m.taskHistory) > 20 {
-		m.taskHistory = m.taskHistory[:20]
+	if len(m.taskHistory) > taskHistoryLimit {
+		m.taskHistory = m.taskHistory[:taskHistoryLimit]
 	}
+	m.saveTaskHistory()
 	m.downloadsScroll = 0
 }
 

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 使用说明与按键表
+    url: https://github.com/MoonCC233/MCLauncher-TUI#readme
+    about: 安装、按键、界面语言、数据目录等说明都在 README 里
+  - name: 下载最新版本
+    url: https://github.com/MoonCC233/MCLauncher-TUI/releases
+    about: 提交问题前请先用最新版本复现一次

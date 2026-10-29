@@ -61,6 +61,8 @@ const (
 	modalMicrosoft
 	modalResolution
 	modalTheme
+	modalTitleAnim
+	modalTitleFont
 )
 
 type formKind int
@@ -236,6 +238,8 @@ type Model struct {
 	accountTypePick int
 	resolutionPick  int
 	themePick       int
+	titleAnimPick   int
+	titleFontPick   int
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -277,6 +281,8 @@ type Model struct {
 	toast   ToastState
 	spinner int
 	clock   int
+	// animFrame advances a few times per second and drives the wordmark sheen.
+	animFrame int
 
 	quit bool
 }
@@ -326,7 +332,7 @@ func (m *Model) sendMsg(msg tea.Msg) {
 
 func (m *Model) Init() tea.Cmd {
 	m.javaScanning = true
-	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(), tickCmd())
+	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(), tickCmd(), animTickCmd())
 }
 
 func (m *Model) quitApp() (tea.Model, tea.Cmd) {
@@ -364,6 +370,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.toast = ToastState{}
 		}
 		return m, tickCmd()
+	case animTickMsg:
+		m.animFrame++
+		return m, animTickCmd()
 	case manifestMsg:
 		m.manifestLoading = false
 		if msg.manifest != nil {
@@ -922,6 +931,10 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Interface language. System follows your operating system locale.")},
 		{ID: "theme", Label: m.t("Theme"), Value: m.themeValue(),
 			Description: m.t("Color palette used by the launcher. Custom accent overrides the primary color.")},
+		{ID: "titlefont", Label: m.t("Title style"), Value: m.titleFontLabel(),
+			Description: m.t("The glyph style used by the home title.")},
+		{ID: "titleanim", Label: m.t("Title animation"), Value: m.titleAnimLabel(),
+			Description: m.t("Animation shown on the home title.")},
 		{ID: "data", Label: m.t("Data directory"), Value: util.ShortenPath(m.layout.Root, 56),
 			Description: m.t("Versions, assets, libraries and instance game directories.")},
 		{ID: "microsoft", Label: m.t("Microsoft Client ID"), Value: microsoft,

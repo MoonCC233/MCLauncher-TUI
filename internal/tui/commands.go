@@ -87,6 +87,13 @@ func tickCmd() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
+// animTickMsg drives the home screen wordmark animation.
+type animTickMsg struct{}
+
+func animTickCmd() tea.Cmd {
+	return tea.Tick(120*time.Millisecond, func(time.Time) tea.Msg { return animTickMsg{} })
+}
+
 func scanJavaCmd() tea.Cmd {
 	return func() tea.Msg {
 		return javaScanMsg{runtimes: java.Scan()}

@@ -49,8 +49,8 @@ func (m *Model) viewHome(w, h int) []string {
 		m.sectionHeader(m.t("Home"), titleRight, w),
 		"",
 	}
-	for _, logo := range renderLogo(w) {
-		lines = append(lines, "  "+logo)
+	for _, title := range m.titleLines(w) {
+		lines = append(lines, "  "+title)
 	}
 	lines = append(lines,
 		"",

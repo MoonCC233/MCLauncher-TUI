@@ -478,3 +478,63 @@ func TestThemeNormalization(t *testing.T) {
 		t.Errorf("invalid accent should be cleared, got %q", reloaded.Settings.ThemeAccent)
 	}
 }
+
+func TestTitleAnimNormalization(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if cfg := DefaultSettings(); cfg.TitleAnim != DefaultTitleAnim {
+		t.Fatalf("default title animation = %q, want %q", cfg.TitleAnim, DefaultTitleAnim)
+	}
+	raw := `{"settings":{"title_anim":"BOGUS"}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Settings.TitleAnim != DefaultTitleAnim {
+		t.Errorf("invalid title animation = %q, want %q", cfg.Settings.TitleAnim, DefaultTitleAnim)
+	}
+
+	cfg.Settings.TitleAnim = "WAVE"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Settings.TitleAnim != "wave" {
+		t.Errorf("title animation = %q, want wave", reloaded.Settings.TitleAnim)
+	}
+}
+
+func TestTitleFontNormalization(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if cfg := DefaultSettings(); cfg.TitleFont != DefaultTitleFont {
+		t.Fatalf("default title font = %q, want %q", cfg.TitleFont, DefaultTitleFont)
+	}
+	raw := `{"settings":{"title_font":"BOGUS"}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Settings.TitleFont != DefaultTitleFont {
+		t.Errorf("invalid title font = %q, want %q", cfg.Settings.TitleFont, DefaultTitleFont)
+	}
+
+	cfg.Settings.TitleFont = "LINE"
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reloaded.Settings.TitleFont != "line" {
+		t.Errorf("title font = %q, want line", reloaded.Settings.TitleFont)
+	}
+}

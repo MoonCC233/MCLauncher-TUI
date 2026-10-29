@@ -6,7 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
@@ -192,60 +194,88 @@ func TestApplyDataDirBlockedWhileBusy(t *testing.T) {
 	})
 }
 
-func logoWidth(lines []string) int {
-	widest := 0
-	for _, line := range lines {
-		if w := ansi.StringWidth(line); w > widest {
-			widest = w
+func TestHomeTitleIsAsciiArt(t *testing.T) {
+	previous := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(previous)
+
+	applyTheme(config.DefaultTheme, "")
+	for _, tc := range []struct {
+		font  string
+		width int
+		glyph string
+	}{
+		{"block", 21, "█"},
+		{"line", 31, "|"},
+	} {
+		art := titleArt(homeTitle, tc.font)
+		if len(art) != 4 {
+			t.Fatalf("%s: wordmark has %d rows, want 4", tc.font, len(art))
 		}
-	}
-	return widest
-}
-
-func TestRenderLogoFallback(t *testing.T) {
-	full := renderLogo(200)
-	if len(full) != 5 {
-		t.Fatalf("wide logo has %d lines, want 5", len(full))
-	}
-	if !strings.Contains(ansi.Strip(strings.Join(full, "\n")), "██") {
-		t.Error("wide logo has no pixel glyphs")
-	}
-	if got := logoWidth(full); got != 68 {
-		t.Errorf("wide logo width = %d, want 68 with double spacing", got)
-	}
-
-	compact := renderLogo(69)
-	if got := logoWidth(compact); got != 59 {
-		t.Errorf("compact logo width = %d, want 59 with single spacing", got)
-	}
-
-	narrow := renderLogo(20)
-	if len(narrow) != 1 {
-		t.Fatalf("narrow logo has %d lines, want 1", len(narrow))
-	}
-	if got := ansi.Strip(narrow[0]); got != "MCLAUNCHER" {
-		t.Errorf("narrow logo = %q, want MCLAUNCHER", got)
-	}
-}
-
-func TestLogoUppercaseGlyphs(t *testing.T) {
-	for _, r := range "MCLAUNCHER" {
-		glyph, ok := logoGlyphs[r]
-		if !ok {
-			t.Fatalf("missing glyph for %q", r)
+		if got := titleArtWidth(art); got != tc.width {
+			t.Errorf("%s: wordmark width = %d, want %d", tc.font, got, tc.width)
 		}
-		if len(glyph) != 5 {
-			t.Errorf("glyph %q has %d rows, want 5", r, len(glyph))
+		if !strings.Contains(strings.Join(art, "\n"), tc.glyph) {
+			t.Errorf("%s: wordmark has no %q strokes", tc.font, tc.glyph)
 		}
-		for _, row := range glyph {
-			if len(row) != 5 {
-				t.Errorf("glyph %q row %q has width %d, want 5", r, row, len(row))
+		for i, row := range art {
+			if strings.TrimSpace(row) == "" {
+				t.Errorf("%s: row %d is empty", tc.font, i)
+			}
+		}
+		painted := paintTitleArt(art, 0, "sheen")
+		for i := range painted {
+			if ansi.Strip(painted[i]) != art[i] {
+				t.Errorf("%s: row %d = %q, want %q", tc.font, i, ansi.Strip(painted[i]), art[i])
 			}
 		}
 	}
-	for r := range logoGlyphs {
-		if r < 'A' || r > 'Z' {
-			t.Errorf("logo glyph %q is not uppercase", r)
+	if strings.Join(titleArt(homeTitle, "block"), "\n") == strings.Join(titleArt(homeTitle, "line"), "\n") {
+		t.Error("the two fonts should render differently")
+	}
+	if got := strings.Join(titleArt(homeTitle, "unknown"), "\n"); got != strings.Join(titleArt(homeTitle, config.DefaultTitleFont), "\n") {
+		t.Error("unknown font should fall back to the default")
+	}
+}
+
+func TestHomeTitleAnimationsDiffer(t *testing.T) {
+	previous := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(previous)
+
+	applyTheme(config.DefaultTheme, "")
+	for _, font := range config.TitleFontIDs {
+		art := titleArt(homeTitle, font)
+		for _, anim := range []string{"sheen", "wave", "breathe"} {
+			first := strings.Join(paintTitleArt(art, 0, anim), "\n")
+			later := strings.Join(paintTitleArt(art, 7, anim), "\n")
+			if ansi.Strip(first) != strings.Join(art, "\n") || ansi.Strip(later) != strings.Join(art, "\n") {
+				t.Fatalf("%s/%s: animation changed the glyphs", font, anim)
+			}
+			if first == later {
+				t.Errorf("%s/%s: frame 7 should differ from frame 0", font, anim)
+			}
 		}
+		if strings.Join(paintTitleArt(art, 0, "off"), "\n") != strings.Join(paintTitleArt(art, 7, "off"), "\n") {
+			t.Errorf("%s: off should stay static across frames", font)
+		}
+	}
+}
+
+func TestHomeTitleFallsBackWhenNarrow(t *testing.T) {
+	m := testModel(t)
+	m.cfg.Settings.TitleAnim = "wave"
+	lines := m.titleLines(12)
+	if len(lines) != 1 {
+		t.Fatalf("narrow title has %d lines, want 1", len(lines))
+	}
+	if got := len([]rune(ansi.Strip(lines[0]))); got > 12 {
+		t.Errorf("narrow title is %d wide, want at most 12", got)
+	}
+	if strings.Contains(lines[0], "█") {
+		t.Errorf("narrow title should fall back to text, got %q", lines[0])
+	}
+	if lines := m.titleLines(120); len(lines) != 4 {
+		t.Errorf("wide title has %d lines, want 4", len(lines))
 	}
 }

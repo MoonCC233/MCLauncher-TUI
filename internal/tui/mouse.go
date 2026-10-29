@@ -20,6 +20,8 @@ const (
 	hitAccountTypeRow
 	hitResolutionRow
 	hitThemeRow
+	hitTitleAnimRow
+	hitTitleFontRow
 )
 
 // hitRegion is a clickable rectangle recorded while the frame is rendered.
@@ -224,6 +226,20 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 		m.themePick = hit.Index
 		if double {
 			return m.chooseTheme()
+		}
+		return m, nil
+	case hitTitleAnimRow:
+		double := m.registerClick(hit)
+		m.titleAnimPick = hit.Index
+		if double {
+			return m.chooseTitleAnim()
+		}
+		return m, nil
+	case hitTitleFontRow:
+		double := m.registerClick(hit)
+		m.titleFontPick = hit.Index
+		if double {
+			return m.chooseTitleFont()
 		}
 		return m, nil
 	}

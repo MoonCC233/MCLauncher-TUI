@@ -1,10 +1,27 @@
 package java
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestGlobCandidatesAcceptsFiles(t *testing.T) {
+	root := t.TempDir()
+	exe := filepath.Join(root, "jdk-21", "bin", javaExe())
+	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(exe, []byte("java"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var out []candidate
+	globCandidates([]string{filepath.Join(root, "jdk-*", "bin", javaExe())}, "test", &out)
+	if len(out) != 1 || !strings.EqualFold(out[0].path, exe) {
+		t.Fatalf("globCandidates = %#v, want %q", out, exe)
+	}
+}
 
 func TestMajorOf(t *testing.T) {
 	cases := []struct {

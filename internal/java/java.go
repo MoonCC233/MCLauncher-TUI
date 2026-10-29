@@ -156,9 +156,15 @@ func globCandidates(patterns []string, source string, out *[]candidate) {
 			continue
 		}
 		for _, m := range matches {
-			if st, err := os.Stat(m); err == nil && st.IsDir() {
-				addPath(out, m, source)
+			st, err := os.Stat(m)
+			if err != nil {
+				continue
 			}
+			if st.IsDir() {
+				addPath(out, m, source)
+				continue
+			}
+			*out = append(*out, candidate{m, source})
 		}
 	}
 }
@@ -199,8 +205,19 @@ func walkCandidates(root string, maxDepth int, source string, out *[]candidate) 
 func Candidates() []candidate {
 	var out []candidate
 	addPath(&out, os.Getenv("JAVA_HOME"), "JAVA_HOME")
+	addPath(&out, os.Getenv("JDK_HOME"), "JDK_HOME")
+	addPath(&out, os.Getenv("JRE_HOME"), "JRE_HOME")
 	if p, err := exec.LookPath(javaExe()); err == nil {
 		addPath(&out, p, "PATH")
+	}
+	// A machine can have several Java versions on PATH. Look at every entry,
+	// not only the first one returned by LookPath.
+	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
+		dir = strings.Trim(strings.TrimSpace(dir), `"`)
+		if dir == "" {
+			continue
+		}
+		addPath(&out, filepath.Join(dir, javaExe()), "PATH")
 	}
 	switch runtime.GOOS {
 	case "windows":
@@ -239,6 +256,7 @@ func Candidates() []candidate {
 			globCandidates([]string{filepath.Join(home, "scoop", "apps", "openjdk*", "current", "bin", javaExe())}, "Scoop", &out)
 			globCandidates([]string{filepath.Join(home, "scoop", "apps", "temurin*", "current", "bin", javaExe())}, "Scoop", &out)
 		}
+		addWindowsExtraCandidates(&out)
 	case "darwin":
 		globCandidates([]string{
 			"/Library/Java/JavaVirtualMachines/*/Contents/Home/bin/java",

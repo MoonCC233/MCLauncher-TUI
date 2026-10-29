@@ -381,6 +381,8 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openPrompt(promptJVMArgs, m.t("JVM arguments"), m.cfg.Settings.JVMArgs, m.t("Extra flags passed to Java, e.g. -XX:+UseG1GC"), 64)
 	case "resolution":
 		m.openResolutionPicker()
+	case "gametitle":
+		m.openPrompt(promptGameWindowTitle, m.t("Game window title"), m.cfg.Settings.GameWindowTitle, m.t("Rename the Minecraft window (Windows only); leave empty to keep the game's own title."), 80)
 	case "quitgame":
 		m.toggleKeepGameRunning()
 	case "threads":
@@ -437,6 +439,18 @@ func (m *Model) openLanguagePicker() {
 func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	value := strings.TrimSpace(m.prompt.Input.Value())
 	switch m.prompt.Kind {
+	case promptGameWindowTitle:
+		m.cfg.Settings.GameWindowTitle = value
+		if err := m.saveConfig(); err != nil {
+			return m, nil
+		}
+		m.modal = modalNone
+		if value == "" {
+			m.setToast(m.t("The game keeps its own window title"), toastInfo)
+		} else {
+			m.setToast(m.tf("Game window title: %s", value), toastSuccess)
+		}
+		return m, nil
 	case promptPackPath:
 		m.modal = modalPacks
 		return m.startPackImport(value)

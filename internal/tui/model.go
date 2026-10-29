@@ -91,6 +91,7 @@ const (
 	promptThemeAccent
 	promptModPath
 	promptOptiFineJar
+	promptGameWindowTitle
 	promptPackPath
 	promptPackURL
 )
@@ -1124,6 +1125,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Extra space-separated flags passed to the JVM.")},
 		{ID: "resolution", Label: m.t("Resolution"), Value: fmt.Sprintf("%d × %d", m.cfg.Settings.Width, m.cfg.Settings.Height),
 			Description: m.t("Initial Minecraft window size.")},
+		{ID: "gametitle", Label: m.t("Game window title"), Value: m.gameTitleValue(),
+			Description: m.t("Rename the Minecraft window (Windows only); leave empty to keep the game's own title.")},
 		{ID: "quitgame", Label: m.t("Keep game running"), Value: m.onOffLabel(m.cfg.Settings.KeepGameRunning),
 			Description: m.t("Keep Minecraft running after the launcher quits.")},
 		{ID: "threads", Label: m.t("Download threads"), Value: fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads),

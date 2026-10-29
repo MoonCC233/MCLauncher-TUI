@@ -504,4 +504,10 @@ var ruCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "Ресурсы и моды",
 	"open resources & mods": "открыть ресурсы и моды",
+
+	// Settings: game window title.
+	"Game window title": "Заголовок окна игры",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Переименовать окно Minecraft (только Windows); оставьте пустым, чтобы сохранить родной заголовок игры.",
+	"Game window title: %s":               "Заголовок окна игры: %s",
+	"The game keeps its own window title": "Игра сохранит свой заголовок окна",
 }

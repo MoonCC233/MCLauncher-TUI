@@ -504,4 +504,10 @@ var frCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "Ressources et mods",
 	"open resources & mods": "ouvrir ressources et mods",
+
+	// Settings: game window title.
+	"Game window title": "Titre de la fenêtre du jeu",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Renomme la fenêtre de Minecraft (Windows uniquement) ; laissez vide pour garder le titre du jeu.",
+	"Game window title: %s":               "Titre de la fenêtre du jeu : %s",
+	"The game keeps its own window title": "Le jeu garde son propre titre de fenêtre",
 }

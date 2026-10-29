@@ -504,4 +504,10 @@ var arCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "الموارد والتعديلات",
 	"open resources & mods": "فتح الموارد والتعديلات",
+
+	// Settings: game window title.
+	"Game window title": "عنوان نافذة اللعبة",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "إعادة تسمية نافذة Minecraft (في Windows فقط)؛ اتركه فارغًا للإبقاء على عنوان اللعبة.",
+	"Game window title: %s":               "عنوان نافذة اللعبة: %s",
+	"The game keeps its own window title": "ستحتفظ اللعبة بعنوان نافذتها الأصلي",
 }

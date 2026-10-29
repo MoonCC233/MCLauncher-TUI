@@ -506,4 +506,10 @@ var deCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "Ressourcen & Mods",
 	"open resources & mods": "Ressourcen & Mods öffnen",
+
+	// Settings: game window title.
+	"Game window title": "Spielfenstertitel",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Benennt das Minecraft-Fenster um (nur Windows); leer lassen, um den Spieltitel zu behalten.",
+	"Game window title: %s":               "Spielfenstertitel: %s",
+	"The game keeps its own window title": "Das Spiel behält seinen eigenen Fenstertitel",
 }

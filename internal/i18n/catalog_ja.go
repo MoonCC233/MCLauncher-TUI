@@ -504,4 +504,10 @@ var jaCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "リソースと MOD",
 	"open resources & mods": "リソースと MOD を開く",
+
+	// Settings: game window title.
+	"Game window title": "ゲームウィンドウのタイトル",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Minecraft のウィンドウ名を変更します（Windows のみ）。空欄ならゲーム本来のタイトルのままです。",
+	"Game window title: %s":               "ゲームウィンドウのタイトル: %s",
+	"The game keeps its own window title": "ゲーム本来のウィンドウタイトルを使います",
 }

@@ -98,6 +98,7 @@ type Settings struct {
 	ThemeAccent       string `json:"theme_accent,omitempty"`
 	TitleAnim         string `json:"title_anim,omitempty"`
 	TitleFont         string `json:"title_font,omitempty"`
+	GameWindowTitle   string `json:"game_window_title,omitempty"`
 	DataDir           string `json:"data_dir,omitempty"`
 	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
 

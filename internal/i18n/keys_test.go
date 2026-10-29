@@ -488,4 +488,8 @@ var requiredCatalogKeys = []string{
 	"%d installed",
 	"Resources & mods",
 	"open resources & mods",
+	"Game window title",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.",
+	"Game window title: %s",
+	"The game keeps its own window title",
 }

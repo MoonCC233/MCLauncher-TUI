@@ -142,6 +142,7 @@ func main() {
 
 	update.CleanupOldBinary()
 	model := tui.New(cfg, layout, util.NewHTTPClient(), version.Full(), notice)
+	model.ApplyWindowTitle()
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	model.SetSender(program.Send)
 	final, runErr := program.Run()

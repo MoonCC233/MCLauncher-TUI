@@ -504,4 +504,10 @@ var ptPTCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "Recursos e mods",
 	"open resources & mods": "abrir recursos e mods",
+
+	// Settings: game window title.
+	"Game window title": "Título da janela do jogo",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Renomeia a janela do Minecraft (apenas Windows); deixe vazio para manter o título do jogo.",
+	"Game window title: %s":               "Título da janela do jogo: %s",
+	"The game keeps its own window title": "O jogo mantém o próprio título da janela",
 }

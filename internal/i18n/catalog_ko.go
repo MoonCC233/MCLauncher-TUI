@@ -504,4 +504,10 @@ var koCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "리소스와 모드",
 	"open resources & mods": "리소스와 모드 열기",
+
+	// Settings: game window title.
+	"Game window title": "게임 창 제목",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Minecraft 창 이름을 바꿉니다(Windows 전용). 비워 두면 게임 기본 제목을 유지합니다.",
+	"Game window title: %s":               "게임 창 제목: %s",
+	"The game keeps its own window title": "게임의 기본 창 제목을 사용합니다",
 }

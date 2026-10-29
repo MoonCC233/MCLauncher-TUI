@@ -504,4 +504,10 @@ var zhHansCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "资源与模组",
 	"open resources & mods": "打开资源与模组",
+
+	// Settings: game window title.
+	"Game window title": "游戏窗口标题",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "重命名 Minecraft 窗口（仅 Windows）；留空则保持游戏自带标题。",
+	"Game window title: %s":               "游戏窗口标题：%s",
+	"The game keeps its own window title": "游戏将使用自带的窗口标题",
 }

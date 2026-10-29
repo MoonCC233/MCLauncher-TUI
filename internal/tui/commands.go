@@ -15,6 +15,7 @@ import (
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/gametitle"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
@@ -431,6 +432,12 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				versionID:    inst.VersionID,
 				pid:          session.Pid(),
 			})
+			// The game creates its window a moment after the process starts and then
+			// sets its own title, so the rename has to keep being applied until the
+			// game exits.
+			if gameTitle := strings.TrimSpace(settings.GameWindowTitle); gameTitle != "" {
+				go gametitle.Keep(session.Pid(), gameTitle, gametitle.Set, time.Second, session.Done())
+			}
 			for line := range session.Lines() {
 				emitter(gameLineMsg{line: line})
 			}

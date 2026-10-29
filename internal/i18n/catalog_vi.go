@@ -504,4 +504,10 @@ var viCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "Tài nguyên và mod",
 	"open resources & mods": "mở tài nguyên và mod",
+
+	// Settings: game window title.
+	"Game window title": "Tiêu đề cửa sổ game",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Đổi tên cửa sổ Minecraft (chỉ Windows); để trống để giữ tiêu đề gốc của game.",
+	"Game window title: %s":               "Tiêu đề cửa sổ game: %s",
+	"The game keeps its own window title": "Game sẽ giữ tiêu đề cửa sổ của riêng nó",
 }

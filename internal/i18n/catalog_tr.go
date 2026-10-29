@@ -504,4 +504,10 @@ var trCatalog = map[string]string{
 	// Content browser: renamed to resources & mods.
 	"Resources & mods":      "Kaynaklar ve modlar",
 	"open resources & mods": "kaynaklar ve modları aç",
+
+	// Settings: game window title.
+	"Game window title": "Oyun penceresi başlığı",
+	"Rename the Minecraft window (Windows only); leave empty to keep the game's own title.": "Minecraft penceresini yeniden adlandırır (yalnızca Windows); oyunun kendi başlığı için boş bırakın.",
+	"Game window title: %s":               "Oyun penceresi başlığı: %s",
+	"The game keeps its own window title": "Oyun kendi pencere başlığını kullanır",
 }

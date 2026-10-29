@@ -8,8 +8,8 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
-	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/packs"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 )
 
@@ -294,21 +294,24 @@ func Preview(screenName string, width, height int, language ...string) string {
 			Cursor:        1,
 		}
 		m.modal = modalLoader
-	case "mods":
+	case "content":
 		m.screen = ScreenInstances
-		m.modState = modsState{
-			InstanceID:   "a1b2c3d4e5",
-			InstanceName: "Survival",
-			Cursor:       2,
-			Items: []mods.Mod{
-				{FileName: "create-1.20.1-6.0.6.jar", Name: "Create", Version: "6.0.6", Loaders: []string{"forge"}, Enabled: true},
-				{FileName: "fabric-api-0.115.1+1.21.4.jar", Name: "Fabric API", Version: "0.115.1+1.21.4", Loaders: []string{"fabric"}, Enabled: true},
-				{FileName: "iris-1.8.1+mc1.21.4.jar", Name: "Iris Shaders", Version: "1.8.1+mc1.21.4", Loaders: []string{"fabric"}, Enabled: true},
-				{FileName: "jei-1.20.1-forge-19.21.0.247.jar.disabled", Name: "Just Enough Items", Version: "19.21.0.247", Loaders: []string{"forge"}, Enabled: false},
-				{FileName: "sodium-fabric-0.6.13+mc1.21.4.jar", Name: "Sodium", Version: "0.6.13+mc1.21.4", Loaders: []string{"fabric"}, Enabled: true},
-			},
+		m.packs.instanceID = "a1b2c3d4e5"
+		m.packs.instanceName = "Survival"
+		m.packs.kind = packs.ResourcePack
+		m.packs.query = newTextInput("", "", 36, 48)
+		m.packs.cursor = 1
+		m.packs.list = []packs.Record{
+			{Title: "Bare Bones", Filename: "BareBones_1.21.zip", Size: 4_200_000, InstalledAt: now.Unix() - 3600},
+			{Title: "Fresh Animations", Filename: "FreshAnimations_v1.11.1.zip", Size: 743_793, InstalledAt: now.Unix() - 900},
+			{Title: "Stay True", Filename: "StayTrue_v1.21.zip", Size: 18_300_000, InstalledAt: now.Unix() - 120},
 		}
-		m.modal = modalMods
+		m.packs.enabled = map[string]bool{
+			"BareBones_1.21.zip":          false,
+			"FreshAnimations_v1.11.1.zip": true,
+			"StayTrue_v1.21.zip":          true,
+		}
+		m.modal = modalPacks
 	default:
 		m.screen = ScreenHome
 	}

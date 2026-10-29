@@ -267,13 +267,7 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 			return m.startLoaderInstall()
 		}
 		return m, nil
-	case hitModRow:
-		double := m.registerClick(hit)
-		m.modState.Cursor = hit.Index
-		if double {
-			return m, m.toggleMod()
-		}
-		return m, nil
+
 	}
 	return m, nil
 }
@@ -350,11 +344,22 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 			m.loaderPick.Cursor = clampInt(m.loaderPick.Cursor+dir, 0, n-1)
 		}
 		return m, nil
-	case modalMods:
-		if n := len(m.modState.Items); n > 0 {
-			m.modState.Cursor = clampInt(m.modState.Cursor+dir, 0, n-1)
+	case modalPacks:
+		if n := len(m.packs.list); n > 0 {
+			m.packs.cursor = clampInt(m.packs.cursor+dir, 0, n-1)
 		}
 		return m, nil
+	case modalPackSearch:
+		if n := len(m.packs.results); n > 0 {
+			m.packs.searchCursor = clampInt(m.packs.searchCursor+dir, 0, n-1)
+		}
+		return m, nil
+	case modalPackVersions:
+		if n := len(m.packs.versions); n > 0 {
+			m.packs.versionCursor = clampInt(m.packs.versionCursor+dir, 0, n-1)
+		}
+		return m, nil
+
 	case modalNone:
 		// handled below
 	default:

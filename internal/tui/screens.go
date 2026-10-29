@@ -62,6 +62,10 @@ func (m *Model) updateHome(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "n":
 		m.switchScreen(ScreenVersions)
 		return m, m.loadManifestCmd(false)
+	case "p":
+		if inst := m.homeInstance(); inst != nil {
+			return m, m.openPacksBrowser(*inst)
+		}
 	case "a":
 		m.openAccountForm()
 	case "r":
@@ -104,6 +108,10 @@ func (m *Model) updateInstances(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if inst != nil {
 			m.openEditInstanceForm(inst)
 		}
+	case "p":
+		if inst := m.currentInstance(); inst != nil {
+			return m, m.openPacksBrowser(*inst)
+		}
 	case "d":
 		inst := m.currentInstance()
 		if inst == nil {
@@ -121,10 +129,7 @@ func (m *Model) updateInstances(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			Target: inst.ID,
 		}
 		m.modal = modalConfirm
-	case "m":
-		if inst := m.currentInstance(); inst != nil {
-			m.openMods(inst)
-		}
+
 	case "r":
 		m.refreshInstalled()
 		m.clampInstanceCursor()
@@ -178,12 +183,7 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.startInstall(v.ID, "", 0)
-	case "l":
-		v := m.currentVersion()
-		if v == nil {
-			return m, nil
-		}
-		m.openLoaderPicker(v.ID)
+
 	case "d":
 		v := m.currentVersion()
 		if v == nil {
@@ -331,6 +331,8 @@ func (m *Model) adjustSetting(key string) {
 			m.saveConfig()
 			m.setToast(m.tf("Memory: %d MB", next), toastSuccess)
 		}
+	case "quitgame":
+		m.toggleKeepGameRunning()
 	case "threads":
 		next := util.Clamp(m.cfg.Settings.DownloadThreads+delta, 1, 32)
 		if next != m.cfg.Settings.DownloadThreads {
@@ -379,6 +381,10 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openPrompt(promptJVMArgs, m.t("JVM arguments"), m.cfg.Settings.JVMArgs, m.t("Extra flags passed to Java, e.g. -XX:+UseG1GC"), 64)
 	case "resolution":
 		m.openResolutionPicker()
+	case "gametitle":
+		m.openPrompt(promptGameWindowTitle, m.t("Game window title"), m.cfg.Settings.GameWindowTitle, m.t("Rename the Minecraft window (Windows only); leave empty to keep the game's own title."), 80)
+	case "quitgame":
+		m.toggleKeepGameRunning()
 	case "threads":
 		m.openPrompt(promptThreads, m.t("Download threads"), fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), m.t("1–32 parallel downloads"), 4)
 	case "language":
@@ -433,6 +439,24 @@ func (m *Model) openLanguagePicker() {
 func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	value := strings.TrimSpace(m.prompt.Input.Value())
 	switch m.prompt.Kind {
+	case promptGameWindowTitle:
+		m.cfg.Settings.GameWindowTitle = value
+		if err := m.saveConfig(); err != nil {
+			return m, nil
+		}
+		m.modal = modalNone
+		if value == "" {
+			m.setToast(m.t("The game keeps its own window title"), toastInfo)
+		} else {
+			m.setToast(m.tf("Game window title: %s", value), toastSuccess)
+		}
+		return m, nil
+	case promptPackPath:
+		m.modal = modalPacks
+		return m.startPackImport(value)
+	case promptPackURL:
+		m.modal = modalPacks
+		return m.startPackURL(value)
 	case promptMemory:
 		n, err := parseInt(value)
 		if err != nil || n < 512 || n > 65536 {
@@ -486,12 +510,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		m.modal = modalNone
 		m.setToast(m.tf("Accent color: %s", accent), toastSuccess)
 		return m, nil
-	case promptModPath:
-		if err := m.addModFromPath(value); err != nil {
-			m.prompt.Err = err.Error()
-			return m, nil
-		}
-		return m, nil
+
 	case promptOptiFineJar:
 		if err := m.chooseOptiFineJar(value); err != nil {
 			m.prompt.Err = err.Error()

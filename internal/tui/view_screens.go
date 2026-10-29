@@ -339,7 +339,7 @@ func (m *Model) viewVersions(w, h int) []string {
 			state = styleGreen.Render(m.t("installed"))
 		}
 		date := m.releaseDate(v.ReleaseTime)
-		hint := m.t("enter create instance · i install only · l install loader · o open version folder")
+		hint := m.t("enter create instance · i install only · o open version folder")
 		if m.installed[v.ID] {
 			hint += " · d " + m.t("uninstall installed version")
 		}

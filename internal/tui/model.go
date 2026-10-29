@@ -18,7 +18,6 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
-	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
@@ -67,7 +66,9 @@ const (
 	modalTitleAnim
 	modalTitleFont
 	modalLoader
-	modalMods
+	modalPacks
+	modalPackSearch
+	modalPackVersions
 )
 
 type formKind int
@@ -90,6 +91,9 @@ const (
 	promptThemeAccent
 	promptModPath
 	promptOptiFineJar
+	promptGameWindowTitle
+	promptPackPath
+	promptPackURL
 )
 
 type confirmKind int
@@ -98,8 +102,8 @@ const (
 	confirmDeleteInstance confirmKind = iota
 	confirmRemoveAccount
 	confirmUninstallVersion
-	confirmRemoveMod
 	confirmInstallUpdate
+	confirmRemovePack
 )
 
 type taskKind string
@@ -110,6 +114,7 @@ const (
 	taskLoader  taskKind = "loader"
 	taskUpdate  taskKind = "update"
 	taskJava    taskKind = "java"
+	taskPack    taskKind = "pack"
 )
 
 type toastKind int
@@ -176,6 +181,10 @@ type FormState struct {
 	Hints     []string
 	Focus     int
 	Err       string
+
+	// LoaderRow shows the "Mod loader" choice of the new-instance form.
+	LoaderRow bool
+	Loader    loader.Kind
 }
 
 type PromptState struct {
@@ -204,15 +213,6 @@ type loaderPicker struct {
 	OptiFineJar   string
 	Loading       bool
 	Err           string
-}
-
-type modsState struct {
-	InstanceID   string
-	InstanceName string
-	Items        []mods.Mod
-	Cursor       int
-	Offset       int
-	Err          string
 }
 
 type AlertState struct {
@@ -260,6 +260,9 @@ type Model struct {
 	installed       map[string]bool
 	loaderMeta      map[string]loader.Meta
 
+	// pendingCreate is set while a new instance waits for its mod loader.
+	pendingCreate *pendingCreate
+
 	homeCursor     int
 	instanceCursor int
 	instanceOffset int
@@ -280,6 +283,7 @@ type Model struct {
 	themePick       int
 	titleAnimPick   int
 	titleFontPick   int
+	packs           packsState
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -308,7 +312,6 @@ type Model struct {
 	task            *TaskState
 	taskHistory     []TaskRecord
 	loaderPick      loaderPicker
-	modState        modsState
 	updateChecking  bool
 	updateRelease   *update.Release
 	updateInstalled string
@@ -389,14 +392,22 @@ func (m *Model) quitApp() (tea.Model, tea.Cmd) {
 	if m.task != nil && m.task.Cancel != nil {
 		m.task.Cancel()
 	}
-	m.stopGameForQuit()
+	m.stopGameOnQuit()
 	return m, tea.Quit
+}
+
+// stopGameOnQuit stops Minecraft unless the player asked to keep it running.
+func (m *Model) stopGameOnQuit() {
+	if !m.stopsGameOnQuit() {
+		return
+	}
+	m.stopGameForQuit()
 }
 
 // Shutdown stops any game process owned by the launcher. It is safe to call
 // after the Bubble Tea program has returned.
 func (m *Model) Shutdown() {
-	m.stopGameForQuit()
+	m.stopGameOnQuit()
 }
 
 // stopGameForQuit makes sure no Minecraft process is left behind when the
@@ -552,6 +563,10 @@ func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case taskDoneMsg:
 		return m.handleTaskDone(msg)
+	case packSearchMsg:
+		return m.handlePackSearch(msg)
+	case packVersionsMsg:
+		return m.handlePackVersions(msg)
 	case gameStartedMsg:
 		backgrounded := m.task != nil && m.task.Backgrounded
 		m.recordTask(m.task, taskStatusCompleted, nil)
@@ -1110,6 +1125,10 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Extra space-separated flags passed to the JVM.")},
 		{ID: "resolution", Label: m.t("Resolution"), Value: fmt.Sprintf("%d × %d", m.cfg.Settings.Width, m.cfg.Settings.Height),
 			Description: m.t("Initial Minecraft window size.")},
+		{ID: "gametitle", Label: m.t("Game window title"), Value: m.gameTitleValue(),
+			Description: m.t("Rename the Minecraft window (Windows only); leave empty to keep the game's own title.")},
+		{ID: "quitgame", Label: m.t("Keep game running"), Value: m.onOffLabel(m.cfg.Settings.KeepGameRunning),
+			Description: m.t("Keep Minecraft running after the launcher quits.")},
 		{ID: "threads", Label: m.t("Download threads"), Value: fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads),
 			Description: m.t("Parallel downloads used while installing game files.")},
 		{ID: "language", Label: m.t("Language"), Value: language,

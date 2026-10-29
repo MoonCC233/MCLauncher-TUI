@@ -15,6 +15,7 @@ import (
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/gametitle"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
@@ -431,6 +432,12 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				versionID:    inst.VersionID,
 				pid:          session.Pid(),
 			})
+			// The game creates its window a moment after the process starts and then
+			// sets its own title, so the rename has to keep being applied until the
+			// game exits.
+			if gameTitle := strings.TrimSpace(settings.GameWindowTitle); gameTitle != "" {
+				go gametitle.Keep(session.Pid(), gameTitle, gametitle.Set, time.Second, session.Done())
+			}
 			for line := range session.Lines() {
 				emitter(gameLineMsg{line: line})
 			}
@@ -554,10 +561,17 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalAlert
 		return m, nil
 	}
+	if msg.kind == taskPack {
+		m.reloadPacks()
+		m.recordTask(task, taskStatusCompleted, nil)
+		m.setToast(m.t("Resource pack installed"), toastSuccess)
+		return m, nil
+	}
 	m.installed = install.InstalledSet(m.layout)
 	m.loaderMeta = loader.Scan(m.layout)
 	if msg.kind == taskLoader {
 		m.rebuildVersions()
+		m.finishPendingCreate(msg.versionID)
 		for i := range m.visible {
 			if m.visible[i].ID == msg.versionID {
 				m.versionCursor = i
@@ -677,6 +691,11 @@ func (m *Model) openInstanceForm(versionID string) {
 		Labels:    []string{m.t("Name"), m.t("Memory (MB, optional)")},
 		Hints:     []string{"", m.t("Leave empty to use the global memory limit")},
 		Focus:     0,
+	}
+	// A plain Minecraft version can be turned into a loader instance right here;
+	// loader versions themselves are not offered again.
+	if _, isLoader := m.loaderMeta[versionID]; !isLoader {
+		m.form.LoaderRow = true
 	}
 	if versionInstalled {
 		m.form.Hints = append(m.form.Hints, "")

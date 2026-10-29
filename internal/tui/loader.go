@@ -90,6 +90,13 @@ func (m *Model) updateLoaderPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.loaderPick.Loading = false
 			return m, nil
 		default:
+			// Leaving the picker from the first step cancels the whole flow; when
+			// it was opened from the new-instance form, go back to the form.
+			if m.pendingCreate != nil {
+				m.pendingCreate = nil
+				m.modal = modalForm
+				return m, nil
+			}
 			m.modal = modalNone
 			return m, nil
 		}

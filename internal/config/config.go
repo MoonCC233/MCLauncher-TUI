@@ -92,11 +92,13 @@ type Settings struct {
 	Width             int    `json:"width"`
 	Height            int    `json:"height"`
 	DownloadThreads   int    `json:"download_threads"`
+	KeepGameRunning   bool   `json:"keep_game_running,omitempty"`
 	Language          string `json:"language,omitempty"`
 	Theme             string `json:"theme,omitempty"`
 	ThemeAccent       string `json:"theme_accent,omitempty"`
 	TitleAnim         string `json:"title_anim,omitempty"`
 	TitleFont         string `json:"title_font,omitempty"`
+	GameWindowTitle   string `json:"game_window_title,omitempty"`
 	DataDir           string `json:"data_dir,omitempty"`
 	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
 

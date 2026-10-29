@@ -393,6 +393,9 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openPrompt(promptDataDir, m.t("Data directory"), m.cfg.Settings.DataDir, m.t("Leave empty to use the default .minecraft folder."), 260)
 	case "microsoft":
 		m.openPrompt(promptMicrosoftClientID, m.t("Microsoft Client ID"), m.cfg.Settings.MicrosoftClientID, m.t("Optional Azure application (client) ID. Leave empty to use the built-in client."), 64)
+	case "version":
+		_, cmd := m.checkForUpdates()
+		return cmd
 	}
 	return nil
 }

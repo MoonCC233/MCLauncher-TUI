@@ -24,6 +24,7 @@
 - **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录；退出启动器时会先停止由它启动的游戏进程。
 - **后台任务与下载记录**：安装和游戏启动可发送到后台，在 `Downloads` 页面查看进度、重开进度弹窗或取消任务；最近 20 条任务会持久化到 `downloads-history.json`，重启启动器后仍可查看，可用 `↑` / `↓`、`pgup` / `pgdown` 翻看。
 - **版本搜索与分类**：标题右侧的搜索框可按版本 ID 即时搜索；正式版、快照、远古版（Beta / Alpha）与愚人节版独立筛选；正式版和快照分类会自动排除愚人节版本；旧版 assets 的 virtual / map_to_resources 索引也有处理。
+- **应用内更新**：在 `Settings` 的 `Launcher version` 行按 `enter` 检查更新；发现新版本后会下载并替换启动器，重启后生效。GitHub 无法直连时会自动尝试镜像，也可以用 `MCLAUNCHER_UPDATE_MIRROR` 指定镜像。
 - **便携数据目录**：默认把游戏数据放在当前目录的 `.minecraft`，可在设置中改到任意路径。
 
 ## 界面预览
@@ -108,9 +109,11 @@ Windows 下输出文件为 `mclauncher.exe`。
   MCLAUNCHER_FABRIC_MAVEN_MIRROR=https://unicom.mirrors.ustc.edu.cn/bmclapi
   # Fabric 的 meta 列表仍使用 BMCLAPI
   MCLAUNCHER_FABRIC_MIRROR=https://bmclapi2.bangbang93.com/fabric-meta/v2
+  # 启动器更新镜像（可选，{url} 会替换为 GitHub 地址）
+  MCLAUNCHER_UPDATE_MIRROR=https://gh-proxy.com/{url}
   ./mclauncher
   ```
-  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge/NeoForge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。镜像由第三方提供，请自行确认可用性与信任程度。
+  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge/NeoForge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。检查启动器更新时也会优先尝试内置 GitHub 镜像（`gh-proxy.com`、`ghfast.top` 等）。镜像由第三方提供，请自行确认可用性与信任程度。
 - 现代终端：支持真彩色与完整 Unicode 制表符（Windows Terminal、iTerm2、Kitty、WezTerm 等）。
 
 ## 使用流程
@@ -151,6 +154,7 @@ Windows 下输出文件为 `mclauncher.exe`。
    - **主题**：打开主题选择器，选择预设或 `Custom accent…` 输入十六进制颜色；`Reset accent` 恢复主题默认强调色。  
    - **标题字形**：打开选择器切换首页标题的字形——`Block`（实心方块）或 `Line`（线条 ASCII），选择器里会直接预览当前高亮字形。  
    - **标题动画**：打开选择器切换首页标题的动效——`Sheen`（扫光）、`Wave`（流动）、`Breathe`（呼吸）、`Off`（静态）；也可以直接用 `←` / `→` 循环切换。  
+   - **启动器版本**：按 `enter` 检查更新；发现新版本后可下载并替换当前可执行文件，重启启动器完成升级。
    - **数据目录**：留空使用默认 `.minecraft`；也可以输入绝对路径或 `~/...`。切换后会立即重新扫描已安装版本，并保留原有配置文件位置。  
    - **Microsoft 客户端 ID**：留空使用内置公开客户端；只有使用自己注册的 Azure 应用时才需要填写 GUID。自定义 Entra 应用需要获得 Mojang 批准，否则 Minecraft 服务可能返回 403。  
    - **语言**：打开语言选择器，第一项“跟随系统”会跟随操作系统区域设置。
@@ -177,7 +181,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 | Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `l` 安装 Fabric / Quilt / Forge / OptiFine · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
 | Mods | `a` 添加模组 · `space` / `t` 启用或禁用 · `d` 删除 · `r` 重新扫描 · `o` 打开模组目录 · `esc` 关闭 |
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
-| Settings | `enter` 编辑 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
+| Settings | `enter` 编辑 / 检查启动器更新 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 · 退出启动器会停止游戏 |
 | Downloads | `enter` 重开当前进度 · `x` 取消当前任务 · `↑` `↓` / `pgup` `pgdown` 翻看历史 |
 
@@ -286,6 +290,7 @@ internal/mojang/        版本清单、规则判断、参数替换、依赖解�
 internal/install/       下载、校验、资源索引与安装标记
 internal/loader/        Fabric / Quilt / Forge / NeoForge / OptiFine 安装与加载器元数据
 internal/mods/          模组扫描、元数据解析、启用/禁用与删除
+internal/update/        GitHub Release 检查、镜像下载与启动器替换
 internal/launch/        Java 命令行构建、进程启动、输出流
 internal/java/          Java 运行时扫描、版本解析与选择
 internal/config/        配置持久化、账户与实例管理
@@ -337,7 +342,6 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 
 - **Microsoft 登录依赖网络与浏览器**：设备代码流程需要访问 Microsoft 登录页；部分账户首次使用前可能需要先在 `xbox.com` 创建 Xbox 档案。自定义 Entra 客户端需要 Mojang 审批，内置客户端开箱即用。
 - **不管理 Java 安装**：只检测和选择已安装的 Java；不会下载 JDK。
-- **无自动更新**：请关注 Releases 页面获取新版本。
 - **阿拉伯语显示取决于终端**：启动器会镜像布局，但阿拉伯文字形连写和 BiDi 排序由终端与字体决定；Windows Terminal 的显示效果通常最好。
 - **预编译二进制未签名**：macOS 首次运行可能需要 `xattr -d com.apple.quarantine ./mclauncher`。
 

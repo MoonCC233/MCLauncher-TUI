@@ -519,7 +519,21 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		if msg.kind == taskLoader {
 			title = m.t("Loader installation failed")
 		}
+		if msg.kind == taskUpdate {
+			title = m.t("Update failed")
+		}
 		m.alert = AlertState{Title: title, Body: msg.err.Error()}
+		m.modal = modalAlert
+		return m, nil
+	}
+	if msg.kind == taskUpdate {
+		m.recordTask(task, taskStatusCompleted, nil)
+		m.updateRelease = nil
+		m.updateInstalled = msg.versionID
+		m.alert = AlertState{
+			Title: m.t("Update installed"),
+			Body:  m.tf("Restart the launcher to finish updating to %s.", msg.versionID),
+		}
 		m.modal = modalAlert
 		return m, nil
 	}

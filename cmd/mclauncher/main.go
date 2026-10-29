@@ -16,6 +16,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/tui"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/version"
 )
@@ -139,6 +140,7 @@ func main() {
 		}
 	}
 
+	update.CleanupOldBinary()
 	model := tui.New(cfg, layout, util.NewHTTPClient(), version.Full(), notice)
 	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
 	model.SetSender(program.Send)

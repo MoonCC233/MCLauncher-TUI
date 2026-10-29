@@ -162,6 +162,9 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.setToast(m.tf("Removed %s", name), toastSuccess)
 			m.modal = modalMods
 			return m, nil
+		case confirmInstallUpdate:
+			m.modal = modalNone
+			return m.startUpdate()
 		}
 		m.modal = modalNone
 	case "esc", "n", "N":

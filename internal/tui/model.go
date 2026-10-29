@@ -21,6 +21,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -98,6 +99,7 @@ const (
 	confirmRemoveAccount
 	confirmUninstallVersion
 	confirmRemoveMod
+	confirmInstallUpdate
 )
 
 type taskKind string
@@ -106,6 +108,7 @@ const (
 	taskInstall taskKind = "install"
 	taskLaunch  taskKind = "launch"
 	taskLoader  taskKind = "loader"
+	taskUpdate  taskKind = "update"
 )
 
 type toastKind int
@@ -295,16 +298,19 @@ type Model struct {
 	modalW int
 	modalH int
 
-	modal       modalKind
-	helpScroll  int
-	form        FormState
-	prompt      PromptState
-	confirm     ConfirmState
-	alert       AlertState
-	task        *TaskState
-	taskHistory []TaskRecord
-	loaderPick  loaderPicker
-	modState    modsState
+	modal           modalKind
+	helpScroll      int
+	form            FormState
+	prompt          PromptState
+	confirm         ConfirmState
+	alert           AlertState
+	task            *TaskState
+	taskHistory     []TaskRecord
+	loaderPick      loaderPicker
+	modState        modsState
+	updateChecking  bool
+	updateRelease   *update.Release
+	updateInstalled string
 
 	downloadsScroll int
 
@@ -599,6 +605,8 @@ func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case loaderVersionsMsg:
 		m.handleLoaderVersions(msg)
 		return m, nil
+	case updateCheckMsg:
+		return m.handleUpdateCheck(msg)
 	}
 	return m, nil
 }
@@ -1086,6 +1094,12 @@ func (m *Model) settingsRows() []settingsRow {
 	if m.cfg.Settings.MicrosoftClientID != "" {
 		microsoft = util.Truncate(m.cfg.Settings.MicrosoftClientID, 40)
 	}
+	versionValue := m.AppVersion
+	if m.updateChecking {
+		versionValue = m.t("Checking for updates…")
+	} else if m.updateRelease != nil {
+		versionValue = m.AppVersion + " → " + m.updateRelease.TagName
+	}
 	return []settingsRow{
 		{ID: "memory", Label: m.t("Memory"), Value: fmt.Sprintf("%d MB", m.cfg.Settings.MemoryMB),
 			Description: m.t("Memory limit used by instances that do not set their own value.")},
@@ -1109,8 +1123,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Versions, assets, libraries and instance game directories.")},
 		{ID: "microsoft", Label: m.t("Microsoft Client ID"), Value: microsoft,
 			Description: m.t("Optional Azure application (client) ID. Leave empty to use the built-in client.")},
-		{ID: "version", Label: m.t("Launcher version"), Value: m.AppVersion,
-			Description: m.t("mclauncher is built with Go, Bubble Tea and Lip Gloss.")},
+		{ID: "version", Label: m.t("Launcher version"), Value: versionValue,
+			Description: m.t("Press enter to check for updates. GitHub mirrors are used when needed.")},
 	}
 }
 

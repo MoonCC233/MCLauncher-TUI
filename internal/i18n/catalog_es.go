@@ -467,4 +467,41 @@ var esCatalog = map[string]string{
 	"On": "Activado",
 	"Minecraft keeps running after the launcher quits": "Minecraft seguirá en ejecución al cerrar el lanzador",
 	"Quitting the launcher also stops Minecraft":       "Cerrar el lanzador también detendrá Minecraft",
+
+	// Resource packs.
+	"Resource packs":                         "Paquetes de recursos",
+	"Search resource packs":                  "Buscar paquetes de recursos",
+	"Choose a version":                       "Elige una versión",
+	"open resource packs":                    "abrir paquetes de recursos",
+	"No packs installed. Press / to search.": "No hay paquetes instalados. Pulsa / para buscar.",
+	"Searching…":                             "Buscando…",
+	"No results.":                            "Sin resultados.",
+	"%d downloads":                           "%d descargas",
+	"Remove resource pack?":                  "¿Eliminar el paquete de recursos?",
+	"Resource pack installed":                "Paquete de recursos instalado",
+	"Downloading resource pack":              "Descargando paquete de recursos",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "Shaders",
+	"Mods":          "Mods",
+	"import":        "importar",
+	"from a URL":    "desde una URL",
+	"Import a file": "Importar un archivo",
+	"Path to a .zip or .jar file you downloaded": "Ruta a un archivo .zip o .jar que hayas descargado",
+	"Add from a URL":                    "Añadir desde una URL",
+	"https link to a .zip or .jar file": "Enlace https a un archivo .zip o .jar",
+	"Imported %s":                       "%s importado",
+	"Mods need a mod loader":            "Los mods necesitan un cargador de mods",
+	"Shaders are selected in game":      "Los shaders se eligen dentro del juego",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "cambiar tipo",
+	"No resource packs installed.": "No hay paquetes de recursos instalados.",
+	"No shaders installed.":        "No hay shaders instalados.",
+	"Press / to search, i to import a file, u for a link.": "Pulsa / para buscar, i para importar un archivo, u para un enlace.",
+	"%d installed": "%d instalados",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "Recursos y mods",
+	"open resources & mods": "abrir recursos y mods",
 }

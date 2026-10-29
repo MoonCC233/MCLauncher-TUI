@@ -467,4 +467,41 @@ var jaCatalog = map[string]string{
 	"On": "オン",
 	"Minecraft keeps running after the launcher quits": "ランチャー終了後も Minecraft は動作を続けます",
 	"Quitting the launcher also stops Minecraft":       "ランチャーを終了すると Minecraft も停止します",
+
+	// Resource packs.
+	"Resource packs":                         "リソースパック",
+	"Search resource packs":                  "リソースパックを検索",
+	"Choose a version":                       "バージョンを選択",
+	"open resource packs":                    "リソースパックを開く",
+	"No packs installed. Press / to search.": "パックがありません。/ で検索します。",
+	"Searching…":                             "検索中…",
+	"No results.":                            "結果がありません。",
+	"%d downloads":                           "%d ダウンロード",
+	"Remove resource pack?":                  "リソースパックを削除しますか？",
+	"Resource pack installed":                "リソースパックをインストールしました",
+	"Downloading resource pack":              "リソースパックをダウンロード中",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "シェーダー",
+	"Mods":          "MOD",
+	"import":        "取り込む",
+	"from a URL":    "URL から",
+	"Import a file": "ファイルを取り込む",
+	"Path to a .zip or .jar file you downloaded": "ダウンロードした .zip / .jar のパス",
+	"Add from a URL":                    "URL から追加",
+	"https link to a .zip or .jar file": ".zip / .jar の https リンク",
+	"Imported %s":                       "%s を取り込みました",
+	"Mods need a mod loader":            "MOD には MOD ローダーが必要です",
+	"Shaders are selected in game":      "シェーダーはゲーム内で選択します",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "種類を切り替え",
+	"No resource packs installed.": "リソースパックは入っていません。",
+	"No shaders installed.":        "シェーダーは入っていません。",
+	"Press / to search, i to import a file, u for a link.": "/ で検索、i でファイルを取り込み、u でリンクを追加。",
+	"%d installed": "%d 個インストール済み",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "リソースと MOD",
+	"open resources & mods": "リソースと MOD を開く",
 }

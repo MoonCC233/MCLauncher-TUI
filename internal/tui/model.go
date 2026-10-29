@@ -18,7 +18,6 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
-	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
@@ -67,7 +66,9 @@ const (
 	modalTitleAnim
 	modalTitleFont
 	modalLoader
-	modalMods
+	modalPacks
+	modalPackSearch
+	modalPackVersions
 )
 
 type formKind int
@@ -90,6 +91,8 @@ const (
 	promptThemeAccent
 	promptModPath
 	promptOptiFineJar
+	promptPackPath
+	promptPackURL
 )
 
 type confirmKind int
@@ -98,8 +101,8 @@ const (
 	confirmDeleteInstance confirmKind = iota
 	confirmRemoveAccount
 	confirmUninstallVersion
-	confirmRemoveMod
 	confirmInstallUpdate
+	confirmRemovePack
 )
 
 type taskKind string
@@ -110,6 +113,7 @@ const (
 	taskLoader  taskKind = "loader"
 	taskUpdate  taskKind = "update"
 	taskJava    taskKind = "java"
+	taskPack    taskKind = "pack"
 )
 
 type toastKind int
@@ -210,15 +214,6 @@ type loaderPicker struct {
 	Err           string
 }
 
-type modsState struct {
-	InstanceID   string
-	InstanceName string
-	Items        []mods.Mod
-	Cursor       int
-	Offset       int
-	Err          string
-}
-
 type AlertState struct {
 	Title  string
 	Body   string
@@ -287,6 +282,7 @@ type Model struct {
 	themePick       int
 	titleAnimPick   int
 	titleFontPick   int
+	packs           packsState
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -315,7 +311,6 @@ type Model struct {
 	task            *TaskState
 	taskHistory     []TaskRecord
 	loaderPick      loaderPicker
-	modState        modsState
 	updateChecking  bool
 	updateRelease   *update.Release
 	updateInstalled string
@@ -567,6 +562,10 @@ func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case taskDoneMsg:
 		return m.handleTaskDone(msg)
+	case packSearchMsg:
+		return m.handlePackSearch(msg)
+	case packVersionsMsg:
+		return m.handlePackVersions(msg)
 	case gameStartedMsg:
 		backgrounded := m.task != nil && m.task.Backgrounded
 		m.recordTask(m.task, taskStatusCompleted, nil)

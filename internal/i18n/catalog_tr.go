@@ -467,4 +467,41 @@ var trCatalog = map[string]string{
 	"On": "Açık",
 	"Minecraft keeps running after the launcher quits": "Başlatıcı kapansa da Minecraft açık kalacak",
 	"Quitting the launcher also stops Minecraft":       "Başlatıcı kapanınca Minecraft da kapanacak",
+
+	// Resource packs.
+	"Resource packs":                         "Kaynak paketleri",
+	"Search resource packs":                  "Kaynak paketi ara",
+	"Choose a version":                       "Bir sürüm seç",
+	"open resource packs":                    "kaynak paketlerini aç",
+	"No packs installed. Press / to search.": "Yüklü paket yok. Aramak için / tuşuna basın.",
+	"Searching…":                             "Aranıyor…",
+	"No results.":                            "Sonuç yok.",
+	"%d downloads":                           "%d indirme",
+	"Remove resource pack?":                  "Kaynak paketi kaldırılsın mı?",
+	"Resource pack installed":                "Kaynak paketi kuruldu",
+	"Downloading resource pack":              "Kaynak paketi indiriliyor",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "Shader'lar",
+	"Mods":          "Modlar",
+	"import":        "içe aktar",
+	"from a URL":    "URL'den",
+	"Import a file": "Dosya içe aktar",
+	"Path to a .zip or .jar file you downloaded": "İndirdiğiniz .zip veya .jar dosyasının yolu",
+	"Add from a URL":                    "URL'den ekle",
+	"https link to a .zip or .jar file": ".zip veya .jar için https bağlantısı",
+	"Imported %s":                       "%s içe aktarıldı",
+	"Mods need a mod loader":            "Modlar için mod yükleyici gerekir",
+	"Shaders are selected in game":      "Shader'lar oyun içinde seçilir",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "tür değiştir",
+	"No resource packs installed.": "Yüklü kaynak paketi yok.",
+	"No shaders installed.":        "Yüklü shader yok.",
+	"Press / to search, i to import a file, u for a link.": "Aramak için /, dosya içe aktarmak için i, bağlantı için u.",
+	"%d installed": "%d yüklü",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "Kaynaklar ve modlar",
+	"open resources & mods": "kaynaklar ve modları aç",
 }

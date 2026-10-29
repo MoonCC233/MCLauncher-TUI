@@ -467,4 +467,41 @@ var zhHantCatalog = map[string]string{
 	"On": "開啟",
 	"Minecraft keeps running after the launcher quits": "關閉啟動器後 Minecraft 會繼續執行",
 	"Quitting the launcher also stops Minecraft":       "關閉啟動器時也會結束 Minecraft",
+
+	// Resource packs.
+	"Resource packs":                         "材質包",
+	"Search resource packs":                  "搜尋材質包",
+	"Choose a version":                       "選擇版本",
+	"open resource packs":                    "開啟材質包",
+	"No packs installed. Press / to search.": "還沒有安裝材質包，按 / 搜尋。",
+	"Searching…":                             "搜尋中…",
+	"No results.":                            "沒有結果。",
+	"%d downloads":                           "%d 次下載",
+	"Remove resource pack?":                  "刪除材質包？",
+	"Resource pack installed":                "材質包已安裝",
+	"Downloading resource pack":              "正在下載材質包",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "光影",
+	"Mods":          "模組",
+	"import":        "匯入",
+	"from a URL":    "從連結",
+	"Import a file": "匯入檔案",
+	"Path to a .zip or .jar file you downloaded": "已下載的 .zip 或 .jar 檔案路徑",
+	"Add from a URL":                    "從連結新增",
+	"https link to a .zip or .jar file": ".zip 或 .jar 檔案的 https 連結",
+	"Imported %s":                       "已匯入 %s",
+	"Mods need a mod loader":            "模組需要先安裝模組載入器",
+	"Shaders are selected in game":      "光影需要在遊戲內選擇",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "切換類型",
+	"No resource packs installed.": "還沒有安裝材質包。",
+	"No shaders installed.":        "還沒有安裝光影。",
+	"Press / to search, i to import a file, u for a link.": "按 / 搜尋，按 i 匯入檔案，按 u 新增連結。",
+	"%d installed": "已安裝 %d 個",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "資源與模組",
+	"open resources & mods": "開啟資源與模組",
 }

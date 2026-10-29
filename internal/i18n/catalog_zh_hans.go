@@ -467,4 +467,41 @@ var zhHansCatalog = map[string]string{
 	"On": "开启",
 	"Minecraft keeps running after the launcher quits": "关闭启动器后 Minecraft 会继续运行",
 	"Quitting the launcher also stops Minecraft":       "关闭启动器时也会结束 Minecraft",
+
+	// Resource packs.
+	"Resource packs":                         "材质包",
+	"Search resource packs":                  "搜索材质包",
+	"Choose a version":                       "选择版本",
+	"open resource packs":                    "打开材质包",
+	"No packs installed. Press / to search.": "还没有安装材质包，按 / 搜索。",
+	"Searching…":                             "搜索中…",
+	"No results.":                            "没有结果。",
+	"%d downloads":                           "%d 次下载",
+	"Remove resource pack?":                  "删除材质包？",
+	"Resource pack installed":                "材质包已安装",
+	"Downloading resource pack":              "正在下载材质包",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "光影",
+	"Mods":          "模组",
+	"import":        "导入",
+	"from a URL":    "从链接",
+	"Import a file": "导入文件",
+	"Path to a .zip or .jar file you downloaded": "已下载的 .zip 或 .jar 文件路径",
+	"Add from a URL":                    "从链接添加",
+	"https link to a .zip or .jar file": ".zip 或 .jar 文件的 https 链接",
+	"Imported %s":                       "已导入 %s",
+	"Mods need a mod loader":            "模组需要先安装模组加载器",
+	"Shaders are selected in game":      "光影需要在游戏内选择",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "切换类型",
+	"No resource packs installed.": "还没有安装材质包。",
+	"No shaders installed.":        "还没有安装光影。",
+	"Press / to search, i to import a file, u for a link.": "按 / 搜索，按 i 导入文件，按 u 添加链接。",
+	"%d installed": "已安装 %d 个",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "资源与模组",
+	"open resources & mods": "打开资源与模组",
 }

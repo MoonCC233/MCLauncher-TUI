@@ -467,4 +467,43 @@ var deCatalog = map[string]string{
 	"On": "An",
 	"Minecraft keeps running after the launcher quits": "Minecraft läuft nach dem Beenden des Launchers weiter",
 	"Quitting the launcher also stops Minecraft":       "Beim Beenden des Launchers wird Minecraft ebenfalls beendet",
+
+	// Resource packs.
+	"Resource packs":                         "Ressourcenpakete",
+	"Search resource packs":                  "Ressourcenpakete suchen",
+	"Choose a version":                       "Version wählen",
+	"open resource packs":                    "Ressourcenpakete öffnen",
+	"No packs installed. Press / to search.": "Keine Pakete installiert. Mit / suchen.",
+	"Searching…":                             "Suche…",
+	"No results.":                            "Keine Treffer.",
+	"%d downloads":                           "%d Downloads",
+	"Remove resource pack?":                  "Ressourcenpaket entfernen?",
+	"Resource pack installed":                "Ressourcenpaket installiert",
+	"Downloading resource pack":              "Ressourcenpaket wird heruntergeladen",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "Shader",
+	"import":        "importieren",
+	"from a URL":    "von einer URL",
+	"Import a file": "Datei importieren",
+	"Path to a .zip or .jar file you downloaded": "Pfad zu einer heruntergeladenen .zip- oder .jar-Datei",
+	"Add from a URL":                    "Von einer URL hinzufügen",
+	"https link to a .zip or .jar file": "https-Link zu einer .zip- oder .jar-Datei",
+	"Imported %s":                       "%s importiert",
+	"Mods need a mod loader":            "Mods brauchen einen Mod-Loader",
+	"Shaders are selected in game":      "Shader werden im Spiel ausgewählt",
+
+	// Content browser: shaders, mods and imports.
+	"Mods": "Mods",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "Typ wechseln",
+	"No resource packs installed.": "Keine Ressourcenpakete installiert.",
+	"No shaders installed.":        "Keine Shader installiert.",
+	"Press / to search, i to import a file, u for a link.": "Mit / suchen, mit i eine Datei importieren, mit u einen Link hinzufügen.",
+	"%d installed": "%d installiert",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "Ressourcen & Mods",
+	"open resources & mods": "Ressourcen & Mods öffnen",
 }

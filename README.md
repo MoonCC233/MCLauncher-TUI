@@ -14,7 +14,7 @@
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
 - **模组加载器**：新建实例时在表单里选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例直接引用该版本；OptiFine 需要本地下载的 `OptiFine_<version>_<edition>.jar`。
-- **实例模组管理**：在 `Instances` 按 `m` 打开模组面板，添加 `.jar`、启用/禁用、删除或打开模组目录。启动器会读取 Fabric、Quilt、Forge、NeoForge 与旧版 Forge 的元数据，显示模组名称、版本和适用加载器；禁用的模组会重命名为 `.jar.disabled`。
+- **资源与模组**：在 `Instances` 按 `p` 打开「资源与模组」窗口，`tab` / `←` `→` / 数字键在材质包、光影与模组之间切换。可以从 Modrinth 搜索（按游戏版本与模组加载器过滤），也可以按 `i` 导入本地已下载的文件、按 `u` 粘贴任意 https 直链——从其他网站下载的内容同样能装进来。材质包装入 `resourcepacks/` 并改写 `options.txt` 开关，模组装入 `mods/` 并用 `.jar.disabled` 开关，光影装入 `shaderpacks/` 后在游戏内选择；下载按 SHA-512 校验，手放进目录的文件也会被列出。
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
@@ -137,11 +137,8 @@ Windows 下输出文件为 `mclauncher.exe`。
 4. **创建并启动实例**  
    在表单中填写实例名、可选内存上限，按 `enter` 创建。回到 `Instances` 或 `Home`，按 `enter` 启动。
 
-5. **管理实例模组**  
-   在 `Instances` 中选中实例，按 `m` 打开模组面板：
-   - `a` 添加本地 `.jar` 模组，或直接把文件放进实例的 `mods/` 目录。
-   - `space` / `t` 启用或禁用选中的模组；双击模组行也可以切换。
-   - `d` 删除模组文件，`r` 重新扫描，`o` 打开模组目录，`esc` 关闭面板。
+5. **管理资源与模组**  
+   在 `Instances` 中选中实例按 `p`：材质包 / 光影 / 模组三个标签，`enter` 启用或禁用，`/` 搜 Modrinth，`i` 导入本地 `.zip` / `.jar`，`u` 粘贴 https 直链，`d` 删除。
 
 6. **查看日志 / 停止游戏**  
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录；直接退出启动器也会先停止正在运行的游戏，不再残留后台进程。
@@ -179,9 +176,9 @@ Windows 下输出文件为 `mclauncher.exe`。
 
 | 页面 | 键与作用 |
 | --- | --- |
-| Instances | `n` 新建实例 · `e` 编辑 · `m` 管理模组 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
+| Instances | `n` 新建实例 · `e` 编辑 · `p` 打开资源与模组 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
 | Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
-| Mods | `a` 添加模组 · `space` / `t` 启用或禁用 · `d` 删除 · `r` 重新扫描 · `o` 打开模组目录 · `esc` 关闭 |
+| 资源与模组 | `tab` / `1`-`3` 切换材质包、光影、模组 · `enter` 启用或禁用 · `/` 搜索 Modrinth · `i` 导入本地文件 · `u` 添加 https 链接 · `d` 删除 · `esc` 关闭 |
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 / 检查启动器更新 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 · 退出启动器会停止游戏 |
@@ -267,7 +264,7 @@ MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | mods
+--preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | content
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```
@@ -344,6 +341,7 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 ## 已知限制
 
 - **Microsoft 登录依赖网络与浏览器**：设备代码流程需要访问 Microsoft 登录页；部分账户首次使用前可能需要先在 `xbox.com` 创建 Xbox 档案。自定义 Entra 客户端需要 Mojang 审批，内置客户端开箱即用。
+- **材质包不检查 `pack_format`**：搜索与下载会按实例的游戏版本过滤，但兼容性最终由 Minecraft 判断，不匹配的包在游戏内会显示为不可用；光影需要 Iris 或 OptiFine，模组需要对应的加载器。
 - **阿拉伯语显示取决于终端**：启动器会镜像布局，但阿拉伯文字形连写和 BiDi 排序由终端与字体决定；Windows Terminal 的显示效果通常最好。
 - **预编译二进制未签名**：macOS 首次运行可能需要 `xattr -d com.apple.quarantine ./mclauncher`。
 

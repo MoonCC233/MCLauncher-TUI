@@ -467,4 +467,41 @@ var koCatalog = map[string]string{
 	"On": "켜짐",
 	"Minecraft keeps running after the launcher quits": "런처를 종료해도 Minecraft가 계속 실행됩니다",
 	"Quitting the launcher also stops Minecraft":       "런처를 종료하면 Minecraft도 함께 종료됩니다",
+
+	// Resource packs.
+	"Resource packs":                         "리소스 팩",
+	"Search resource packs":                  "리소스 팩 검색",
+	"Choose a version":                       "버전 선택",
+	"open resource packs":                    "리소스 팩 열기",
+	"No packs installed. Press / to search.": "설치된 팩이 없습니다. / 를 눌러 검색하세요.",
+	"Searching…":                             "검색 중…",
+	"No results.":                            "결과가 없습니다.",
+	"%d downloads":                           "다운로드 %d",
+	"Remove resource pack?":                  "리소스 팩을 삭제할까요?",
+	"Resource pack installed":                "리소스 팩 설치됨",
+	"Downloading resource pack":              "리소스 팩 다운로드 중",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "셰이더",
+	"Mods":          "모드",
+	"import":        "가져오기",
+	"from a URL":    "URL에서",
+	"Import a file": "파일 가져오기",
+	"Path to a .zip or .jar file you downloaded": "내려받은 .zip 또는 .jar 파일 경로",
+	"Add from a URL":                    "URL에서 추가",
+	"https link to a .zip or .jar file": ".zip 또는 .jar 파일의 https 링크",
+	"Imported %s":                       "%s 가져옴",
+	"Mods need a mod loader":            "모드는 모드 로더가 필요합니다",
+	"Shaders are selected in game":      "셰이더는 게임 안에서 선택합니다",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "종류 전환",
+	"No resource packs installed.": "설치된 리소스 팩이 없습니다.",
+	"No shaders installed.":        "설치된 셰이더가 없습니다.",
+	"Press / to search, i to import a file, u for a link.": "/ 로 검색, i 로 파일 가져오기, u 로 링크 추가.",
+	"%d installed": "%d개 설치됨",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "리소스와 모드",
+	"open resources & mods": "리소스와 모드 열기",
 }

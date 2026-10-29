@@ -224,18 +224,32 @@ func (m *Model) modalView() string {
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("back")),
 		}
-	case modalMods:
-		accent = colPrimary
-		title = m.tf("Mods · %s", m.modState.InstanceName)
-		pickerBody, pickerHits := m.modsBody(contentW)
-		body = pickerBody
-		pending = append(pending, pickerHits...)
+
+	case modalPacks:
+		title = m.t("Resources & mods")
+		body = m.packListBody(contentW)
 		footer = []hintSpec{
-			hint("a", m.t("add")),
-			hintAction("space", m.t("toggle"), " "),
-			hint("d", m.t("delete")),
-			hint("r", m.t("reload")),
-			hint("esc", m.t("close")),
+			hint("tab", m.t("switch type")),
+			hint("enter", m.t("toggle")),
+			hint("/", m.t("search")),
+			hint("i", m.t("import")),
+			hint("u", m.t("from a URL")),
+			hint("d", m.t("remove")),
+			hint("esc", m.t("cancel")),
+		}
+	case modalPackSearch:
+		title = m.t("Search resource packs")
+		body = m.packSearchBody(contentW)
+		footer = []hintSpec{
+			hint("enter", m.t("search")),
+			hint("esc", m.t("cancel")),
+		}
+	case modalPackVersions:
+		title = m.t("Choose a version")
+		body = m.packVersionsBody(contentW)
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("cancel")),
 		}
 	case modalProgress:
 		accent = colPrimary

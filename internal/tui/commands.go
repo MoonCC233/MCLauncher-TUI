@@ -554,6 +554,12 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalAlert
 		return m, nil
 	}
+	if msg.kind == taskPack {
+		m.reloadPacks()
+		m.recordTask(task, taskStatusCompleted, nil)
+		m.setToast(m.t("Resource pack installed"), toastSuccess)
+		return m, nil
+	}
 	m.installed = install.InstalledSet(m.layout)
 	m.loaderMeta = loader.Scan(m.layout)
 	if msg.kind == taskLoader {

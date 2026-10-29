@@ -62,6 +62,10 @@ func (m *Model) updateHome(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "n":
 		m.switchScreen(ScreenVersions)
 		return m, m.loadManifestCmd(false)
+	case "p":
+		if inst := m.homeInstance(); inst != nil {
+			return m, m.openPacksBrowser(*inst)
+		}
 	case "a":
 		m.openAccountForm()
 	case "r":
@@ -104,6 +108,10 @@ func (m *Model) updateInstances(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if inst != nil {
 			m.openEditInstanceForm(inst)
 		}
+	case "p":
+		if inst := m.currentInstance(); inst != nil {
+			return m, m.openPacksBrowser(*inst)
+		}
 	case "d":
 		inst := m.currentInstance()
 		if inst == nil {
@@ -121,10 +129,7 @@ func (m *Model) updateInstances(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			Target: inst.ID,
 		}
 		m.modal = modalConfirm
-	case "m":
-		if inst := m.currentInstance(); inst != nil {
-			m.openMods(inst)
-		}
+
 	case "r":
 		m.refreshInstalled()
 		m.clampInstanceCursor()
@@ -432,6 +437,12 @@ func (m *Model) openLanguagePicker() {
 func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 	value := strings.TrimSpace(m.prompt.Input.Value())
 	switch m.prompt.Kind {
+	case promptPackPath:
+		m.modal = modalPacks
+		return m.startPackImport(value)
+	case promptPackURL:
+		m.modal = modalPacks
+		return m.startPackURL(value)
 	case promptMemory:
 		n, err := parseInt(value)
 		if err != nil || n < 512 || n > 65536 {
@@ -485,12 +496,7 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		m.modal = modalNone
 		m.setToast(m.tf("Accent color: %s", accent), toastSuccess)
 		return m, nil
-	case promptModPath:
-		if err := m.addModFromPath(value); err != nil {
-			m.prompt.Err = err.Error()
-			return m, nil
-		}
-		return m, nil
+
 	case promptOptiFineJar:
 		if err := m.chooseOptiFineJar(value); err != nil {
 			m.prompt.Err = err.Error()

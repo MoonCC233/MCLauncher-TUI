@@ -467,4 +467,41 @@ var ptBRCatalog = map[string]string{
 	"On": "Ativado",
 	"Minecraft keeps running after the launcher quits": "O Minecraft continuará aberto ao fechar o launcher",
 	"Quitting the launcher also stops Minecraft":       "Fechar o launcher também encerrará o Minecraft",
+
+	// Resource packs.
+	"Resource packs":                         "Pacotes de recursos",
+	"Search resource packs":                  "Buscar pacotes de recursos",
+	"Choose a version":                       "Escolha uma versão",
+	"open resource packs":                    "abrir pacotes de recursos",
+	"No packs installed. Press / to search.": "Nenhum pacote instalado. Pressione / para buscar.",
+	"Searching…":                             "Buscando…",
+	"No results.":                            "Nenhum resultado.",
+	"%d downloads":                           "%d downloads",
+	"Remove resource pack?":                  "Remover o pacote de recursos?",
+	"Resource pack installed":                "Pacote de recursos instalado",
+	"Downloading resource pack":              "Baixando pacote de recursos",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "Shaders",
+	"Mods":          "Mods",
+	"import":        "importar",
+	"from a URL":    "de um URL",
+	"Import a file": "Importar um arquivo",
+	"Path to a .zip or .jar file you downloaded": "Caminho de um arquivo .zip ou .jar baixado",
+	"Add from a URL":                    "Adicionar de um URL",
+	"https link to a .zip or .jar file": "Link https para um arquivo .zip ou .jar",
+	"Imported %s":                       "%s importado",
+	"Mods need a mod loader":            "Mods precisam de um carregador de mods",
+	"Shaders are selected in game":      "Os shaders são escolhidos dentro do jogo",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "trocar tipo",
+	"No resource packs installed.": "Nenhum pacote de recursos instalado.",
+	"No shaders installed.":        "Nenhum shader instalado.",
+	"Press / to search, i to import a file, u for a link.": "Pressione / para buscar, i para importar um arquivo, u para um link.",
+	"%d installed": "%d instalados",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "Recursos e mods",
+	"open resources & mods": "abrir recursos e mods",
 }

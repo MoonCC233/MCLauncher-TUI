@@ -467,4 +467,41 @@ var ruCatalog = map[string]string{
 	"On": "Вкл.",
 	"Minecraft keeps running after the launcher quits": "Minecraft продолжит работу после выхода из лаунчера",
 	"Quitting the launcher also stops Minecraft":       "При выходе из лаунчера Minecraft тоже будет остановлен",
+
+	// Resource packs.
+	"Resource packs":                         "Наборы ресурсов",
+	"Search resource packs":                  "Поиск наборов ресурсов",
+	"Choose a version":                       "Выберите версию",
+	"open resource packs":                    "открыть наборы ресурсов",
+	"No packs installed. Press / to search.": "Наборы не установлены. Нажмите / для поиска.",
+	"Searching…":                             "Поиск…",
+	"No results.":                            "Ничего не найдено.",
+	"%d downloads":                           "%d загрузок",
+	"Remove resource pack?":                  "Удалить набор ресурсов?",
+	"Resource pack installed":                "Набор ресурсов установлен",
+	"Downloading resource pack":              "Загрузка набора ресурсов",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "Шейдеры",
+	"Mods":          "Моды",
+	"import":        "импорт",
+	"from a URL":    "по ссылке",
+	"Import a file": "Импорт файла",
+	"Path to a .zip or .jar file you downloaded": "Путь к скачанному файлу .zip или .jar",
+	"Add from a URL":                    "Добавить по ссылке",
+	"https link to a .zip or .jar file": "https-ссылка на файл .zip или .jar",
+	"Imported %s":                       "%s импортирован",
+	"Mods need a mod loader":            "Модам нужен загрузчик модов",
+	"Shaders are selected in game":      "Шейдеры выбираются в самой игре",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "сменить тип",
+	"No resource packs installed.": "Наборы ресурсов не установлены.",
+	"No shaders installed.":        "Шейдеры не установлены.",
+	"Press / to search, i to import a file, u for a link.": "Нажмите / для поиска, i для импорта файла, u для ссылки.",
+	"%d installed": "%d установлено",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "Ресурсы и моды",
+	"open resources & mods": "открыть ресурсы и моды",
 }

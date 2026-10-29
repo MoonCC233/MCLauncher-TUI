@@ -467,4 +467,41 @@ var viCatalog = map[string]string{
 	"On": "Bật",
 	"Minecraft keeps running after the launcher quits": "Minecraft sẽ tiếp tục chạy sau khi đóng trình khởi chạy",
 	"Quitting the launcher also stops Minecraft":       "Đóng trình khởi chạy cũng sẽ dừng Minecraft",
+
+	// Resource packs.
+	"Resource packs":                         "Gói tài nguyên",
+	"Search resource packs":                  "Tìm gói tài nguyên",
+	"Choose a version":                       "Chọn phiên bản",
+	"open resource packs":                    "mở gói tài nguyên",
+	"No packs installed. Press / to search.": "Chưa cài gói nào. Nhấn / để tìm.",
+	"Searching…":                             "Đang tìm…",
+	"No results.":                            "Không có kết quả.",
+	"%d downloads":                           "%d lượt tải",
+	"Remove resource pack?":                  "Xóa gói tài nguyên?",
+	"Resource pack installed":                "Đã cài gói tài nguyên",
+	"Downloading resource pack":              "Đang tải gói tài nguyên",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "Shader",
+	"Mods":          "Mod",
+	"import":        "nhập",
+	"from a URL":    "từ URL",
+	"Import a file": "Nhập tệp",
+	"Path to a .zip or .jar file you downloaded": "Đường dẫn tới tệp .zip hoặc .jar đã tải",
+	"Add from a URL":                    "Thêm từ URL",
+	"https link to a .zip or .jar file": "Liên kết https tới tệp .zip hoặc .jar",
+	"Imported %s":                       "Đã nhập %s",
+	"Mods need a mod loader":            "Mod cần trình tải mod",
+	"Shaders are selected in game":      "Shader được chọn trong game",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "đổi loại",
+	"No resource packs installed.": "Chưa cài gói tài nguyên nào.",
+	"No shaders installed.":        "Chưa cài shader nào.",
+	"Press / to search, i to import a file, u for a link.": "Nhấn / để tìm, i để nhập tệp, u để thêm liên kết.",
+	"%d installed": "Đã cài %d",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "Tài nguyên và mod",
+	"open resources & mods": "mở tài nguyên và mod",
 }

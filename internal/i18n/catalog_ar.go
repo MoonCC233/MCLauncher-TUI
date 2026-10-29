@@ -467,4 +467,41 @@ var arCatalog = map[string]string{
 	"On": "تشغيل",
 	"Minecraft keeps running after the launcher quits": "سيبقى Minecraft قيد التشغيل بعد إغلاق المشغّل",
 	"Quitting the launcher also stops Minecraft":       "إغلاق المشغّل سيوقف Minecraft أيضًا",
+
+	// Resource packs.
+	"Resource packs":                         "حزم الموارد",
+	"Search resource packs":                  "البحث عن حزم الموارد",
+	"Choose a version":                       "اختر نسخة",
+	"open resource packs":                    "فتح حزم الموارد",
+	"No packs installed. Press / to search.": "لا توجد حزم مثبتة. اضغط / للبحث.",
+	"Searching…":                             "جارٍ البحث…",
+	"No results.":                            "لا نتائج.",
+	"%d downloads":                           "%d تنزيل",
+	"Remove resource pack?":                  "حذف حزمة الموارد؟",
+	"Resource pack installed":                "تم تثبيت حزمة الموارد",
+	"Downloading resource pack":              "جارٍ تنزيل حزمة الموارد",
+
+	// Content browser: shaders, mods and imports.
+	"Shaders":       "تظليل",
+	"Mods":          "التعديلات",
+	"import":        "استيراد",
+	"from a URL":    "من رابط",
+	"Import a file": "استيراد ملف",
+	"Path to a .zip or .jar file you downloaded": "مسار ملف .zip أو .jar قمت بتنزيله",
+	"Add from a URL":                    "إضافة من رابط",
+	"https link to a .zip or .jar file": "رابط https لملف .zip أو .jar",
+	"Imported %s":                       "تم استيراد %s",
+	"Mods need a mod loader":            "التعديلات تحتاج إلى محمّل تعديلات",
+	"Shaders are selected in game":      "يُختار التظليل داخل اللعبة",
+
+	// Content browser: tabs and empty states.
+	"switch type":                  "تبديل النوع",
+	"No resource packs installed.": "لا توجد حزم موارد مثبتة.",
+	"No shaders installed.":        "لا توجد تظليلات مثبتة.",
+	"Press / to search, i to import a file, u for a link.": "اضغط / للبحث، و i لاستيراد ملف، و u لإضافة رابط.",
+	"%d installed": "%d مثبت",
+
+	// Content browser: renamed to resources & mods.
+	"Resources & mods":      "الموارد والتعديلات",
+	"open resources & mods": "فتح الموارد والتعديلات",
 }

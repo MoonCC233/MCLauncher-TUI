@@ -47,6 +47,8 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updatePackSearch(msg)
 	case modalPackVersions:
 		return m.updatePackVersions(msg)
+	case modalAnnounce:
+		return m.updateAnnounce(msg)
 	case modalProgress:
 		switch msg.String() {
 		case "esc":
@@ -348,6 +350,12 @@ func (m *Model) helpContent(width int) []string {
 			{m.t("click"), m.t("select ; click again to open")},
 			{m.t("wheel"), m.t("scroll lists, help and console")},
 			{"?", m.t("open this help")},
+		}},
+		{m.t("About"), []entry{
+			{"tab", m.t("switch type")},
+			{"a", m.t("Announcements")},
+			{"o", m.t("Repository")},
+			{"r", m.t("Press r to load.")},
 		}},
 	}
 	out := []string{styleBold.Render(m.t("Keyboard shortcuts")), styleBorder.Render(strings.Repeat("─", width)), ""}

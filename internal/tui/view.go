@@ -395,6 +395,14 @@ func (m *Model) screenHints() []hintSpec {
 			}
 		}
 		return []hintSpec{hint("esc", m.t("back to Home"))}
+	case ScreenAbout:
+		return []hintSpec{
+			hint("tab", m.t("sections")),
+			hint("enter", m.t("choose")),
+			hint("r", m.t("refresh")),
+			hint("a", m.t("Announcements")),
+			hint("o", m.t("Repository")),
+		}
 	}
 	return []hintSpec{hint("?", m.t("help"))}
 }
@@ -424,6 +432,8 @@ func (m *Model) screenLines(width, height int) []string {
 		return m.viewConsole(width, height)
 	case ScreenDownloads:
 		return m.viewDownloads(width, height)
+	case ScreenAbout:
+		return m.viewAbout(width, height)
 	}
 	return []string{""}
 }

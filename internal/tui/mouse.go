@@ -25,7 +25,7 @@ const (
 	hitLoaderKindRow
 	hitLoaderVersionRow
 	hitLoaderJavaRow
-	hitModRow
+	hitAboutTab
 )
 
 // hitRegion is a clickable rectangle recorded while the frame is rendered.
@@ -173,6 +173,8 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 		m.versionOffset = 0
 		m.rebuildVersions()
 		return m, nil
+	case hitAboutTab:
+		return m, m.switchAboutTab(aboutTab(hit.Scope))
 	case hitSearch:
 		if m.filterActive {
 			return m, nil

@@ -15,6 +15,7 @@
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
 - **模组加载器**：新建实例时在表单里选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例直接引用该版本；OptiFine 需要本地下载的 `OptiFine_<version>_<edition>.jar`。
 - **资源与模组**：在 `Instances` 按 `p` 打开「资源与模组」窗口，`tab` / `←` `→` / 数字键在材质包、光影与模组之间切换。可以从 Modrinth 搜索（按游戏版本与模组加载器过滤），也可以按 `i` 导入本地已下载的文件、按 `u` 粘贴任意 https 直链——从其他网站下载的内容同样能装进来。材质包装入 `resourcepacks/` 并改写 `options.txt` 开关，模组装入 `mods/` 并用 `.jar.disabled` 开关，光影装入 `shaderpacks/` 后在游戏内选择；下载按 SHA-512 校验，手放进目录的文件也会被列出。
+- **更新公告与关于页**：启动器会拉取 GitHub Releases，把**当前版本对应的更新日志**用弹窗展示（开发版则显示最新一个 Release），每个版本只弹一次，`a` 可重新查看。侧栏的「关于」里有四个标签：软件信息（版本、Go 版本、平台、数据目录、仓库、许可证）、贡献者名单、历次更新公告（含 Release 说明）以及来自 GitHub issue 的反馈列表，`enter` 可在浏览器里打开对应页面，`n` 直接新建 issue。
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
@@ -181,6 +182,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 | Instances | `n` 新建实例 · `e` 编辑 · `p` 打开资源与模组 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
 | Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
 | 资源与模组 | `tab` / `1`-`3` 切换材质包、光影、模组 · `enter` 启用或禁用 · `/` 搜索 Modrinth · `i` 导入本地文件 · `u` 添加 https 链接 · `d` 删除 · `esc` 关闭 |
+| 关于 | `tab` / `1`-`4` 切换软件信息、贡献者、更新公告、反馈 · `enter` 在浏览器中打开 · `r` 重新加载 · `a` 重新查看公告 · `o` 打开仓库 · `n` 新建 issue |
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 / 检查启动器更新 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 · 退出启动器会停止游戏 |
@@ -266,7 +268,7 @@ MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | content
+--preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | content | about | about-contributors | about-releases | about-feedback | announce
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```

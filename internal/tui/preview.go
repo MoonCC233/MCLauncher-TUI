@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
@@ -11,6 +12,8 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/packs"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/remote"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
 )
 
 // Preview renders a deterministic frame with demo data. It is used by
@@ -312,6 +315,50 @@ func Preview(screenName string, width, height int, language ...string) string {
 			"StayTrue_v1.21.zip":          true,
 		}
 		m.modal = modalPacks
+	case "about", "about-software", "about-contributors", "about-releases", "about-feedback":
+		m.screen = ScreenAbout
+		m.cfg.Path = filepath.Join(m.layout.Root, "config.json")
+		m.about.cursor = 0
+		m.about.contributors = []remote.Contributor{
+			{Login: "MoonCC233", Contributions: 214, HTMLURL: remote.RepoURL()},
+			{Login: "TeAnli", Contributions: 37, HTMLURL: remote.RepoURL()},
+			{Login: "sourcery-ai", Contributions: 4, HTMLURL: remote.RepoURL()},
+		}
+		m.about.releases = []update.Release{
+			{TagName: "v0.2.3", Body: "## 更新详情\n\n- 新增「资源与模组」窗口\n- 新建实例时可直接选择加载器\n- 关于页：贡献者、更新公告与反馈", PublishedAt: now},
+			{TagName: "v0.2.2", Body: "## 更新详情\n\n- Java 安装器\n- 启动器内更新", PublishedAt: now.AddDate(0, 0, -1)},
+			{TagName: "v0.2.1", Body: "## 更新详情\n\n- 首个公开版本", PublishedAt: now.AddDate(0, 0, -3)},
+		}
+		m.about.issues = []remote.Issue{
+			{Number: 12, Title: "1.19 模组搜不到", State: "open", Comments: 3, User: struct {
+				Login string `json:"login"`
+			}{Login: "TeAnli"}, HTMLURL: remote.RepoURL()},
+			{Number: 11, Title: "关于页建议显示贡献者", State: "open", Comments: 1, User: struct {
+				Login string `json:"login"`
+			}{Login: "MoonCC233"}, HTMLURL: remote.RepoURL()},
+			{Number: 9, Title: "启动器退出后游戏仍在运行", State: "closed", User: struct {
+				Login string `json:"login"`
+			}{Login: "someone"}, HTMLURL: remote.RepoURL()},
+		}
+		switch screenName {
+		case "about-contributors":
+			m.about.tab = aboutContributors
+		case "about-releases":
+			m.about.tab = aboutReleases
+		case "about-feedback":
+			m.about.tab = aboutFeedback
+		default:
+			m.about.tab = aboutSoftware
+		}
+	case "announce":
+		m.screen = ScreenHome
+		m.announce.items = []remote.Announcement{{
+			ID:        "demo",
+			Title:     "关于页上线",
+			Body:      "侧栏新增「关于」：可以查看启动器版本、贡献者名单、历次更新公告，以及来自 GitHub 的反馈列表。",
+			Published: now,
+		}}
+		m.modal = modalAnnounce
 	default:
 		m.screen = ScreenHome
 	}

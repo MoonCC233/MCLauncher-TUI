@@ -1,0 +1,64 @@
+name: 缺陷报告
+description: 启动器崩溃、报错、安装或启动失败、界面异常
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先用最新版本复现一次，并搜索现有 issue。日志位置：
+        `<数据目录>/logs/launcher.log`、`<数据目录>/instances/<实例>/logs/latest.log`
+
+  - type: input
+    id: version
+    attributes:
+      label: 启动器版本
+      description: "`mclauncher.exe --version` 的输出"
+      placeholder: v0.2.2
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 运行环境
+      description: 操作系统、终端、涉及的 Minecraft 版本或加载器
+      placeholder: Windows 11 · Windows Terminal · 1.21.4
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 进入 Versions，搜索 1.21.4
+        2. 按 enter 打开新建实例表单
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: 期望结果与实际结果
+      description: 报错信息请粘贴成文本，不要只截图
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志
+      description: 粘贴最后 50～100 行；完全没有日志就写「无」
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认
+      options:
+        - label: 已搜索现有 issue，且用最新版本复现过
+          required: true

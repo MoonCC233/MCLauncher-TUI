@@ -44,7 +44,7 @@ func (m *Model) openLoaderPicker(versionID string) {
 
 func fetchLoaderVersionsCmd(client *http.Client, kind loader.Kind, minecraft string) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 		defer cancel()
 		versions, err := loader.FetchVersions(ctx, client, kind, minecraft)
 		return loaderVersionsMsg{kind: kind, minecraft: minecraft, versions: versions, err: err}

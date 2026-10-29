@@ -138,6 +138,33 @@ func TestArgumentMarshalJSONRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Marshal(%+v): %v", arg, err)
 		}
+		// The output has to use the Mojang schema, not the lenient legacy form
+		// this package also accepts when reading.
+		var fields map[string]json.RawMessage
+		canonical := json.Unmarshal(data, &fields) == nil
+		if canonical {
+			for _, legacy := range []string{"Rules", "Values", "Value"} {
+				if _, ok := fields[legacy]; ok {
+					t.Errorf("Marshal(%+v) = %s, want lowercase keys", arg, data)
+				}
+			}
+			if _, ok := fields["value"]; !ok {
+				t.Errorf("Marshal(%+v) = %s, want a value field", arg, data)
+			}
+			if len(arg.Rules) > 0 {
+				if _, ok := fields["rules"]; !ok {
+					t.Errorf("Marshal(%+v) = %s, want a rules field", arg, data)
+				}
+			}
+			if len(arg.Values) == 1 {
+				var value string
+				if err := json.Unmarshal(fields["value"], &value); err != nil || value != arg.Values[0] {
+					t.Errorf("Marshal(%+v) = %s, want value %q", arg, data, arg.Values[0])
+				}
+			}
+		} else if len(arg.Rules) > 0 || len(arg.Values) != 1 {
+			t.Errorf("Marshal(%+v) = %s, want an object", arg, data)
+		}
 		var got Argument
 		if err := json.Unmarshal(data, &got); err != nil {
 			t.Fatalf("Unmarshal(%s): %v", data, err)

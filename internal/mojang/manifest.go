@@ -121,67 +121,6 @@ func (m *Manifest) Find(id string) *VersionSummary {
 	return nil
 }
 
-func LoadVersionJSON(layout paths.Layout, id string) (*VersionJSON, error) {
-	var v VersionJSON
-	path := layout.VersionJSON(id)
-	if err := util.ReadJSON(path, &v); err != nil {
-		return nil, err
-	}
-	if v.MainClass == "" || len(v.Libraries) == 0 {
-		return nil, fmt.Errorf("version metadata for %s is incomplete", id)
-	}
-	if v.ID == "" {
-		v.ID = id
-	}
-	return &v, nil
-}
-
-// FetchVersionJSON loads local metadata when possible, otherwise downloads it
-// from the URL advertised by the manifest.
-func FetchVersionJSON(ctx context.Context, client *http.Client, layout paths.Layout, manifest *Manifest, id string, force bool) (*VersionJSON, error) {
-	local, _ := LoadVersionJSON(layout, id)
-	if local != nil && !force {
-		return local, nil
-	}
-	if manifest == nil {
-		var err error
-		manifest, err = FetchManifest(ctx, client, layout, false)
-		if err != nil {
-			if local != nil {
-				return local, nil
-			}
-			return nil, err
-		}
-	}
-	summary := manifest.Find(id)
-	if summary == nil {
-		if local != nil {
-			return local, nil
-		}
-		return nil, fmt.Errorf("version %q is not in the Mojang manifest", id)
-	}
-	var v VersionJSON
-	if err := util.FetchJSON(ctx, client, summary.URL, &v); err != nil {
-		if local != nil {
-			return local, nil
-		}
-		return nil, fmt.Errorf("fetch version %s: %w", id, err)
-	}
-	if v.MainClass == "" {
-		if local != nil {
-			return local, nil
-		}
-		return nil, fmt.Errorf("version %s metadata is invalid", id)
-	}
-	if v.ID == "" {
-		v.ID = id
-	}
-	if err := util.WriteJSONAtomic(layout.VersionJSON(id), &v); err != nil {
-		return nil, err
-	}
-	return &v, nil
-}
-
 func ClientJarPath(layout paths.Layout, id string) string {
 	return filepath.Join(layout.VersionDir(id), id+".jar")
 }

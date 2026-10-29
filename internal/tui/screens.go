@@ -121,8 +121,12 @@ func (m *Model) updateInstances(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			Target: inst.ID,
 		}
 		m.modal = modalConfirm
+	case "m":
+		if inst := m.currentInstance(); inst != nil {
+			m.openMods(inst)
+		}
 	case "r":
-		m.installed = install.InstalledSet(m.layout)
+		m.refreshInstalled()
 		m.clampInstanceCursor()
 		m.setToast(m.t("Refreshed installed versions"), toastInfo)
 	case "x":
@@ -174,6 +178,12 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.startInstall(v.ID, "", 0)
+	case "l":
+		v := m.currentVersion()
+		if v == nil {
+			return m, nil
+		}
+		m.openLoaderPicker(v.ID)
 	case "d":
 		v := m.currentVersion()
 		if v == nil {
@@ -472,6 +482,18 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		m.setTheme(m.cfg.Settings.Theme, accent)
 		m.modal = modalNone
 		m.setToast(m.tf("Accent color: %s", accent), toastSuccess)
+		return m, nil
+	case promptModPath:
+		if err := m.addModFromPath(value); err != nil {
+			m.prompt.Err = err.Error()
+			return m, nil
+		}
+		return m, nil
+	case promptOptiFineJar:
+		if err := m.chooseOptiFineJar(value); err != nil {
+			m.prompt.Err = err.Error()
+			return m, nil
+		}
 		return m, nil
 	}
 	m.saveConfig()

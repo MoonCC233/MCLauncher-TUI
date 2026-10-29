@@ -7,6 +7,8 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 )
@@ -44,7 +46,7 @@ func Preview(screenName string, width, height int, language ...string) string {
 	}
 
 	layout := paths.New(`C:\Users\MoonCC\MCLauncher\.minecraft`)
-	m := New(cfg, layout, nil, "0.2.0", "")
+	m := New(cfg, layout, nil, "0.2.1", "")
 	m.width = width
 	m.height = height
 	m.ready = true
@@ -52,14 +54,32 @@ func Preview(screenName string, width, height int, language ...string) string {
 	m.manifestLoading = false
 	m.manifestAt = now.Add(-12 * time.Minute)
 	m.installed = map[string]bool{
-		"1.21.4": true,
-		"1.21.3": true,
-		"1.20.1": true,
-		"1.19.4": true,
-		"1.18.2": true,
-		"1.16.5": true,
-		"1.12.2": true,
-		"1.8.9":  true,
+		"1.21.4":                      true,
+		"1.21.3":                      true,
+		"1.20.1":                      true,
+		"1.19.4":                      true,
+		"1.18.2":                      true,
+		"1.16.5":                      true,
+		"1.12.2":                      true,
+		"1.8.9":                       true,
+		"fabric-loader-0.16.9-1.21.4": true,
+		"1.20.1-forge-47.2.0":         true,
+	}
+	m.loaderMeta = map[string]loader.Meta{
+		"fabric-loader-0.16.9-1.21.4": {
+			Kind:          loader.Fabric,
+			Minecraft:     "1.21.4",
+			LoaderVersion: "0.16.9",
+			VersionID:     "fabric-loader-0.16.9-1.21.4",
+			InstalledAt:   now.Add(-11 * 24 * time.Hour).Unix(),
+		},
+		"1.20.1-forge-47.2.0": {
+			Kind:          loader.Forge,
+			Minecraft:     "1.20.1",
+			LoaderVersion: "47.2.0",
+			VersionID:     "1.20.1-forge-47.2.0",
+			InstalledAt:   now.Add(-3 * 24 * time.Hour).Unix(),
+		},
 	}
 	m.rebuildVersions()
 	m.javaScanned = true
@@ -79,7 +99,7 @@ func Preview(screenName string, width, height int, language ...string) string {
 	push := func(source, text string, ago time.Duration) {
 		m.logs = append(m.logs, LogLine{At: now.Add(-ago), Source: source, Text: text})
 	}
-	push("system", "mclauncher 0.2.0", 62*time.Second)
+	push("system", "mclauncher 0.2.1", 62*time.Second)
 	push("launcher", "version manifest: network · 27 versions", 61*time.Second)
 	push("launcher", "java scan: 3 runtimes", 60*time.Second)
 	push("launcher", "installed 1.21.4 · 512 files · 283.4 MB", 59*time.Second)
@@ -237,6 +257,56 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.cfg.Settings.Width = 1920
 		m.cfg.Settings.Height = 1080
 		m.openResolutionPicker()
+	case "loader":
+		m.screen = ScreenVersions
+		m.loaderPick = loaderPicker{
+			Step:      loaderStepKind,
+			Minecraft: "1.20.1",
+			Cursor:    2,
+		}
+		m.modal = modalLoader
+	case "loader-versions":
+		m.screen = ScreenVersions
+		m.loaderPick = loaderPicker{
+			Step:      loaderStepVersion,
+			Minecraft: "1.20.1",
+			Kind:      loader.Fabric,
+			Cursor:    1,
+			Versions: []loader.RemoteVersion{
+				{Version: "0.17.2", Stable: true},
+				{Version: "0.16.14", Stable: true},
+				{Version: "0.16.10", Stable: true},
+				{Version: "0.15.11", Stable: true},
+				{Version: "0.16.0-beta.1", Stable: false},
+				{Version: "0.15.0-beta.4", Stable: false},
+			},
+		}
+		m.modal = modalLoader
+	case "loader-java":
+		m.screen = ScreenVersions
+		m.loaderPick = loaderPicker{
+			Step:          loaderStepJava,
+			Minecraft:     "1.20.1",
+			Kind:          loader.Forge,
+			LoaderVersion: "47.2.0",
+			Cursor:        1,
+		}
+		m.modal = modalLoader
+	case "mods":
+		m.screen = ScreenInstances
+		m.modState = modsState{
+			InstanceID:   "a1b2c3d4e5",
+			InstanceName: "Survival",
+			Cursor:       2,
+			Items: []mods.Mod{
+				{FileName: "create-1.20.1-6.0.6.jar", Name: "Create", Version: "6.0.6", Loaders: []string{"forge"}, Enabled: true},
+				{FileName: "fabric-api-0.115.1+1.21.4.jar", Name: "Fabric API", Version: "0.115.1+1.21.4", Loaders: []string{"fabric"}, Enabled: true},
+				{FileName: "iris-1.8.1+mc1.21.4.jar", Name: "Iris Shaders", Version: "1.8.1+mc1.21.4", Loaders: []string{"fabric"}, Enabled: true},
+				{FileName: "jei-1.20.1-forge-19.21.0.247.jar.disabled", Name: "Just Enough Items", Version: "19.21.0.247", Loaders: []string{"forge"}, Enabled: false},
+				{FileName: "sodium-fabric-0.6.13+mc1.21.4.jar", Name: "Sodium", Version: "0.6.13+mc1.21.4", Loaders: []string{"fabric"}, Enabled: true},
+			},
+		}
+		m.modal = modalMods
 	default:
 		m.screen = ScreenHome
 	}

@@ -86,6 +86,30 @@ func TestResolveLibrariesModern(t *testing.T) {
 	}
 }
 
+func TestResolveLibrariesLocalArtifact(t *testing.T) {
+	version := &VersionJSON{Libraries: []Library{
+		{
+			Name:  "optifine:OptiFine:1.20.1_HD_U_I6",
+			Local: true,
+			Downloads: LibraryDownloads{Artifact: DownloadInfo{
+				Path: "optifine/OptiFine/1.20.1_HD_U_I6/OptiFine-1.20.1_HD_U_I6.jar",
+				SHA1: "abc",
+				Size: 42,
+			}},
+		},
+	}}
+	res := ResolveLibraries(version, nil)
+	if len(res.Artifacts) != 1 {
+		t.Fatalf("artifacts = %#v, want one", res.Artifacts)
+	}
+	if res.Artifacts[0].URL != "" {
+		t.Errorf("local artifact URL = %q, want empty", res.Artifacts[0].URL)
+	}
+	if len(res.Classpath) != 1 {
+		t.Fatalf("classpath = %#v, want one entry", res.Classpath)
+	}
+}
+
 func TestResolveLibrariesLegacyNatives(t *testing.T) {
 	classifier := "natives-" + util.OSName() + "-" + archBits()
 	nativePath := "com/example/legacy/1.0/legacy-1.0-" + classifier + ".jar"

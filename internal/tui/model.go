@@ -17,6 +17,8 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -63,6 +65,8 @@ const (
 	modalTheme
 	modalTitleAnim
 	modalTitleFont
+	modalLoader
+	modalMods
 )
 
 type formKind int
@@ -83,6 +87,8 @@ const (
 	promptDataDir
 	promptMicrosoftClientID
 	promptThemeAccent
+	promptModPath
+	promptOptiFineJar
 )
 
 type confirmKind int
@@ -91,6 +97,7 @@ const (
 	confirmDeleteInstance confirmKind = iota
 	confirmRemoveAccount
 	confirmUninstallVersion
+	confirmRemoveMod
 )
 
 type taskKind string
@@ -98,6 +105,7 @@ type taskKind string
 const (
 	taskInstall taskKind = "install"
 	taskLaunch  taskKind = "launch"
+	taskLoader  taskKind = "loader"
 )
 
 type toastKind int
@@ -115,23 +123,27 @@ type LogLine struct {
 }
 
 type TaskState struct {
-	Kind         taskKind
-	Title        string
-	VersionID    string
-	InstanceID   string
-	CreateName   string
-	CreateMemory int
-	Backgrounded bool
-	Stage        string
-	Detail       string
-	Done         int64
-	Total        int64
-	FilesDone    int
-	FilesTotal   int
-	Started      time.Time
-	Cancel       context.CancelFunc
-	Cancelled    bool
-	Err          error
+	Kind            taskKind
+	Title           string
+	VersionID       string
+	InstanceID      string
+	CreateName      string
+	CreateMemory    int
+	LoaderKind      loader.Kind
+	LoaderMinecraft string
+	LoaderVersion   string
+	LoaderJar       string
+	Backgrounded    bool
+	Stage           string
+	Detail          string
+	Done            int64
+	Total           int64
+	FilesDone       int
+	FilesTotal      int
+	Started         time.Time
+	Cancel          context.CancelFunc
+	Cancelled       bool
+	Err             error
 }
 
 type TaskRecord struct {
@@ -166,6 +178,7 @@ type PromptState struct {
 	Kind  promptKind
 	Title string
 	Help  string
+	Err   string
 	Input textinput.Model
 }
 
@@ -174,6 +187,28 @@ type ConfirmState struct {
 	Title  string
 	Body   string
 	Target string
+	Aux    string
+}
+
+type loaderPicker struct {
+	Step          int
+	Minecraft     string
+	Kind          loader.Kind
+	Cursor        int
+	Versions      []loader.RemoteVersion
+	LoaderVersion string
+	OptiFineJar   string
+	Loading       bool
+	Err           string
+}
+
+type modsState struct {
+	InstanceID   string
+	InstanceName string
+	Items        []mods.Mod
+	Cursor       int
+	Offset       int
+	Err          string
 }
 
 type AlertState struct {
@@ -219,6 +254,7 @@ type Model struct {
 	manifestErr     string
 	manifestAt      time.Time
 	installed       map[string]bool
+	loaderMeta      map[string]loader.Meta
 
 	homeCursor     int
 	instanceCursor int
@@ -267,6 +303,8 @@ type Model struct {
 	alert       AlertState
 	task        *TaskState
 	taskHistory []TaskRecord
+	loaderPick  loaderPicker
+	modState    modsState
 
 	downloadsScroll int
 
@@ -304,6 +342,7 @@ func New(cfg *config.Config, layout paths.Layout, client *http.Client, appVersio
 		lang:            i18n.Resolve(cfg.Settings.Language),
 		screen:          ScreenHome,
 		installed:       install.InstalledSet(layout),
+		loaderMeta:      loader.Scan(layout),
 		manifestLoading: true,
 		versionScope:    0,
 		logFollow:       true,
@@ -512,6 +551,9 @@ func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleMicrosoftSession(msg)
 	case microsoftRefreshedMsg:
 		return m.handleMicrosoftRefreshed(msg)
+	case loaderVersionsMsg:
+		m.handleLoaderVersions(msg)
+		return m, nil
 	}
 	return m, nil
 }
@@ -576,6 +618,7 @@ func (m *Model) switchScreen(screen Screen) {
 	m.filterActive = false
 	if screen == ScreenVersions {
 		m.installed = install.InstalledSet(m.layout)
+		m.loaderMeta = loader.Scan(m.layout)
 		m.rebuildVersions()
 	}
 	if screen == ScreenAccounts {
@@ -606,14 +649,43 @@ func (m *Model) loadManifestCmd(force bool) tea.Cmd {
 
 func (m *Model) rebuildVersions() {
 	if m.manifest == nil {
-		m.visible = nil
-		m.versionCursor = 0
-		m.versionOffset = 0
+		filter := strings.ToLower(strings.TrimSpace(m.filter))
+		out := make([]mojang.VersionSummary, 0, len(m.loaderMeta))
+		for _, v := range m.localVersionSummaries() {
+			if filter != "" && !strings.Contains(strings.ToLower(v.ID), filter) {
+				continue
+			}
+			out = append(out, v)
+		}
+		m.visible = out
+		if m.versionCursor >= len(out) {
+			m.versionCursor = len(out) - 1
+		}
+		if m.versionCursor < 0 {
+			m.versionCursor = 0
+		}
+		m.ensureVersionVisible()
 		return
 	}
 	filter := strings.ToLower(strings.TrimSpace(m.filter))
 	scope := m.versionScope
-	out := make([]mojang.VersionSummary, 0, len(m.manifest.Versions))
+	out := make([]mojang.VersionSummary, 0, len(m.manifest.Versions)+len(m.loaderMeta))
+	manifestIDs := make(map[string]bool, len(m.manifest.Versions))
+	for _, v := range m.manifest.Versions {
+		manifestIDs[v.ID] = true
+	}
+	if scope == 0 {
+		locals := m.localVersionSummaries()
+		for _, v := range locals {
+			if manifestIDs[v.ID] {
+				continue
+			}
+			if filter != "" && !strings.Contains(strings.ToLower(v.ID), filter) {
+				continue
+			}
+			out = append(out, v)
+		}
+	}
 	for _, v := range m.manifest.Versions {
 		april := isAprilFoolsVersion(v.ID)
 		switch scope {
@@ -647,6 +719,35 @@ func (m *Model) rebuildVersions() {
 		m.versionCursor = 0
 	}
 	m.ensureVersionVisible()
+}
+
+// localVersionSummaries turns installed loader sidecars into list entries that
+// can be used to create instances just like Mojang versions.
+func (m *Model) localVersionSummaries() []mojang.VersionSummary {
+	out := make([]mojang.VersionSummary, 0, len(m.loaderMeta))
+	for id, meta := range m.loaderMeta {
+		if !m.installed[id] {
+			continue
+		}
+		out = append(out, mojang.VersionSummary{
+			ID:          id,
+			Type:        "loader",
+			ReleaseTime: time.Unix(meta.InstalledAt, 0).UTC().Format(time.RFC3339),
+		})
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		ai, aj := m.loaderMeta[out[i].ID].InstalledAt, m.loaderMeta[out[j].ID].InstalledAt
+		if ai != aj {
+			return ai > aj
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out
+}
+
+func (m *Model) refreshInstalled() {
+	m.installed = install.InstalledSet(m.layout)
+	m.loaderMeta = loader.Scan(m.layout)
 }
 
 func (m *Model) ensureVersionVisible() {

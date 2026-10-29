@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
@@ -212,7 +213,7 @@ func (m *Model) viewInstances(w, h int) []string {
 		lines = append(lines,
 			"  "+stylePrimary.Render("▌ ")+styleBold.Render(inst.Name),
 			"  "+styleMuted.Render(m.tf("%s · %s · %s%s",
-				inst.VersionID, m.memoryLabel(inst), m.tf("last played %s", m.relTime(inst.LastPlayedAt)), m.playedTotal(*inst))),
+				m.instanceVersionLabel(inst.VersionID), m.memoryLabel(inst), m.tf("last played %s", m.relTime(inst.LastPlayedAt)), m.playedTotal(*inst))),
 			"  "+styleDim.Render(util.ShortenPath(m.layout.InstanceDir(inst.ID), w-4)),
 		)
 	}
@@ -338,7 +339,7 @@ func (m *Model) viewVersions(w, h int) []string {
 			state = styleGreen.Render(m.t("installed"))
 		}
 		date := m.releaseDate(v.ReleaseTime)
-		hint := m.t("enter create instance · i install only · o open version folder")
+		hint := m.t("enter create instance · i install only · l install loader · o open version folder")
 		if m.installed[v.ID] {
 			hint += " · d " + m.t("uninstall installed version")
 		}
@@ -587,13 +588,35 @@ func (m *Model) filterBarLines(w, y0 int) []string {
 }
 
 func (m *Model) versionLabel(v mojang.VersionSummary) string {
+	if meta, ok := m.loaderMeta[v.ID]; ok {
+		return loaderKindName(meta.Kind)
+	}
 	if isAprilFoolsVersion(v.ID) {
 		return m.t("April Fools")
 	}
 	return m.versionTypeLabel(v.Type)
 }
 
+func (m *Model) instanceVersionLabel(versionID string) string {
+	if meta, ok := m.loaderMeta[versionID]; ok {
+		return loaderKindName(meta.Kind) + " · " + versionID
+	}
+	return versionID
+}
+
 func (m *Model) versionLabelStyle(v mojang.VersionSummary) lipgloss.Style {
+	if meta, ok := m.loaderMeta[v.ID]; ok {
+		color := colCyan
+		switch meta.Kind {
+		case loader.Forge:
+			color = colBlue
+		case loader.Quilt:
+			color = colPurple
+		case loader.OptiFine:
+			color = colGreen
+		}
+		return lipgloss.NewStyle().Foreground(color)
+	}
 	if isAprilFoolsVersion(v.ID) {
 		return lipgloss.NewStyle().Foreground(colPurple)
 	}
@@ -658,6 +681,8 @@ func (m *Model) versionTypeLabel(t string) string {
 		return m.t("old beta")
 	case "old_alpha":
 		return m.t("old alpha")
+	case "loader":
+		return m.t("loader")
 	}
 	return t
 }
@@ -671,6 +696,8 @@ func versionTypeStyle(t string) lipgloss.Style {
 		color = colYellow
 	case "old_beta", "old_alpha":
 		color = colMuted
+	case "loader":
+		color = colPrimary
 	}
 	return lipgloss.NewStyle().Foreground(color)
 }

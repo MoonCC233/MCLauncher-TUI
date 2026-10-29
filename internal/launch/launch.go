@@ -95,7 +95,8 @@ func Build(opts Options) (*Spec, error) {
 	if assetsDir == "" {
 		assetsDir = opts.Layout.Assets
 	}
-	clientJar := opts.Layout.ClientJar(versionID)
+	clientJarID := opts.Version.ClientJarID(versionID)
+	clientJar := opts.Layout.ClientJar(clientJarID)
 	if st, err := os.Stat(clientJar); err != nil || st.Size() == 0 {
 		return nil, fmt.Errorf("client jar for %s is missing — reinstall it from the Versions screen", versionID)
 	}

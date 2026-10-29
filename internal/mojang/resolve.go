@@ -118,12 +118,18 @@ func ResolveLibraries(v *VersionJSON, features map[string]bool) *LibraryResoluti
 			hasRegular = true
 		}
 		if hasRegular {
-			if regular.URL == "" {
+			if regular.URL == "" && !lib.Local {
 				base := lib.URL
 				if base == "" {
 					base = "https://libraries.minecraft.net/"
 				}
 				regular.URL = strings.TrimRight(base, "/") + "/" + regular.Path
+			}
+			if regular.SHA1 == "" {
+				regular.SHA1 = lib.SHA1
+			}
+			if regular.Size <= 0 {
+				regular.Size = lib.Size
 			}
 			addArtifact(lib.Name, regular)
 		}

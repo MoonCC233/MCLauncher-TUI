@@ -39,12 +39,13 @@ type Event struct {
 }
 
 type Installer struct {
-	Layout    paths.Layout
-	VersionID string
-	Manifest  *mojang.Manifest
-	Threads   int
-	Client    *http.Client
-	OnEvent   func(Event)
+	Layout     paths.Layout
+	VersionID  string
+	Manifest   *mojang.Manifest
+	Threads    int
+	Client     *http.Client
+	SkipClient bool // keep an existing (patched) client jar
+	OnEvent    func(Event)
 }
 
 type InstalledMarker struct {
@@ -62,11 +63,15 @@ func IsInstalled(layout paths.Layout, versionID string) bool {
 	if _, err := os.Stat(layout.Marker(versionID)); err != nil {
 		return false
 	}
-	if info, err := os.Stat(layout.ClientJar(versionID)); err != nil || info.Size() == 0 {
+	if _, err := os.Stat(layout.VersionJSON(versionID)); err != nil {
 		return false
 	}
-	_, err := os.Stat(layout.VersionJSON(versionID))
-	return err == nil
+	jarID := versionID
+	if v, err := mojang.LoadVersionJSON(layout, versionID); err == nil {
+		jarID = v.ClientJarID(versionID)
+	}
+	info, err := os.Stat(layout.ClientJar(jarID))
+	return err == nil && info.Size() > 0
 }
 
 func InstalledSet(layout paths.Layout) map[string]bool {
@@ -165,18 +170,28 @@ func (in *Installer) Install(ctx context.Context) error {
 		tasks[t.dest] = t
 	}
 
-	clientInfo := version.Downloads.Client
-	if clientInfo.URL == "" {
-		return fmt.Errorf("version %s has no client download URL", in.VersionID)
+	jarID := version.ClientJarID(in.VersionID)
+	clientPath := in.Layout.ClientJar(jarID)
+	if in.SkipClient {
+		if st, statErr := os.Stat(clientPath); statErr != nil || st.Size() == 0 {
+			return fmt.Errorf("client jar for %s is missing", in.VersionID)
+		}
+	} else {
+		clientInfo := version.Downloads.Client
+		if !util.VerifyFile(clientPath, clientInfo.SHA1, clientInfo.Size) {
+			if clientInfo.URL == "" {
+				return fmt.Errorf("version %s has no client download URL", in.VersionID)
+			}
+			addTask(&fileTask{
+				dest:  clientPath,
+				url:   clientInfo.URL,
+				sha1:  clientInfo.SHA1,
+				size:  clientInfo.Size,
+				label: filepath.Base(clientPath),
+				kind:  "client",
+			})
+		}
 	}
-	addTask(&fileTask{
-		dest:  in.Layout.ClientJar(in.VersionID),
-		url:   clientInfo.URL,
-		sha1:  clientInfo.SHA1,
-		size:  clientInfo.Size,
-		label: filepath.Base(in.Layout.ClientJar(in.VersionID)),
-		kind:  "client",
-	})
 	for _, artifact := range res.Artifacts {
 		if artifact.URL == "" {
 			continue

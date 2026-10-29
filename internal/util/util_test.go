@@ -1,12 +1,46 @@
 package util
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestDownloadFileAbortsStalledBody(t *testing.T) {
+	old := downloadStallTimeout
+	downloadStallTimeout = 200 * time.Millisecond
+	defer func() { downloadStallTimeout = old }()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "100")
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+		}
+	}))
+	defer server.Close()
+
+	dest := filepath.Join(t.TempDir(), "stalled.bin")
+	start := time.Now()
+	err := DownloadFile(context.Background(), server.Client(), DownloadSpec{
+		URL:  server.URL,
+		Dest: dest,
+		Size: 100,
+	}, nil)
+	if err == nil {
+		t.Fatal("DownloadFile succeeded, want a stall error")
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("DownloadFile took %s, the stall watchdog did not fire", elapsed)
+	}
+}
 
 func TestSafeJoin(t *testing.T) {
 	root := t.TempDir()

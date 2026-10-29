@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mods"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -37,6 +38,10 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateTitleAnimPicker(msg)
 	case modalTitleFont:
 		return m.updateTitleFontPicker(msg)
+	case modalLoader:
+		return m.updateLoaderPicker(msg)
+	case modalMods:
+		return m.updateMods(msg)
 	case modalProgress:
 		switch msg.String() {
 		case "esc":
@@ -143,11 +148,28 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.modal = modalAlert
 				return m, nil
 			}
+			m.refreshInstalled()
 			m.setToast(m.tf("Uninstalled %s", target), toastSuccess)
+		case confirmRemoveMod:
+			dir := m.layout.ModsDir(m.modState.InstanceID)
+			if err := mods.Remove(dir, m.confirm.Target); err != nil {
+				m.alert = AlertState{Title: m.t("Could not remove mod"), Body: err.Error()}
+				m.modal = modalAlert
+				return m, nil
+			}
+			name := m.confirm.Aux
+			m.reloadMods("")
+			m.setToast(m.tf("Removed %s", name), toastSuccess)
+			m.modal = modalMods
+			return m, nil
 		}
 		m.modal = modalNone
 	case "esc", "n", "N":
-		m.modal = modalNone
+		if m.confirm.Kind == confirmRemoveMod {
+			m.modal = modalMods
+		} else {
+			m.modal = modalNone
+		}
 	}
 	return m, nil
 }
@@ -155,13 +177,21 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) updatePrompt(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
-		m.modal = modalNone
+		switch m.prompt.Kind {
+		case promptModPath:
+			m.modal = modalMods
+		case promptOptiFineJar:
+			m.modal = modalLoader
+		default:
+			m.modal = modalNone
+		}
 		return m, nil
 	case "enter":
 		return m.submitPrompt()
 	}
 	var cmd tea.Cmd
 	m.prompt.Input, cmd = m.prompt.Input.Update(msg)
+	m.prompt.Err = ""
 	return m, cmd
 }
 
@@ -287,6 +317,7 @@ func (m *Model) helpContent(width int) []string {
 			{"e", m.t("rename / change memory")},
 			{"d", m.t("delete instance (files are kept)")},
 			{"o", m.t("open the instance folder")},
+			{"m", m.t("manage mods for the selected instance")},
 			{"x", m.t("stop the running game")},
 		}},
 		{m.t("Versions"), []entry{
@@ -294,8 +325,14 @@ func (m *Model) helpContent(width int) []string {
 			{"t", m.t("cycle version filters")},
 			{"enter", m.t("install if needed, then create instance")},
 			{"i", m.t("install without creating an instance")},
+			{"l", m.t("install Fabric, Quilt, Forge or OptiFine")},
 			{"d", m.t("uninstall installed version")},
 			{"r", m.t("refresh the Mojang manifest")},
+		}},
+		{m.t("mods"), []entry{
+			{"a", m.t("Add mod")},
+			{"space / t", m.t("toggle")},
+			{"r", m.t("reload")},
 		}},
 		{m.t("Accounts & settings"), []entry{
 			{"a", m.t("add account")},

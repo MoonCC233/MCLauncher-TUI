@@ -18,6 +18,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/version"
@@ -185,6 +186,7 @@ func (m *Model) uninstallVersion(id string) error {
 		}
 	}
 	m.installed = install.InstalledSet(m.layout)
+	m.loaderMeta = loader.Scan(m.layout)
 	m.rebuildVersions()
 	m.addLog("launcher", "uninstalled "+id)
 	if staged != "" {
@@ -510,11 +512,29 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		if msg.kind == taskLaunch {
 			title = m.t("Could not launch Minecraft")
 		}
+		if msg.kind == taskLoader {
+			title = m.t("Loader installation failed")
+		}
 		m.alert = AlertState{Title: title, Body: msg.err.Error()}
 		m.modal = modalAlert
 		return m, nil
 	}
 	m.installed = install.InstalledSet(m.layout)
+	m.loaderMeta = loader.Scan(m.layout)
+	if msg.kind == taskLoader {
+		m.rebuildVersions()
+		for i := range m.visible {
+			if m.visible[i].ID == msg.versionID {
+				m.versionCursor = i
+				m.ensureVersionVisible()
+				break
+			}
+		}
+		m.recordTask(task, taskStatusCompleted, nil)
+		m.setToast(m.tf("Installed %s", msg.versionID), toastSuccess)
+		m.addLog("launcher", "installed "+msg.versionID)
+		return m, nil
+	}
 	if msg.kind == taskInstall && task != nil && task.CreateName != "" {
 		versionID := task.VersionID
 		if msg.versionID != "" {

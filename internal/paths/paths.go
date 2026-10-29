@@ -61,8 +61,14 @@ func (l Layout) NativesDir(id string) string  { return filepath.Join(l.Versions,
 func (l Layout) Marker(id string) string {
 	return filepath.Join(l.Versions, id, ".mclauncher-installed.json")
 }
+func (l Layout) LoaderMeta(id string) string {
+	return filepath.Join(l.Versions, id, ".mclauncher-loader.json")
+}
 func (l Layout) InstanceDir(instanceID string) string {
 	return filepath.Join(l.Instances, instanceID)
+}
+func (l Layout) ModsDir(instanceID string) string {
+	return filepath.Join(l.InstanceDir(instanceID), "mods")
 }
 func (l Layout) AssetIndex(id string) string {
 	return filepath.Join(l.Indexes, id+".json")

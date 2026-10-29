@@ -355,6 +355,7 @@ func (m *Model) screenHints() []hintSpec {
 			hint("enter", m.t("play")),
 			hint("n", m.t("new")),
 			hint("e", m.t("edit")),
+			hint("m", m.t("mods")),
 			hint("d", m.t("delete")),
 			hint("o", m.t("folder")),
 		}
@@ -362,6 +363,7 @@ func (m *Model) screenHints() []hintSpec {
 		return []hintSpec{
 			hint("enter", m.t("create")),
 			hint("i", m.t("install")),
+			hint("l", m.t("loader")),
 			hint("/", m.t("search")),
 			hint("t", m.t("type")),
 			hint("r", m.t("refresh")),

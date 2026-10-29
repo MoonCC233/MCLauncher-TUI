@@ -41,6 +41,10 @@ var previewScreens = []string{
 	"microsoft",
 	"microsoft-error",
 	"resolution",
+	"loader",
+	"loader-versions",
+	"loader-java",
+	"mods",
 }
 
 func TestPreviewFrames(t *testing.T) {

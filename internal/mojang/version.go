@@ -12,6 +12,7 @@ import (
 type VersionJSON struct {
 	ID                 string           `json:"id"`
 	InheritsFrom       string           `json:"inheritsFrom,omitempty"`
+	JarID              string           `json:"jar_id,omitempty"`
 	Type               string           `json:"type"`
 	MainClass          string           `json:"mainClass"`
 	Assets             string           `json:"assets"`
@@ -52,10 +53,15 @@ type JavaVersion struct {
 type Library struct {
 	Name      string            `json:"name"`
 	URL       string            `json:"url"`
+	SHA1      string            `json:"sha1,omitempty"`
+	Size      int64             `json:"size,omitempty"`
 	Downloads LibraryDownloads  `json:"downloads"`
 	Natives   map[string]string `json:"natives"`
 	Extract   *ExtractRule      `json:"extract"`
 	Rules     []Rule            `json:"rules"`
+	// Local marks a library that is shipped in the data directory (for example
+	// the OptiFine jar) and must never be downloaded.
+	Local bool `json:"mclauncher_local,omitempty"`
 }
 
 type LibraryDownloads struct {
@@ -288,11 +294,16 @@ func MavenPath(name string) string {
 	if len(parts) > 3 {
 		classifier = parts[3]
 	}
+	ext := "jar"
+	if i := strings.IndexByte(classifier, '@'); i >= 0 {
+		ext = classifier[i+1:]
+		classifier = classifier[:i]
+	}
 	file := artifact + "-" + version
 	if classifier != "" {
 		file += "-" + classifier
 	}
-	file += ".jar"
+	file += "." + ext
 	return strings.ReplaceAll(group, ".", "/") + "/" + artifact + "/" + version + "/" + file
 }
 

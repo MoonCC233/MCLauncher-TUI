@@ -115,6 +115,9 @@ func (m *Model) modalView() string {
 			"",
 			m.prompt.Input.View(),
 		}
+		if m.prompt.Err != "" {
+			body = append(body, "", styleRed.Render("✗ "+m.prompt.Err))
+		}
 		footer = []hintSpec{
 			hint("enter", m.t("save")),
 			hint("esc", m.t("cancel")),
@@ -187,6 +190,42 @@ func (m *Model) modalView() string {
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("cancel")),
+		}
+	case modalLoader:
+		accent = colCyan
+		title = m.tf("Install loader for %s", m.loaderPick.Minecraft)
+		switch m.loaderPick.Step {
+		case loaderStepVersion:
+			title = m.tf("Choose a %s build", loaderKindName(m.loaderPick.Kind))
+			pickerBody, pickerHits := m.loaderVersionBody(contentW)
+			body = pickerBody
+			pending = append(pending, pickerHits...)
+		case loaderStepJava:
+			title = m.t("Choose Java for the installer")
+			pickerBody, pickerHits := m.loaderJavaBody(contentW)
+			body = pickerBody
+			pending = append(pending, pickerHits...)
+		default:
+			pickerBody, pickerHits := m.loaderKindBody(contentW)
+			body = pickerBody
+			pending = append(pending, pickerHits...)
+		}
+		footer = []hintSpec{
+			hint("enter", m.t("choose")),
+			hint("esc", m.t("back")),
+		}
+	case modalMods:
+		accent = colPrimary
+		title = m.tf("Mods · %s", m.modState.InstanceName)
+		pickerBody, pickerHits := m.modsBody(contentW)
+		body = pickerBody
+		pending = append(pending, pickerHits...)
+		footer = []hintSpec{
+			hint("a", m.t("add")),
+			hintAction("space", m.t("toggle"), " "),
+			hint("d", m.t("delete")),
+			hint("r", m.t("reload")),
+			hint("esc", m.t("close")),
 		}
 	case modalProgress:
 		accent = colPrimary

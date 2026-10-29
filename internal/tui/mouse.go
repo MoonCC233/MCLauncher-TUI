@@ -22,6 +22,10 @@ const (
 	hitThemeRow
 	hitTitleAnimRow
 	hitTitleFontRow
+	hitLoaderKindRow
+	hitLoaderVersionRow
+	hitLoaderJavaRow
+	hitModRow
 )
 
 // hitRegion is a clickable rectangle recorded while the frame is rendered.
@@ -242,6 +246,34 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 			return m.chooseTitleFont()
 		}
 		return m, nil
+	case hitLoaderKindRow:
+		double := m.registerClick(hit)
+		m.loaderPick.Cursor = hit.Index
+		if double {
+			return m.chooseLoaderKind()
+		}
+		return m, nil
+	case hitLoaderVersionRow:
+		double := m.registerClick(hit)
+		m.loaderPick.Cursor = hit.Index
+		if double {
+			return m.chooseLoaderVersion()
+		}
+		return m, nil
+	case hitLoaderJavaRow:
+		double := m.registerClick(hit)
+		m.loaderPick.Cursor = hit.Index
+		if double {
+			return m.startLoaderInstall()
+		}
+		return m, nil
+	case hitModRow:
+		double := m.registerClick(hit)
+		m.modState.Cursor = hit.Index
+		if double {
+			return m, m.toggleMod()
+		}
+		return m, nil
 	}
 	return m, nil
 }
@@ -311,6 +343,16 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 	case modalTheme:
 		if n := m.themePickerCount(); n > 0 {
 			m.themePick = clampInt(m.themePick+dir, 0, n-1)
+		}
+		return m, nil
+	case modalLoader:
+		if n := m.loaderPickerCount(); n > 0 {
+			m.loaderPick.Cursor = clampInt(m.loaderPick.Cursor+dir, 0, n-1)
+		}
+		return m, nil
+	case modalMods:
+		if n := len(m.modState.Items); n > 0 {
+			m.modState.Cursor = clampInt(m.modState.Cursor+dir, 0, n-1)
 		}
 		return m, nil
 	case modalNone:

@@ -13,6 +13,8 @@
 - **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏；首页标题是四行 ASCII 大字 “MCTL”，带渐变高光，字形（方块 / 线条）与动效（`Sheen` / `Wave` / `Breathe` / `Off`）都能在设置里切换，窄终端自动回退成单行文字。
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
+- **模组加载器**：在 `Versions` 按 `l` 安装 Fabric、Quilt、Forge 或 OptiFine。加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例继续引用该版本；OptiFine 可使用本地下载的 `OptiFine_<version>_<edition>.jar` 生成补丁客户端。
+- **实例模组管理**：在 `Instances` 按 `m` 打开模组面板，添加 `.jar`、启用/禁用、删除或打开模组目录。启动器会读取 Fabric、Quilt、Forge 与旧版 Forge 的元数据，显示模组名称、版本和适用加载器；禁用的模组会重命名为 `.jar.disabled`。
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
@@ -34,6 +36,10 @@
 | --- | --- |
 | ![控制台](docs/console.png) | ![帮助](docs/help.png) |
 
+| 安装加载器 | 模组管理 |
+| --- | --- |
+| ![加载器](docs/loader.png) | ![模组](docs/mods.png) |
+
 <details>
 <summary>更多截图</summary>
 
@@ -48,6 +54,10 @@
 | 账户类型 | 分辨率预设 |
 | --- | --- |
 | ![账户类型](docs/account-type.png) | ![分辨率](docs/resolution.png) |
+
+| 加载器版本 | 安装器 Java |
+| --- | --- |
+| ![加载器版本](docs/loader-versions.png) | ![安装器 Java](docs/loader-java.png) |
 
 </details>
 
@@ -90,7 +100,14 @@ Windows 下输出文件为 `mclauncher.exe`。
   - Minecraft 1.20.5+ / 1.21.x：通常需要 Java 21
   - Minecraft 1.18–1.20.4：通常需要 Java 17
   - 更旧的版本：通常需要 Java 8
-- **网络**：首次加载版本清单和安装版本时需要访问 Mojang 的 `piston-meta`、`piston-data`、`resources`、`libraries` 服务。
+- **网络**：首次加载版本清单和安装版本时需要访问 Mojang 的 `piston-meta`、`piston-data`、`resources`、`libraries` 服务；安装 Fabric/Quilt 加载器需要访问对应的 meta 与 Maven 服务，Forge 需要访问 Forge Maven。中国大陆网络访问这些服务较慢或失败时，可以在启动前设置镜像，例如：
+  ```bash
+  MCLAUNCHER_FORGE_MIRROR=https://bmclapi2.bangbang93.com/maven
+  MCLAUNCHER_FABRIC_MIRROR=https://bmclapi2.bangbang93.com/fabric-meta/v2
+  MCLAUNCHER_FABRIC_MAVEN_MIRROR=https://bmclapi2.bangbang93.com/maven
+  ./mclauncher
+  ```
+  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。镜像由第三方提供，请自行确认可用性与信任程度。
 - 现代终端：支持真彩色与完整 Unicode 制表符（Windows Terminal、iTerm2、Kitty、WezTerm 等）。
 
 ## 使用流程
@@ -107,16 +124,25 @@ Windows 下输出文件为 `mclauncher.exe`。
    - `i`：仅安装，不创建实例。  
    - `r`：重新拉取 Mojang 版本清单。
 
-3. **创建并启动实例**  
+3. **安装模组加载器（可选）**  
+   在 `Versions` 中选中一个原版版本，按 `l` 打开加载器面板。依次选择 Fabric、Quilt、Forge 或 OptiFine，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。安装完成后加载器会作为独立版本出现在列表中，按 `enter` 即可基于它创建实例。
+
+4. **创建并启动实例**  
    在表单中填写实例名、可选内存上限，按 `enter` 创建。回到 `Instances` 或 `Home`，按 `enter` 启动。
 
-4. **查看日志 / 停止游戏**  
+5. **管理实例模组**  
+   在 `Instances` 中选中实例，按 `m` 打开模组面板：
+   - `a` 添加本地 `.jar` 模组，或直接把文件放进实例的 `mods/` 目录。
+   - `space` / `t` 启用或禁用选中的模组；双击模组行也可以切换。
+   - `d` 删除模组文件，`r` 重新扫描，`o` 打开模组目录，`esc` 关闭面板。
+
+6. **查看日志 / 停止游戏**  
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录。
 
-5. **后台任务与下载记录**  
+7. **后台任务与下载记录**  
    安装或启动时按 `b` 将任务留在后台，按 `d` 直接打开 `Downloads`。在 `Downloads` 中按 `enter` 重开进度弹窗，按 `x` 取消任务；完成、失败和取消的任务会保留在历史记录中。
 
-6. **调整设置**  
+8. **调整设置**  
    在 `Settings` 中调整全局内存、Java 运行时、JVM 参数、窗口尺寸、下载线程数、界面语言、主题、标题字形、标题动画、数据目录与 Microsoft 客户端 ID。进入某一行按 `enter` 编辑，内存和线程数也可用 `←` / `→` 或 `-` / `+` 调整。  
    - **窗口尺寸**：打开常用分辨率预设（854×480、1280×720、1366×768、1600×900、1920×1080、2560×1440、3840×2160），选择 `Custom…` 可手动输入任意 `宽x高`。  
    - **主题**：打开主题选择器，选择预设或 `Custom accent…` 输入十六进制颜色；`Reset accent` 恢复主题默认强调色。  
@@ -144,8 +170,9 @@ Windows 下输出文件为 `mclauncher.exe`。
 
 | 页面 | 键与作用 |
 | --- | --- |
-| Instances | `n` 新建实例 · `e` 编辑 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
-| Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
+| Instances | `n` 新建实例 · `e` 编辑 · `m` 管理模组 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
+| Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `l` 安装 Fabric / Quilt / Forge / OptiFine · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
+| Mods | `a` 添加模组 · `space` / `t` 启用或禁用 · `d` 删除 · `r` 重新扫描 · `o` 打开模组目录 · `esc` 关闭 |
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 |
@@ -192,6 +219,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 <当前目录>/.minecraft/
 ├── config.json                 # 账户、实例与设置（固定保存在启动根目录）
 ├── versions/<id>/              # 版本 JSON、client jar、natives、安装标记
+│   └── .mclauncher-loader.json # 加载器类型、版本与基础版本（仅加载器版本）
 ├── libraries/                  # 全局共享依赖
 ├── assets/
 │   ├── indexes/
@@ -199,6 +227,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 │   ├── virtual/                # 旧版本虚拟资源
 │   └── log_configs/
 ├── instances/<id>/             # 每个实例独立的游戏目录（存档、模组、截图等）
+│   └── mods/                   # Fabric / Quilt / Forge 模组
 ├── logs/
 └── cache/
 ```
@@ -227,7 +256,7 @@ MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution
+--preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | mods
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```
@@ -249,8 +278,10 @@ go build ./...
 cmd/mclauncher/         程序入口、参数解析、配置引导
 internal/tui/           Bubble Tea 模型、页面、弹窗、鼠标命中区域与预览数据
 internal/i18n/          界面语言目录、区域设置检测、复数与相对时间
-internal/mojang/        版本清单、规则判断、参数替换、依赖解析、natives 解压
+internal/mojang/        版本清单、规则判断、参数替换、依赖解析、版本继承合并、natives 解压
 internal/install/       下载、校验、资源索引与安装标记
+internal/loader/        Fabric / Quilt / Forge / OptiFine 安装与加载器元数据
+internal/mods/          模组扫描、元数据解析、启用/禁用与删除
 internal/launch/        Java 命令行构建、进程启动、输出流
 internal/java/          Java 运行时扫描、版本解析与选择
 internal/config/        配置持久化、账户与实例管理
@@ -265,9 +296,10 @@ scripts/ansi2html.go    预览 ANSI 转 HTML（生成文档截图用）
 
 ```powershell
 go build -o mclauncher.exe ./cmd/mclauncher
-mclauncher.exe --preview --preview-screen home --width 120 --height 38 > preview-home.ansi
+# PowerShell 的 > 默认写 UTF-16；用 cmd /c 生成 UTF-8 的 ANSI 预览
+cmd /c "mclauncher.exe --preview --preview-screen home --width 120 --height 38 > preview-home.ansi"
 # 生成中文界面预览
-mclauncher.exe --preview --lang zh-Hans --preview-screen settings --width 120 --height 38 > preview-settings-zh.ansi
+cmd /c "mclauncher.exe --preview --lang zh-Hans --preview-screen settings --width 120 --height 38 > preview-settings-zh.ansi"
 go run scripts/ansi2html.go preview-home.ansi preview-home.html mclauncher
 # 再用浏览器无头模式将 preview-home.html 渲染为 PNG
 ```

@@ -17,6 +17,10 @@ import (
 
 const userAgent = "mclauncher/0.1.0 (+https://github.com/MoonCC233/MCLauncher-TUI)"
 
+// downloadStallTimeout is how long a response body may make no progress before
+// the attempt is cancelled. It is a variable so tests can shorten it.
+var downloadStallTimeout = 45 * time.Second
+
 func NewHTTPClient() *http.Client {
 	transport := &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
@@ -25,8 +29,8 @@ func NewHTTPClient() *http.Client {
 		MaxIdleConns:          128,
 		MaxIdleConnsPerHost:   32,
 		IdleConnTimeout:       45 * time.Second,
-		TLSHandshakeTimeout:   15 * time.Second,
-		ResponseHeaderTimeout: 30 * time.Second,
+		TLSHandshakeTimeout:   20 * time.Second,
+		ResponseHeaderTimeout: 60 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 	return &http.Client{Transport: transport}
@@ -101,6 +105,16 @@ func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, p
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GET %s: HTTP %d", spec.URL, resp.StatusCode)
 	}
+	// Some mirrors accept the connection and then stop sending data. Abort the
+	// attempt when the body has made no progress for a while so DownloadFile
+	// can retry instead of waiting for the full 15 minute deadline.
+	stall := time.AfterFunc(downloadStallTimeout, func() {
+		// Closing the body also unblocks a Read that is stuck in the HTTP
+		// transport; cancelling alone is not always enough.
+		_ = resp.Body.Close()
+		cancel()
+	})
+	defer stall.Stop()
 	f, err := os.OpenFile(part, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
 	if err != nil {
 		return err
@@ -118,6 +132,7 @@ func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, p
 	for {
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
+			stall.Reset(downloadStallTimeout)
 			if _, err := f.Write(buf[:n]); err != nil {
 				return err
 			}
@@ -174,7 +189,7 @@ func FetchJSON(ctx context.Context, client *http.Client, url string, out any) er
 }
 
 func fetchJSONOnce(ctx context.Context, client *http.Client, url string, out any) error {
-	attemptCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	attemptCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet, url, nil)
 	if err != nil {

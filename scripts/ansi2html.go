@@ -8,11 +8,13 @@ package main
 
 import (
 	"bufio"
+	"encoding/binary"
 	"fmt"
 	"html"
 	"os"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 )
 
 type state struct {
@@ -26,19 +28,27 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: ansi2html <input.ansi> <output.html> [title]")
 		os.Exit(2)
 	}
-	in, err := os.Open(os.Args[1])
+	raw, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	defer in.Close()
+	text := string(raw)
+	switch {
+	case len(raw) >= 2 && raw[0] == 0xff && raw[1] == 0xfe:
+		text = decodeUTF16(raw[2:], binary.LittleEndian)
+	case len(raw) >= 2 && raw[0] == 0xfe && raw[1] == 0xff:
+		text = decodeUTF16(raw[2:], binary.BigEndian)
+	case strings.HasPrefix(text, "\ufeff"):
+		text = strings.TrimPrefix(text, "\ufeff")
+	}
 	title := "mclauncher"
 	if len(os.Args) > 3 {
 		title = os.Args[3]
 	}
 
 	var body strings.Builder
-	scanner := bufio.NewScanner(in)
+	scanner := bufio.NewScanner(strings.NewReader(text))
 	scanner.Buffer(make([]byte, 1<<20), 1<<20)
 	st := state{}
 	for scanner.Scan() {
@@ -122,6 +132,14 @@ func main() {
 	}
 }
 
+func decodeUTF16(raw []byte, order binary.ByteOrder) string {
+	units := make([]uint16, len(raw)/2)
+	for i := range units {
+		units[i] = order.Uint16(raw[i*2:])
+	}
+	return string(utf16.Decode(units))
+}
+
 func writeLine(out *strings.Builder, line string, st *state) {
 	var span strings.Builder
 	flush := func() {
@@ -164,6 +182,28 @@ func writeLine(out *strings.Builder, line string, st *state) {
 				i = j + 1
 				continue
 			}
+		}
+		if line[i] == 0x1b {
+			// OSC sequences (for example a window title) and truncated escape
+			// codes must be consumed so the outer loop always makes progress.
+			if i+1 < len(line) && line[i+1] == ']' {
+				j := i + 2
+				for j < len(line) {
+					if line[j] == 0x07 {
+						j++
+						break
+					}
+					if line[j] == 0x1b && j+1 < len(line) && line[j+1] == '\\' {
+						j += 2
+						break
+					}
+					j++
+				}
+				i = j
+			} else {
+				i++
+			}
+			continue
 		}
 		start := i
 		for i < len(line) && line[i] != 0x1b {

@@ -95,9 +95,9 @@ func animTickCmd() tea.Cmd {
 	return tea.Tick(120*time.Millisecond, func(time.Time) tea.Msg { return animTickMsg{} })
 }
 
-func scanJavaCmd() tea.Cmd {
+func scanJavaCmd(extraRoots ...string) tea.Cmd {
 	return func() tea.Msg {
-		return javaScanMsg{runtimes: java.Scan()}
+		return javaScanMsg{runtimes: java.Scan(extraRoots...)}
 	}
 }
 
@@ -344,12 +344,12 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				runtime = *info
 			} else {
 				if !javaScanned || len(runtimes) == 0 {
-					runtimes = java.Scan()
+					runtimes = java.Scan(layout.Java)
 					emitter(javaScanMsg{runtimes: runtimes})
 				}
 				selected, warning, selectErr := java.Select(runtimes, versionJSON.JavaMajor(), "")
 				if selectErr != nil && javaScanned {
-					runtimes = java.Scan()
+					runtimes = java.Scan(layout.Java)
 					emitter(javaScanMsg{runtimes: runtimes})
 					selected, warning, selectErr = java.Select(runtimes, versionJSON.JavaMajor(), "")
 				}
@@ -522,9 +522,26 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		if msg.kind == taskUpdate {
 			title = m.t("Update failed")
 		}
+		if msg.kind == taskJava {
+			title = m.t("Java installation failed")
+		}
 		m.alert = AlertState{Title: title, Body: msg.err.Error()}
 		m.modal = modalAlert
 		return m, nil
+	}
+	if msg.kind == taskJava {
+		m.recordTask(task, taskStatusCompleted, nil)
+		label := msg.versionID
+		if info := java.Detect(msg.versionID); info != nil {
+			label = info.Short()
+		}
+		m.cfg.Settings.JavaPath = msg.versionID
+		m.saveConfig()
+		m.addLog("launcher", "java runtime: "+msg.versionID)
+		m.setToast(m.tf("Java runtime: %s", label), toastSuccess)
+		m.javaScanning = true
+		m.javaScanned = false
+		return m, scanJavaCmd(m.layout.Java)
 	}
 	if msg.kind == taskUpdate {
 		m.recordTask(task, taskStatusCompleted, nil)

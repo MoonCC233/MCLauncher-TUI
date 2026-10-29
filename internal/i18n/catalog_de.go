@@ -442,4 +442,13 @@ var deCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "Starte den Launcher neu, um das Update auf %s abzuschließen.",
 	"Update check failed":                                   "Updateprüfung fehlgeschlagen",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Enter drücken, um nach Updates zu suchen. Bei blockiertem GitHub werden Spiegel verwendet.",
+	"Download Java %d":                      "Java %d herunterladen",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Java-Laufzeit wird ermittelt",
+	"Downloading Java":                      "Java wird heruntergeladen",
+	"Extracting Java":                       "Java wird entpackt",
+	"Java installed":                        "Java installiert",
+	"Installing Java %d":                    "Java %d wird installiert",
+	"Java installation failed":              "Java-Installation fehlgeschlagen",
+	"Stop the game before installing Java.": "Stoppe das Spiel, bevor du Java installierst.",
 }

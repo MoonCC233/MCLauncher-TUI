@@ -304,7 +304,7 @@ func (m *Model) updateSettings(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.javaScanning = true
 			m.javaScanned = false
 			m.setToast(m.t("Scanning for Java runtimes…"), toastInfo)
-			return m, scanJavaCmd()
+			return m, scanJavaCmd(m.layout.Java)
 		}
 	case "o":
 		_ = util.OpenPath(m.layout.Root)
@@ -412,7 +412,7 @@ func (m *Model) openJavaPicker() tea.Cmd {
 	m.modal = modalJava
 	if !m.javaScanned && !m.javaScanning {
 		m.javaScanning = true
-		return scanJavaCmd()
+		return scanJavaCmd(m.layout.Java)
 	}
 	return nil
 }

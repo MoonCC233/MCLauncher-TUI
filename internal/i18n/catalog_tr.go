@@ -442,4 +442,13 @@ var trCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "%s sürümüne güncellemeyi tamamlamak için başlatıcıyı yeniden başlatın.",
 	"Update check failed":                                   "Güncelleme denetimi başarısız",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Güncellemeleri denetlemek için Enter'a basın. GitHub'a erişilemezse aynalar kullanılır.",
+	"Download Java %d":                      "Java %d indir",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Java çalışma zamanı çözümleniyor",
+	"Downloading Java":                      "Java indiriliyor",
+	"Extracting Java":                       "Java çıkarılıyor",
+	"Java installed":                        "Java kuruldu",
+	"Installing Java %d":                    "Java %d kuruluyor",
+	"Java installation failed":              "Java kurulumu başarısız",
+	"Stop the game before installing Java.": "Java kurmadan önce oyunu durdurun.",
 }

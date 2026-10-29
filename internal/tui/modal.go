@@ -199,7 +199,7 @@ func (m *Model) updatePrompt(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) javaPickerCount() int {
-	return len(m.javaRuntimes) + 3
+	return len(m.javaRuntimes) + 6
 }
 
 func (m *Model) updateJavaPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -214,7 +214,7 @@ func (m *Model) updateJavaPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "r":
 		if !m.javaScanning {
 			m.javaScanning = true
-			return m, scanJavaCmd()
+			return m, scanJavaCmd(m.layout.Java)
 		}
 		return m, nil
 	case "enter":
@@ -254,11 +254,19 @@ func (m *Model) chooseJava() (tea.Model, tea.Cmd) {
 	if idx == n+1 {
 		if !m.javaScanning {
 			m.javaScanning = true
-			return m, scanJavaCmd()
+			return m, scanJavaCmd(m.layout.Java)
 		}
 		return m, nil
 	}
-	m.openPrompt(promptJavaPath, m.t("Java executable"), m.cfg.Settings.JavaPath, m.t("Full path to java.exe or a JDK folder"), 260)
+	if idx == n+2 {
+		m.openPrompt(promptJavaPath, m.t("Java executable"), m.cfg.Settings.JavaPath, m.t("Full path to java.exe or a JDK folder"), 260)
+		return m, nil
+	}
+	if idx >= n+3 && idx <= n+5 {
+		major := []int{21, 17, 8}[idx-(n+3)]
+		m.modal = modalNone
+		return m.startJavaDownload(major)
+	}
 	return m, nil
 }
 

@@ -15,6 +15,19 @@ func TestSettingsVersionChecksForUpdates(t *testing.T) {
 	}
 }
 
+func TestJavaPickerStartsDownload(t *testing.T) {
+	m := testModel(t)
+	m.javaRuntimes = nil
+	m.javaPicker = 3 // auto, scan, custom path, then Download Java 21
+	m.chooseJava()
+	if m.modal != modalProgress {
+		t.Fatalf("modal = %v, want progress", m.modal)
+	}
+	if m.task == nil || m.task.Kind != taskJava {
+		t.Fatalf("task = %#v, want Java download", m.task)
+	}
+}
+
 func TestUpdateCheckShowsConfirmation(t *testing.T) {
 	m := testModel(t)
 	release := &update.Release{TagName: "v9.9.9"}

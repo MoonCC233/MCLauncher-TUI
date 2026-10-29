@@ -440,4 +440,13 @@ var requiredCatalogKeys = []string{
 	"Restart the launcher to finish updating to %s.",
 	"Update check failed",
 	"Press enter to check for updates. GitHub mirrors are used when needed.",
+	"Download Java %d",
+	"Adoptium Temurin JDK",
+	"Resolving Java runtime",
+	"Downloading Java",
+	"Extracting Java",
+	"Java installed",
+	"Installing Java %d",
+	"Java installation failed",
+	"Stop the game before installing Java.",
 }

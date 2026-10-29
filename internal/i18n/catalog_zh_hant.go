@@ -442,4 +442,13 @@ var zhHantCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "請重新啟動啟動器以完成更新到 %s。",
 	"Update check failed":                                   "檢查更新失敗",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "按 Enter 檢查更新。無法直連 GitHub 時會使用鏡像加速。",
+	"Download Java %d":                      "下載 Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "正在解析 Java 執行環境",
+	"Downloading Java":                      "正在下載 Java",
+	"Extracting Java":                       "正在解壓縮 Java",
+	"Java installed":                        "Java 已安裝",
+	"Installing Java %d":                    "正在安裝 Java %d",
+	"Java installation failed":              "Java 安裝失敗",
+	"Stop the game before installing Java.": "安裝 Java 前請先停止遊戲。",
 }

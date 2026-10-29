@@ -442,4 +442,13 @@ var arCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "أعد تشغيل المشغّل لإكمال التحديث إلى %s.",
 	"Update check failed":                                   "فشل البحث عن التحديثات",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "اضغط Enter للبحث عن تحديثات. تُستخدم مرايا عند تعذر الوصول إلى GitHub.",
+	"Download Java %d":                      "تنزيل Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "جارٍ تحديد بيئة Java",
+	"Downloading Java":                      "جارٍ تنزيل Java",
+	"Extracting Java":                       "جارٍ استخراج Java",
+	"Java installed":                        "تم تثبيت Java",
+	"Installing Java %d":                    "جارٍ تثبيت Java %d",
+	"Java installation failed":              "فشل تثبيت Java",
+	"Stop the game before installing Java.": "أوقف اللعبة قبل تثبيت Java.",
 }

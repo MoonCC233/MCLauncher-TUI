@@ -378,8 +378,13 @@ func (m *Model) javaPickerBody(contentW int) ([]string, []hitRegion) {
 				right = spinnerFrame(m.spinner) + " " + m.t("scanning")
 			}
 			body = append(body, javaPickerRow(marker, m.t("Scan again"), right, false, selected, contentW))
-		default:
+		case i == n+2:
 			body = append(body, javaPickerRow(marker, m.t("Use a custom path…"), "", false, selected, contentW))
+		case i >= n+3 && i <= n+5:
+			major := []int{21, 17, 8}[i-(n+3)]
+			body = append(body, javaPickerRow(marker, m.tf("Download Java %d", major), m.t("Adoptium Temurin JDK"), false, selected, contentW))
+		default:
+			body = append(body, javaPickerRow(marker, "", "", false, selected, contentW))
 		}
 		hits = append(hits, hitRegion{Kind: hitJavaRow, Index: i, Y: lineIdx, W: contentW, H: 1})
 	}

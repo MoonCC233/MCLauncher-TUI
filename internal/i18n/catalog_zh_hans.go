@@ -442,4 +442,13 @@ var zhHansCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "请重启启动器以完成更新到 %s。",
 	"Update check failed":                                   "检查更新失败",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "按 Enter 检查更新。无法直连 GitHub 时会使用镜像加速。",
+	"Download Java %d":                      "下载 Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "正在解析 Java 运行时",
+	"Downloading Java":                      "正在下载 Java",
+	"Extracting Java":                       "正在解压 Java",
+	"Java installed":                        "Java 已安装",
+	"Installing Java %d":                    "正在安装 Java %d",
+	"Java installation failed":              "Java 安装失败",
+	"Stop the game before installing Java.": "安装 Java 前请先停止游戏。",
 }

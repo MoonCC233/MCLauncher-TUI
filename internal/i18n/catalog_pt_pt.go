@@ -442,4 +442,13 @@ var ptPTCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "Reinicie o launcher para concluir a atualização para %s.",
 	"Update check failed":                                   "Falha ao verificar atualizações",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Prima Enter para verificar atualizações. São usados espelhos quando o GitHub não está acessível.",
+	"Download Java %d":                      "Transferir Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "A resolver o runtime Java",
+	"Downloading Java":                      "A transferir Java",
+	"Extracting Java":                       "A extrair Java",
+	"Java installed":                        "Java instalado",
+	"Installing Java %d":                    "A instalar Java %d",
+	"Java installation failed":              "Falha na instalação do Java",
+	"Stop the game before installing Java.": "Pare o jogo antes de instalar o Java.",
 }

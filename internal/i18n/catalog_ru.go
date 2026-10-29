@@ -442,4 +442,13 @@ var ruCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "Перезапустите лаунчер, чтобы завершить обновление до %s.",
 	"Update check failed":                                   "Не удалось проверить обновления",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Нажмите Enter для проверки обновлений. При недоступности GitHub используются зеркала.",
+	"Download Java %d":                      "Скачать Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Определение среды Java",
+	"Downloading Java":                      "Загрузка Java",
+	"Extracting Java":                       "Распаковка Java",
+	"Java installed":                        "Java установлена",
+	"Installing Java %d":                    "Установка Java %d",
+	"Java installation failed":              "Ошибка установки Java",
+	"Stop the game before installing Java.": "Остановите игру перед установкой Java.",
 }

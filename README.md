@@ -18,7 +18,7 @@
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
-- **Java 运行时管理**：自动扫描 PATH、JAVA_HOME、Windows 注册表、各本地磁盘的常见安装目录以及 IDE 自带运行时，也可手动指定；按版本要求选择 Java，并在版本过旧时提示。
+- **Java 运行时管理**：自动扫描 PATH、JAVA_HOME、Windows 注册表、各本地磁盘的常见安装目录以及 IDE 自带运行时，也可手动指定；可在 Java 选择器里下载 Adoptium Temurin JDK 8/17/21，下载优先走 GitHub 镜像；按版本要求选择 Java，并在版本过旧时提示。
 - **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数；窗口尺寸提供从 854×480 到 4K 的常用预设，也可手动输入自定义分辨率。
 - **可靠的下载**：多线程下载、SHA-1 校验、原子写入配置文件。
 - **控制台**：实时显示游戏 stdout/stderr，支持滚动、清屏、停止游戏和打开日志目录；退出启动器时会先停止由它启动的游戏进程。
@@ -97,7 +97,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 
 ### 前置条件
 
-- **Java**：启动器不会自动下载 Java。请先安装对应版本所需的 JDK/JRE：
+- **Java**：启动器会扫描已安装的 Java，也可以在 Java 选择器中直接下载 Adoptium Temurin JDK。对应版本要求：
   - Minecraft 1.20.5+ / 1.21.x：通常需要 Java 21
   - Minecraft 1.18–1.20.4：通常需要 Java 17
   - 更旧的版本：通常需要 Java 8
@@ -111,9 +111,11 @@ Windows 下输出文件为 `mclauncher.exe`。
   MCLAUNCHER_FABRIC_MIRROR=https://bmclapi2.bangbang93.com/fabric-meta/v2
   # 启动器更新镜像（可选，{url} 会替换为 GitHub 地址）
   MCLAUNCHER_UPDATE_MIRROR=https://gh-proxy.com/{url}
+  # 下载 Adoptium JDK 时使用的 GitHub 镜像（可选）
+  MCLAUNCHER_JAVA_MIRROR=https://ghfast.top/{url}
   ./mclauncher
   ```
-  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge/NeoForge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。检查启动器更新时也会优先尝试内置 GitHub 镜像（`gh-proxy.com`、`ghfast.top` 等）。镜像由第三方提供，请自行确认可用性与信任程度。
+  `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge/NeoForge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。检查启动器更新和下载 JDK 时也会优先尝试内置 GitHub 镜像（`gh-proxy.com`、`ghfast.top` 等）。镜像由第三方提供，请自行确认可用性与信任程度。
 - 现代终端：支持真彩色与完整 Unicode 制表符（Windows Terminal、iTerm2、Kitty、WezTerm 等）。
 
 ## 使用流程
@@ -155,6 +157,7 @@ Windows 下输出文件为 `mclauncher.exe`。
    - **标题字形**：打开选择器切换首页标题的字形——`Block`（实心方块）或 `Line`（线条 ASCII），选择器里会直接预览当前高亮字形。  
    - **标题动画**：打开选择器切换首页标题的动效——`Sheen`（扫光）、`Wave`（流动）、`Breathe`（呼吸）、`Off`（静态）；也可以直接用 `←` / `→` 循环切换。  
    - **启动器版本**：按 `enter` 检查更新；发现新版本后可下载并替换当前可执行文件，重启启动器完成升级。
+   - **Java 运行时**：选择已安装的运行时、输入自定义路径，或在列表底部下载 Temurin JDK 8/17/21；下载优先使用 GitHub 镜像。
    - **数据目录**：留空使用默认 `.minecraft`；也可以输入绝对路径或 `~/...`。切换后会立即重新扫描已安装版本，并保留原有配置文件位置。  
    - **Microsoft 客户端 ID**：留空使用内置公开客户端；只有使用自己注册的 Azure 应用时才需要填写 GUID。自定义 Entra 应用需要获得 Mojang 批准，否则 Minecraft 服务可能返回 403。  
    - **语言**：打开语言选择器，第一项“跟随系统”会跟随操作系统区域设置。
@@ -229,6 +232,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 ├── versions/<id>/              # 版本 JSON、client jar、natives、安装标记
 │   └── .mclauncher-loader.json # 加载器类型、版本与基础版本（仅加载器版本）
 ├── libraries/                  # 全局共享依赖
+├── java/                       # 在启动器内下载的 JDK
 ├── assets/
 │   ├── indexes/
 │   ├── objects/
@@ -292,7 +296,7 @@ internal/loader/        Fabric / Quilt / Forge / NeoForge / OptiFine 安装与�
 internal/mods/          模组扫描、元数据解析、启用/禁用与删除
 internal/update/        GitHub Release 检查、镜像下载与启动器替换
 internal/launch/        Java 命令行构建、进程启动、输出流
-internal/java/          Java 运行时扫描、版本解析与选择
+internal/java/          Java 运行时扫描、版本解析、选择与 JDK 下载
 internal/config/        配置持久化、账户与实例管理
 internal/auth/          离线用户名校验、离线 UUID、Microsoft OAuth / Xbox / Minecraft 登录
 internal/paths/         数据目录布局
@@ -341,7 +345,6 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 ## 已知限制
 
 - **Microsoft 登录依赖网络与浏览器**：设备代码流程需要访问 Microsoft 登录页；部分账户首次使用前可能需要先在 `xbox.com` 创建 Xbox 档案。自定义 Entra 客户端需要 Mojang 审批，内置客户端开箱即用。
-- **不管理 Java 安装**：只检测和选择已安装的 Java；不会下载 JDK。
 - **阿拉伯语显示取决于终端**：启动器会镜像布局，但阿拉伯文字形连写和 BiDi 排序由终端与字体决定；Windows Terminal 的显示效果通常最好。
 - **预编译二进制未签名**：macOS 首次运行可能需要 `xattr -d com.apple.quarantine ./mclauncher`。
 

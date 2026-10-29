@@ -442,4 +442,13 @@ var viCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "Khởi động lại trình khởi chạy để hoàn tất cập nhật lên %s.",
 	"Update check failed":                                   "Kiểm tra cập nhật thất bại",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Nhấn Enter để kiểm tra cập nhật. Mirror được dùng khi không truy cập được GitHub.",
+	"Download Java %d":                      "Tải Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Đang phân giải môi trường Java",
+	"Downloading Java":                      "Đang tải Java",
+	"Extracting Java":                       "Đang giải nén Java",
+	"Java installed":                        "Đã cài Java",
+	"Installing Java %d":                    "Đang cài Java %d",
+	"Java installation failed":              "Cài đặt Java thất bại",
+	"Stop the game before installing Java.": "Dừng trò chơi trước khi cài Java.",
 }

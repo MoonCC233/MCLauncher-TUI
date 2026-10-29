@@ -202,7 +202,7 @@ func walkCandidates(root string, maxDepth int, source string, out *[]candidate) 
 	})
 }
 
-func Candidates() []candidate {
+func Candidates(extraRoots ...string) []candidate {
 	var out []candidate
 	addPath(&out, os.Getenv("JAVA_HOME"), "JAVA_HOME")
 	addPath(&out, os.Getenv("JDK_HOME"), "JDK_HOME")
@@ -282,13 +282,16 @@ func Candidates() []candidate {
 		walkCandidates(filepath.Join(home, ".minecraft", "runtime"), 5, "Minecraft", &out)
 		walkCandidates(filepath.Join(home, ".local", "share", "PrismLauncher", "java"), 3, "Prism", &out)
 	}
+	for _, root := range extraRoots {
+		walkCandidates(root, 5, "mclauncher", &out)
+	}
 	return out
 }
 
-func Scan() []Info {
+func Scan(extraRoots ...string) []Info {
 	seen := map[string]bool{}
 	var results []Info
-	for _, c := range Candidates() {
+	for _, c := range Candidates(extraRoots...) {
 		key := filepath.Clean(c.path)
 		if runtime.GOOS == "windows" {
 			key = strings.ToLower(key)

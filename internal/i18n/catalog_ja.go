@@ -442,4 +442,13 @@ var jaCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "ランチャーを再起動して %s への更新を完了してください。",
 	"Update check failed":                                   "アップデートの確認に失敗しました",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Enter でアップデートを確認します。GitHub に接続できない場合はミラーを使用します。",
+	"Download Java %d":                      "Java %d をダウンロード",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Java ランタイムを解析中",
+	"Downloading Java":                      "Java をダウンロード中",
+	"Extracting Java":                       "Java を展開中",
+	"Java installed":                        "Java をインストールしました",
+	"Installing Java %d":                    "Java %d をインストール中",
+	"Java installation failed":              "Java のインストールに失敗しました",
+	"Stop the game before installing Java.": "Java をインストールする前にゲームを停止してください。",
 }

@@ -442,4 +442,13 @@ var frCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "Redémarrez le launcher pour terminer la mise à jour vers %s.",
 	"Update check failed":                                   "Échec de la recherche de mises à jour",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Appuyez sur Entrée pour rechercher des mises à jour. Des miroirs sont utilisés si GitHub est inaccessible.",
+	"Download Java %d":                      "Télécharger Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Résolution de l'environnement Java",
+	"Downloading Java":                      "Téléchargement de Java",
+	"Extracting Java":                       "Extraction de Java",
+	"Java installed":                        "Java installé",
+	"Installing Java %d":                    "Installation de Java %d",
+	"Java installation failed":              "Échec de l'installation de Java",
+	"Stop the game before installing Java.": "Arrêtez le jeu avant d'installer Java.",
 }

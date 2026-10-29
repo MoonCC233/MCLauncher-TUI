@@ -109,6 +109,7 @@ const (
 	taskLaunch  taskKind = "launch"
 	taskLoader  taskKind = "loader"
 	taskUpdate  taskKind = "update"
+	taskJava    taskKind = "java"
 )
 
 type toastKind int
@@ -380,7 +381,7 @@ func (m *Model) sendMsg(msg tea.Msg) {
 
 func (m *Model) Init() tea.Cmd {
 	m.javaScanning = true
-	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(), tickCmd())
+	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(m.layout.Java), tickCmd())
 }
 
 func (m *Model) quitApp() (tea.Model, tea.Cmd) {

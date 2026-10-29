@@ -1,10 +1,18 @@
 package java
 
 import (
+	"archive/zip"
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGlobCandidatesAcceptsFiles(t *testing.T) {
@@ -20,6 +28,139 @@ func TestGlobCandidatesAcceptsFiles(t *testing.T) {
 	globCandidates([]string{filepath.Join(root, "jdk-*", "bin", javaExe())}, "test", &out)
 	if len(out) != 1 || !strings.EqualFold(out[0].path, exe) {
 		t.Fatalf("globCandidates = %#v, want %q", out, exe)
+	}
+}
+
+func TestCandidatesExtraRoot(t *testing.T) {
+	root := t.TempDir()
+	exe := filepath.Join(root, "temurin-21", "bin", javaExe())
+	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(exe, []byte("java"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, c := range Candidates(root) {
+		if strings.EqualFold(c.path, exe) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Candidates(%q) did not include %q", root, exe)
+	}
+}
+
+func TestJavaDownloadURLs(t *testing.T) {
+	t.Setenv("MCLAUNCHER_JAVA_MIRROR", "https://mirror.test/{url}")
+	raw := "https://github.com/adoptium/temurin21-binaries/releases/download/x/y.zip"
+	urls := javaDownloadURLs(raw)
+	if len(urls) == 0 || urls[0] != strings.ReplaceAll("https://mirror.test/{url}", "{url}", raw) {
+		t.Errorf("download URLs = %#v", urls)
+	}
+	t.Setenv("MCLAUNCHER_JAVA_MIRROR", "")
+	local := "https://example.test/java.zip"
+	urls = javaDownloadURLs(local)
+	if len(urls) != 1 || urls[0] != local {
+		t.Errorf("local download URLs = %#v", urls)
+	}
+}
+
+func TestDownloadJavaVerifiesChecksum(t *testing.T) {
+	t.Setenv("MCLAUNCHER_JAVA_MIRROR", "")
+	data := bytes.Repeat([]byte("0123456789"), 30000)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, "jdk.zip", time.Time{}, bytes.NewReader(data))
+	}))
+	defer server.Close()
+	sum := sha256.Sum256(data)
+	dest := filepath.Join(t.TempDir(), "jdk.zip")
+	var last int64
+	if err := downloadJava(context.Background(), server.Client(), server.URL, dest, int64(len(data)),
+		hex.EncodeToString(sum[:]), func(n int64) { last = n }); err != nil {
+		t.Fatal(err)
+	}
+	if last != int64(len(data)) {
+		t.Errorf("last progress = %d, want %d", last, len(data))
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, data) {
+		t.Error("downloaded data does not match")
+	}
+}
+
+func TestDownloadJavaResumesPartialFile(t *testing.T) {
+	t.Setenv("MCLAUNCHER_JAVA_MIRROR", "")
+	data := bytes.Repeat([]byte("abcdefghij"), 20000)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeContent(w, r, "jdk.zip", time.Time{}, bytes.NewReader(data))
+	}))
+	defer server.Close()
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "jdk.zip")
+	if err := os.WriteFile(dest+".part", data[:5000], 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(data)
+	if err := downloadJava(context.Background(), server.Client(), server.URL, dest, int64(len(data)),
+		hex.EncodeToString(sum[:]), nil); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, data) {
+		t.Error("resumed data does not match")
+	}
+}
+
+func TestExtractJavaZip(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "jdk.zip")
+	f, err := os.Create(archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zw := zip.NewWriter(f)
+	payload := []byte("zip-java")
+	w, err := zw.Create("jdk-21/bin/" + javaExe())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = w.Write(payload)
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	dest := filepath.Join(dir, "jdk")
+	if err := extractJavaArchive(archive, dest); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(filepath.Join(dest, "bin", javaExe()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(payload) {
+		t.Errorf("extracted = %q", got)
+	}
+}
+
+func TestFindJavaExecutableMacLayout(t *testing.T) {
+	root := t.TempDir()
+	exe := filepath.Join(root, "Contents", "Home", "bin", javaExe())
+	if err := os.MkdirAll(filepath.Dir(exe), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(exe, []byte("java"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got := findJavaExecutable(root); got != exe {
+		t.Errorf("findJavaExecutable = %q, want %q", got, exe)
 	}
 }
 

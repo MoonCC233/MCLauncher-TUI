@@ -442,4 +442,13 @@ var koCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "런처를 다시 시작하여 %s 업데이트를 완료하세요.",
 	"Update check failed":                                   "업데이트 확인 실패",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Enter를 눌러 업데이트를 확인합니다. GitHub 연결이 안 되면 미러를 사용합니다.",
+	"Download Java %d":                      "Java %d 다운로드",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Java 런타임 확인 중",
+	"Downloading Java":                      "Java 다운로드 중",
+	"Extracting Java":                       "Java 압축 해제 중",
+	"Java installed":                        "Java 설치됨",
+	"Installing Java %d":                    "Java %d 설치 중",
+	"Java installation failed":              "Java 설치 실패",
+	"Stop the game before installing Java.": "Java를 설치하기 전에 게임을 중지하세요.",
 }

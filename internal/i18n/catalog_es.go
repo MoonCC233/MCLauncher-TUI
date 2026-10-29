@@ -442,4 +442,13 @@ var esCatalog = map[string]string{
 	"Restart the launcher to finish updating to %s.":        "Reinicia el launcher para terminar de actualizar a %s.",
 	"Update check failed":                                   "Error al buscar actualizaciones",
 	"Press enter to check for updates. GitHub mirrors are used when needed.": "Pulsa Enter para buscar actualizaciones. Se usan espejos si GitHub no está disponible.",
+	"Download Java %d":                      "Descargar Java %d",
+	"Adoptium Temurin JDK":                  "Adoptium Temurin JDK",
+	"Resolving Java runtime":                "Resolviendo el entorno de Java",
+	"Downloading Java":                      "Descargando Java",
+	"Extracting Java":                       "Extrayendo Java",
+	"Java installed":                        "Java instalado",
+	"Installing Java %d":                    "Instalando Java %d",
+	"Java installation failed":              "Error al instalar Java",
+	"Stop the game before installing Java.": "Detén el juego antes de instalar Java.",
 }

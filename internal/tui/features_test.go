@@ -265,17 +265,116 @@ func TestHomeTitleAnimationsDiffer(t *testing.T) {
 func TestHomeTitleFallsBackWhenNarrow(t *testing.T) {
 	m := testModel(t)
 	m.cfg.Settings.TitleAnim = "wave"
-	lines := m.titleLines(12)
-	if len(lines) != 1 {
-		t.Fatalf("narrow title has %d lines, want 1", len(lines))
+	// Ten columns of title plus the two-cell indent of viewHome is the smallest
+	// width that still fits the whole letter-spaced wordmark.
+	for _, width := range []int{11, 12, 20} {
+		lines := m.titleLines(width)
+		if len(lines) != 1 {
+			t.Fatalf("width %d: title has %d lines, want 1", width, len(lines))
+		}
+		got := ansi.Strip(lines[0])
+		if got != titleDisplay(homeTitle) {
+			t.Errorf("width %d: title = %q, want %q", width, got, titleDisplay(homeTitle))
+		}
+		if ansi.StringWidth(lines[0])+titleIndent > width {
+			t.Errorf("width %d: title is %d wide, overflows", width, ansi.StringWidth(lines[0])+titleIndent)
+		}
 	}
-	if got := len([]rune(ansi.Strip(lines[0]))); got > 12 {
-		t.Errorf("narrow title is %d wide, want at most 12", got)
-	}
-	if strings.Contains(lines[0], "█") {
-		t.Errorf("narrow title should fall back to text, got %q", lines[0])
+	// Below that the title is clipped, but it must stay visible and inside the
+	// available columns.
+	for _, width := range []int{3, 4, 5, 8} {
+		lines := m.titleLines(width)
+		if len(lines) != 1 {
+			t.Fatalf("width %d: title has %d lines, want 1", width, len(lines))
+		}
+		got := ansi.Strip(lines[0])
+		if strings.TrimSpace(got) == "" {
+			t.Errorf("width %d: title is empty", width)
+		}
+		if ansi.StringWidth(lines[0])+titleIndent > width {
+			t.Errorf("width %d: title is %d wide, overflows", width, ansi.StringWidth(lines[0])+titleIndent)
+		}
 	}
 	if lines := m.titleLines(120); len(lines) != 4 {
 		t.Errorf("wide title has %d lines, want 4", len(lines))
+	}
+}
+
+func TestAnimationRunsOnlyWhenVisible(t *testing.T) {
+	m := testModel(t)
+	if !m.animVisible() {
+		t.Fatal("the home title should animate")
+	}
+	if cmd := m.ensureAnimTick(); cmd == nil {
+		t.Fatal("the first call should schedule a tick")
+	}
+	if cmd := m.ensureAnimTick(); cmd != nil {
+		t.Error("a second tick should not be scheduled while one is pending")
+	}
+
+	m.Update(animTickMsg{})
+	if m.animFrame != 1 {
+		t.Errorf("frame = %d, want 1", m.animFrame)
+	}
+	if !m.animRunning {
+		t.Error("Update should re-arm the tick while the title is visible")
+	}
+
+	// A dialog covers the title: no frames and no new tick.
+	m.modal = modalHelp
+	if m.animVisible() {
+		t.Error("a covered title should not animate")
+	}
+	m.Update(animTickMsg{})
+	if m.animFrame != 1 {
+		t.Errorf("frame = %d, want it to stay unchanged while hidden", m.animFrame)
+	}
+	if m.animRunning {
+		t.Error("the tick should stop while the title is hidden")
+	}
+
+	// Animations turned off: nothing is scheduled at all.
+	m.modal = modalNone
+	m.cfg.Settings.TitleAnim = "off"
+	if m.animVisible() {
+		t.Error("off should not animate")
+	}
+	if cmd := m.ensureAnimTick(); cmd != nil {
+		t.Error("off should not schedule a tick")
+	}
+}
+
+func TestTitleSettingReportsSaveFailure(t *testing.T) {
+	m := testModel(t) // no config path, so every Save fails
+	if err := m.setTitleAnim("wave"); err == nil {
+		t.Fatal("expected the save to fail")
+	}
+	if m.toast.Kind != toastError {
+		t.Errorf("toast kind = %v, want the error toast", m.toast.Kind)
+	}
+	if !strings.Contains(m.toast.Text, "save config") && !strings.Contains(m.toast.Text, "Could not save config") {
+		t.Errorf("toast = %q, want a save error", m.toast.Text)
+	}
+
+	m.toast = ToastState{}
+	m.openTitleAnimPicker()
+	m.titleAnimPick = 1
+	m.chooseTitleAnim()
+	if m.toast.Kind == toastSuccess {
+		t.Error("the picker must not report success when the save failed")
+	}
+
+	m.toast = ToastState{}
+	m.cycleTitleAnim(1)
+	if m.toast.Kind == toastSuccess {
+		t.Error("cycling must not report success when the save failed")
+	}
+
+	m.toast = ToastState{}
+	m.openTitleFontPicker()
+	m.titleFontPick = 1
+	m.chooseTitleFont()
+	if m.toast.Kind == toastSuccess {
+		t.Error("the font picker must not report success when the save failed")
 	}
 }

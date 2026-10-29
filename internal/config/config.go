@@ -99,6 +99,9 @@ type Settings struct {
 	TitleFont         string `json:"title_font,omitempty"`
 	DataDir           string `json:"data_dir,omitempty"`
 	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
+
+	// preserved holds keys written by a newer launcher (see preserve.go).
+	preserved *preservedFields
 }
 
 func DefaultSettings() Settings {
@@ -120,6 +123,9 @@ type Config struct {
 	Settings          Settings   `json:"settings"`
 	Accounts          []Account  `json:"accounts"`
 	Instances         []Instance `json:"instances"`
+
+	// preserved holds keys written by a newer launcher (see preserve.go).
+	preserved *preservedFields
 }
 
 func Load(path string) (*Config, error) {

@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
@@ -58,11 +59,15 @@ const (
 	titleRowSkew      = 2.5  // cells a row trails the one above it
 )
 
+// titleIndent is the left margin viewHome puts in front of the title, so the
+// title itself has to fit in width-titleIndent columns.
+const titleIndent = 2
+
 // titleLines renders the Home title for the width available.
 func (m *Model) titleLines(width int) []string {
 	anim := m.titleAnim()
 	art := titleArt(homeTitle, m.titleFont())
-	if widest := titleArtWidth(art); len(art) > 0 && widest+2 <= width {
+	if widest := titleArtWidth(art); len(art) > 0 && widest+titleIndent <= width {
 		return paintTitleArt(art, m.animFrame, anim)
 	}
 	return []string{renderTitle(titleDisplay(homeTitle), m.animFrame, anim, width)}
@@ -158,9 +163,14 @@ func paintTitleRow(line string, row, length, frame int, anim string) string {
 	return b.String()
 }
 
-// renderTitle colours a single line of text with the same animation.
+// renderTitle colours a single line of text with the same animation. width is
+// the space viewHome has for the title, indentation included.
 func renderTitle(text string, frame int, anim string, width int) string {
-	text = truncateRunes(text, max(4, width-4))
+	limit := width - titleIndent
+	if limit < 1 {
+		limit = 1
+	}
+	text = truncateRunes(text, limit)
 	return paintTitleRow(text, 0, len([]rune(text)), frame, anim)
 }
 
@@ -222,4 +232,20 @@ func titleShadeIndex(row, col, length, frame int, anim string) int {
 		shade = levels - 1
 	}
 	return shade
+}
+
+// animVisible reports whether the animated title is on screen right now. The
+// animation only costs frames while it can actually be seen.
+func (m *Model) animVisible() bool {
+	return m.screen == ScreenHome && m.modal == modalNone && m.titleAnim() != "off"
+}
+
+// ensureAnimTick schedules the next animation frame when the title is visible
+// and no tick is pending yet.
+func (m *Model) ensureAnimTick() tea.Cmd {
+	if m.animRunning || !m.animVisible() {
+		return nil
+	}
+	m.animRunning = true
+	return animTickCmd()
 }

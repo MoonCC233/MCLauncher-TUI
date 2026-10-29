@@ -538,3 +538,88 @@ func TestTitleFontNormalization(t *testing.T) {
 		t.Errorf("title font = %q, want line", reloaded.Settings.TitleFont)
 	}
 }
+
+func TestUnknownFieldsSurviveSave(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	raw := `{
+  "data_version": 1,
+  "future_top_level": {"nested": true},
+  "settings": {
+    "memory_mb": 2048,
+    "title_font": "line",
+    "future_setting": "keep me"
+  }
+}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Settings.TitleFont != "line" {
+		t.Fatalf("title font = %q, want line", cfg.Settings.TitleFont)
+	}
+
+	// A later change rewrites the file; the keys this build does not know about
+	// have to survive, otherwise a newer launcher's settings are lost.
+	cfg.Settings.MemoryMB = 3072
+	if err := cfg.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saved map[string]any
+	if err := json.Unmarshal(data, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := saved["future_top_level"]; !ok {
+		t.Errorf("unknown top-level key was dropped: %s", data)
+	}
+	settings, ok := saved["settings"].(map[string]any)
+	if !ok {
+		t.Fatalf("settings missing: %s", data)
+	}
+	if settings["future_setting"] != "keep me" {
+		t.Errorf("unknown setting was dropped: %s", data)
+	}
+	if settings["title_font"] != "line" {
+		t.Errorf("title font = %v, want line", settings["title_font"])
+	}
+	if settings["memory_mb"] != float64(3072) {
+		t.Errorf("memory = %v, want 3072", settings["memory_mb"])
+	}
+	if _, ok := saved["preserved"]; ok {
+		t.Errorf("internal field leaked into the file: %s", data)
+	}
+}
+
+func TestUnknownFieldsSurviveReload(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	raw := `{"settings":{"title_anim":"wave","from_the_future":1}}`
+	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		cfg, err := Load(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Settings.TitleAnim != "wave" {
+			t.Fatalf("round %d: title animation = %q, want wave", i, cfg.Settings.TitleAnim)
+		}
+		if err := cfg.Save(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "from_the_future") {
+		t.Errorf("unknown setting was lost across reloads: %s", data)
+	}
+}

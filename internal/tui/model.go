@@ -282,7 +282,9 @@ type Model struct {
 	spinner int
 	clock   int
 	// animFrame advances a few times per second and drives the wordmark sheen.
-	animFrame int
+	// animRunning tracks whether a tick is already scheduled.
+	animFrame   int
+	animRunning bool
 
 	quit bool
 }
@@ -332,7 +334,7 @@ func (m *Model) sendMsg(msg tea.Msg) {
 
 func (m *Model) Init() tea.Cmd {
 	m.javaScanning = true
-	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(), tickCmd(), animTickCmd())
+	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(), tickCmd())
 }
 
 func (m *Model) quitApp() (tea.Model, tea.Cmd) {
@@ -343,7 +345,21 @@ func (m *Model) quitApp() (tea.Model, tea.Cmd) {
 	return m, tea.Quit
 }
 
+// Update runs the message through the model and then makes sure the title
+// animation is running only while it is actually on screen.
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	model, cmd := m.updateMsg(msg)
+	next, ok := model.(*Model)
+	if !ok || next == nil {
+		return model, cmd
+	}
+	if anim := next.ensureAnimTick(); anim != nil {
+		return next, tea.Batch(cmd, anim)
+	}
+	return next, cmd
+}
+
+func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -371,8 +387,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tickCmd()
 	case animTickMsg:
-		m.animFrame++
-		return m, animTickCmd()
+		m.animRunning = false
+		if m.animVisible() {
+			m.animFrame++
+		}
+		return m, nil
 	case manifestMsg:
 		m.manifestLoading = false
 		if msg.manifest != nil {
@@ -760,11 +779,16 @@ var aprilFoolsVersions = map[string]bool{
 
 func isAprilFoolsVersion(id string) bool { return aprilFoolsVersions[id] }
 
-func (m *Model) saveConfig() {
-	if err := m.cfg.Save(); err != nil {
-		m.setToast(m.tf("Could not save config: %s", err.Error()), toastError)
-		m.addLog("error", "save config: "+err.Error())
+// saveConfig persists the config and reports a failure both as a toast and to
+// the caller, so a later success message cannot hide it.
+func (m *Model) saveConfig() error {
+	err := m.cfg.Save()
+	if err == nil {
+		return nil
 	}
+	m.setToast(m.tf("Could not save config: %s", err.Error()), toastError)
+	m.addLog("error", "save config: "+err.Error())
+	return err
 }
 
 func (m *Model) setToast(text string, kind toastKind) {

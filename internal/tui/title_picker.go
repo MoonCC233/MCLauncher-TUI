@@ -58,8 +58,11 @@ func (m *Model) updateTitleAnimPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) chooseTitleAnim() (tea.Model, tea.Cmd) {
 	id := config.TitleAnimIDs[clampInt(m.titleAnimPick, 0, len(config.TitleAnimIDs)-1)]
-	m.setTitleAnim(id)
 	m.modal = modalNone
+	if err := m.setTitleAnim(id); err != nil {
+		// setTitleAnim already surfaced the error; do not claim success.
+		return m, nil
+	}
 	m.setToast(m.tf("Title animation: %s", m.t(titleAnimName(id))), toastSuccess)
 	return m, nil
 }
@@ -73,16 +76,18 @@ func (m *Model) cycleTitleAnim(delta int) {
 		next += len(ids)
 	}
 	id := ids[next]
-	m.setTitleAnim(id)
+	if err := m.setTitleAnim(id); err != nil {
+		return
+	}
 	m.setToast(m.tf("Title animation: %s", m.t(titleAnimName(id))), toastSuccess)
 }
 
-func (m *Model) setTitleAnim(id string) {
+func (m *Model) setTitleAnim(id string) error {
 	if !config.ValidTitleAnim(id) {
 		id = config.DefaultTitleAnim
 	}
 	m.cfg.Settings.TitleAnim = id
-	m.saveConfig()
+	return m.saveConfig()
 }
 
 func (m *Model) titleAnimPickerBody(contentW int) ([]string, []hitRegion) {
@@ -157,8 +162,11 @@ func (m *Model) updateTitleFontPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 func (m *Model) chooseTitleFont() (tea.Model, tea.Cmd) {
 	id := config.TitleFontIDs[clampInt(m.titleFontPick, 0, len(config.TitleFontIDs)-1)]
-	m.setTitleFont(id)
 	m.modal = modalNone
+	if err := m.setTitleFont(id); err != nil {
+		// setTitleFont already surfaced the error; do not claim success.
+		return m, nil
+	}
 	m.setToast(m.tf("Title style: %s", m.t(titleFontName(id))), toastSuccess)
 	return m, nil
 }
@@ -172,16 +180,18 @@ func (m *Model) cycleTitleFont(delta int) {
 		next += len(ids)
 	}
 	id := ids[next]
-	m.setTitleFont(id)
+	if err := m.setTitleFont(id); err != nil {
+		return
+	}
 	m.setToast(m.tf("Title style: %s", m.t(titleFontName(id))), toastSuccess)
 }
 
-func (m *Model) setTitleFont(id string) {
+func (m *Model) setTitleFont(id string) error {
 	if !config.ValidTitleFont(id) {
 		id = config.DefaultTitleFont
 	}
 	m.cfg.Settings.TitleFont = id
-	m.saveConfig()
+	return m.saveConfig()
 }
 
 // titleFontPickerBody lists the fonts and previews the highlighted one.

@@ -451,4 +451,13 @@ var deCatalog = map[string]string{
 	"Installing Java %d":                    "Java %d wird installiert",
 	"Java installation failed":              "Java-Installation fehlgeschlagen",
 	"Stop the game before installing Java.": "Stoppe das Spiel, bevor du Java installierst.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Mod-Loader",
+	"None":       "Keiner",
+	"Choose the mod loader, or None for vanilla.": "Mod-Loader wählen oder Keiner für Vanilla.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Mod-Loader wählen…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Enter öffnet die Auswahl für Loader, Version und Java-Laufzeit.",
 }

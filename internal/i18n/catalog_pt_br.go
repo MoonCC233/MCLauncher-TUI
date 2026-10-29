@@ -451,4 +451,13 @@ var ptBRCatalog = map[string]string{
 	"Installing Java %d":                    "Instalando Java %d",
 	"Java installation failed":              "Falha na instalação do Java",
 	"Stop the game before installing Java.": "Pare o jogo antes de instalar o Java.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Carregador de mods",
+	"None":       "Nenhum",
+	"Choose the mod loader, or None for vanilla.": "Escolha o carregador de mods, ou Nenhum para o jogo original.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Escolher um carregador de mods…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Pressione enter para escolher o carregador, a versão e o Java.",
 }

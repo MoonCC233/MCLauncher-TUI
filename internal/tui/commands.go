@@ -558,6 +558,7 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	m.loaderMeta = loader.Scan(m.layout)
 	if msg.kind == taskLoader {
 		m.rebuildVersions()
+		m.finishPendingCreate(msg.versionID)
 		for i := range m.visible {
 			if m.visible[i].ID == msg.versionID {
 				m.versionCursor = i
@@ -677,6 +678,11 @@ func (m *Model) openInstanceForm(versionID string) {
 		Labels:    []string{m.t("Name"), m.t("Memory (MB, optional)")},
 		Hints:     []string{"", m.t("Leave empty to use the global memory limit")},
 		Focus:     0,
+	}
+	// A plain Minecraft version can be turned into a loader instance right here;
+	// loader versions themselves are not offered again.
+	if _, isLoader := m.loaderMeta[versionID]; !isLoader {
+		m.form.LoaderRow = true
 	}
 	if versionInstalled {
 		m.form.Hints = append(m.form.Hints, "")

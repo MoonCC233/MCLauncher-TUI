@@ -451,4 +451,13 @@ var jaCatalog = map[string]string{
 	"Installing Java %d":                    "Java %d をインストール中",
 	"Java installation failed":              "Java のインストールに失敗しました",
 	"Stop the game before installing Java.": "Java をインストールする前にゲームを停止してください。",
+
+	// New instance form: mod loader row.
+	"Mod loader": "MODローダー",
+	"None":       "なし",
+	"Choose the mod loader, or None for vanilla.": "MODローダーを選択します。バニラなら「なし」。",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "MOD ローダーを選ぶ…",
+	"Press enter to pick the loader, its version and the Java runtime.": "enter でローダー・バージョン・Java を選択します。",
 }

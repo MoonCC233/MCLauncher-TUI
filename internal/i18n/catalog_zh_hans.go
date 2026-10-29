@@ -451,4 +451,13 @@ var zhHansCatalog = map[string]string{
 	"Installing Java %d":                    "正在安装 Java %d",
 	"Java installation failed":              "Java 安装失败",
 	"Stop the game before installing Java.": "安装 Java 前请先停止游戏。",
+
+	// New instance form: mod loader row.
+	"Mod loader": "模组加载器",
+	"None":       "无",
+	"Choose the mod loader, or None for vanilla.": "选择模组加载器，选“无”则使用原版。",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "选择模组加载器…",
+	"Press enter to pick the loader, its version and the Java runtime.": "按 enter 选择加载器、版本与 Java 运行时。",
 }

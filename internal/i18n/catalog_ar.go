@@ -451,4 +451,13 @@ var arCatalog = map[string]string{
 	"Installing Java %d":                    "جارٍ تثبيت Java %d",
 	"Java installation failed":              "فشل تثبيت Java",
 	"Stop the game before installing Java.": "أوقف اللعبة قبل تثبيت Java.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "محمّل التعديلات",
+	"None":       "بدون",
+	"Choose the mod loader, or None for vanilla.": "اختر محمّل التعديلات، أو «بدون» للعبة الأصلية.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "اختيار محمّل التعديلات…",
+	"Press enter to pick the loader, its version and the Java runtime.": "اضغط enter لاختيار المحمّل ونسخته وبيئة Java.",
 }

@@ -451,4 +451,13 @@ var koCatalog = map[string]string{
 	"Installing Java %d":                    "Java %d 설치 중",
 	"Java installation failed":              "Java 설치 실패",
 	"Stop the game before installing Java.": "Java를 설치하기 전에 게임을 중지하세요.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "모드 로더",
+	"None":       "없음",
+	"Choose the mod loader, or None for vanilla.": "모드 로더를 선택하세요. 바닐라는 '없음'.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "모드 로더 선택…",
+	"Press enter to pick the loader, its version and the Java runtime.": "enter를 눌러 로더, 버전, Java를 선택하세요.",
 }

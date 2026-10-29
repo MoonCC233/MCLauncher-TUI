@@ -176,6 +176,10 @@ type FormState struct {
 	Hints     []string
 	Focus     int
 	Err       string
+
+	// LoaderRow shows the "Mod loader" choice of the new-instance form.
+	LoaderRow bool
+	Loader    loader.Kind
 }
 
 type PromptState struct {
@@ -259,6 +263,9 @@ type Model struct {
 	manifestAt      time.Time
 	installed       map[string]bool
 	loaderMeta      map[string]loader.Meta
+
+	// pendingCreate is set while a new instance waits for its mod loader.
+	pendingCreate *pendingCreate
 
 	homeCursor     int
 	instanceCursor int

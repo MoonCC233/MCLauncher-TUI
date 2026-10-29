@@ -451,4 +451,13 @@ var viCatalog = map[string]string{
 	"Installing Java %d":                    "Đang cài Java %d",
 	"Java installation failed":              "Cài đặt Java thất bại",
 	"Stop the game before installing Java.": "Dừng trò chơi trước khi cài Java.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Trình tải mod",
+	"None":       "Không",
+	"Choose the mod loader, or None for vanilla.": "Chọn trình tải mod, hoặc Không để chơi bản gốc.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Chọn trình tải mod…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Nhấn enter để chọn trình tải, phiên bản và Java.",
 }

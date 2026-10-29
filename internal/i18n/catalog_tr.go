@@ -451,4 +451,13 @@ var trCatalog = map[string]string{
 	"Installing Java %d":                    "Java %d kuruluyor",
 	"Java installation failed":              "Java kurulumu başarısız",
 	"Stop the game before installing Java.": "Java kurmadan önce oyunu durdurun.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Mod yükleyici",
+	"None":       "Yok",
+	"Choose the mod loader, or None for vanilla.": "Mod yükleyiciyi seçin, vanilya için Yok.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Mod yükleyici seç…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Yükleyici, sürüm ve Java için enter'a basın.",
 }

@@ -86,25 +86,18 @@ func (m *Model) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalNone
 		return m, nil
 	case "tab", "down":
-		if len(m.form.Fields) > 0 {
-			m.form.Fields[m.form.Focus].Blur()
-			m.form.Focus = (m.form.Focus + 1) % len(m.form.Fields)
-			m.form.Err = ""
-			return m, m.form.Fields[m.form.Focus].Focus()
-		}
-		return m, nil
+		return m, m.focusFormRow(1)
 	case "shift+tab", "up":
-		if len(m.form.Fields) > 0 {
-			m.form.Fields[m.form.Focus].Blur()
-			m.form.Focus = (m.form.Focus + len(m.form.Fields) - 1) % len(m.form.Fields)
-			m.form.Err = ""
-			return m, m.form.Fields[m.form.Focus].Focus()
-		}
-		return m, nil
+		return m, m.focusFormRow(-1)
 	case "enter":
+		// The loader row is an entry point into the loader picker, not a value to
+		// cycle in place.
+		if m.formLoaderFocus() {
+			return m.openLoaderForForm()
+		}
 		return m.submitForm()
 	}
-	if len(m.form.Fields) == 0 {
+	if len(m.form.Fields) == 0 || m.formLoaderFocus() {
 		return m, nil
 	}
 	var cmd tea.Cmd
@@ -336,7 +329,7 @@ func (m *Model) helpContent(width int) []string {
 			{"t", m.t("cycle version filters")},
 			{"enter", m.t("install if needed, then create instance")},
 			{"i", m.t("install without creating an instance")},
-			{"l", m.t("install Fabric, Quilt, Forge, NeoForge or OptiFine")},
+
 			{"d", m.t("uninstall installed version")},
 			{"r", m.t("refresh the Mojang manifest")},
 		}},

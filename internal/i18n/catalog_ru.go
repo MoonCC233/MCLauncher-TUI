@@ -451,4 +451,13 @@ var ruCatalog = map[string]string{
 	"Installing Java %d":                    "Установка Java %d",
 	"Java installation failed":              "Ошибка установки Java",
 	"Stop the game before installing Java.": "Остановите игру перед установкой Java.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Загрузчик модов",
+	"None":       "Нет",
+	"Choose the mod loader, or None for vanilla.": "Выберите загрузчик модов или «Нет» для ванильной игры.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Выбрать загрузчик модов…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Нажмите enter, чтобы выбрать загрузчик, версию и Java.",
 }

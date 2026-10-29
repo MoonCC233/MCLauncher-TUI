@@ -178,12 +178,7 @@ func (m *Model) updateVersions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, m.startInstall(v.ID, "", 0)
-	case "l":
-		v := m.currentVersion()
-		if v == nil {
-			return m, nil
-		}
-		m.openLoaderPicker(v.ID)
+
 	case "d":
 		v := m.currentVersion()
 		if v == nil {

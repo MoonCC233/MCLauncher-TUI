@@ -13,7 +13,7 @@
 - **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏；首页标题是四行 ASCII 大字 “MCTL”，带渐变高光，字形（方块 / 线条）与动效（`Sheen` / `Wave` / `Breathe` / `Off`）都能在设置里切换，窄终端自动回退成单行文字。
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
-- **模组加载器**：在 `Versions` 按 `l` 安装 Fabric、Quilt、Forge、NeoForge 或 OptiFine。加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例继续引用该版本；OptiFine 可使用本地下载的 `OptiFine_<version>_<edition>.jar` 生成补丁客户端。
+- **模组加载器**：新建实例时在表单里选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例直接引用该版本；OptiFine 需要本地下载的 `OptiFine_<version>_<edition>.jar`。
 - **实例模组管理**：在 `Instances` 按 `m` 打开模组面板，添加 `.jar`、启用/禁用、删除或打开模组目录。启动器会读取 Fabric、Quilt、Forge、NeoForge 与旧版 Forge 的元数据，显示模组名称、版本和适用加载器；禁用的模组会重命名为 `.jar.disabled`。
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
@@ -132,9 +132,8 @@ Windows 下输出文件为 `mclauncher.exe`。
    - `i`：仅安装，不创建实例。  
    - `r`：重新拉取 Mojang 版本清单。
 
-3. **安装模组加载器（可选）**  
-   在 `Versions` 中选中一个原版版本，按 `l` 打开加载器面板。依次选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge/NeoForge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。安装完成后加载器会作为独立版本出现在列表中，按 `enter` 即可基于它创建实例。
-
+3. **选择模组加载器（可选）**  
+   在上一步的「新建实例」表单里，按 `tab` 移到「模组加载器」行并按 `enter`，依次选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge/NeoForge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。装好后实例会自动指向该加载器版本。
 4. **创建并启动实例**  
    在表单中填写实例名、可选内存上限，按 `enter` 创建。回到 `Instances` 或 `Home`，按 `enter` 启动。
 
@@ -181,7 +180,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 | 页面 | 键与作用 |
 | --- | --- |
 | Instances | `n` 新建实例 · `e` 编辑 · `m` 管理模组 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
-| Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `l` 安装 Fabric / Quilt / Forge / OptiFine · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
+| Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
 | Mods | `a` 添加模组 · `space` / `t` 启用或禁用 · `d` 删除 · `r` 重新扫描 · `o` 打开模组目录 · `esc` 关闭 |
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
 | Settings | `enter` 编辑 / 检查启动器更新 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |

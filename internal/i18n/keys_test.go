@@ -449,4 +449,9 @@ var requiredCatalogKeys = []string{
 	"Installing Java %d",
 	"Java installation failed",
 	"Stop the game before installing Java.",
+	"Mod loader",
+	"None",
+	"Choose the mod loader, or None for vanilla.",
+	"Choose a mod loader…",
+	"Press enter to pick the loader, its version and the Java runtime.",
 }

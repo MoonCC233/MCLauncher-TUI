@@ -451,4 +451,13 @@ var esCatalog = map[string]string{
 	"Installing Java %d":                    "Instalando Java %d",
 	"Java installation failed":              "Error al instalar Java",
 	"Stop the game before installing Java.": "Detén el juego antes de instalar Java.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Cargador de mods",
+	"None":       "Ninguno",
+	"Choose the mod loader, or None for vanilla.": "Elige el cargador de mods, o Ninguno para el juego original.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Elegir un cargador de mods…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Pulsa enter para elegir el cargador, su versión y el runtime de Java.",
 }

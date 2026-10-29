@@ -451,4 +451,13 @@ var frCatalog = map[string]string{
 	"Installing Java %d":                    "Installation de Java %d",
 	"Java installation failed":              "Échec de l'installation de Java",
 	"Stop the game before installing Java.": "Arrêtez le jeu avant d'installer Java.",
+
+	// New instance form: mod loader row.
+	"Mod loader": "Chargeur de mods",
+	"None":       "Aucun",
+	"Choose the mod loader, or None for vanilla.": "Choisissez le chargeur de mods, ou Aucun pour le jeu vanilla.",
+
+	// New instance form: loader picker entry.
+	"Choose a mod loader…": "Choisir un chargeur de mods…",
+	"Press enter to pick the loader, its version and the Java runtime.": "Appuyez sur entrée pour choisir le chargeur, sa version et le runtime Java.",
 }

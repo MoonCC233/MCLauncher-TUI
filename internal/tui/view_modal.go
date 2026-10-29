@@ -82,6 +82,16 @@ func (m *Model) modalView() string {
 			}
 			body = append(body, styleBorder.Render(strings.Repeat("─", max(12, contentW-4))), "")
 		}
+		if m.form.LoaderRow {
+			label := styleMuted.Render(m.t("Mod loader"))
+			value := styleCyan.Render(m.formLoaderValue())
+			if m.formLoaderFocus() {
+				value = stylePrimary.Render("▸ " + m.t("Choose a mod loader…") + " ◂")
+			}
+			body = append(body, label, "  "+value)
+			body = append(body, styleDim.Render(m.t("Press enter to pick the loader, its version and the Java runtime.")))
+			body = append(body, styleBorder.Render(strings.Repeat("─", max(12, contentW-4))), "")
+		}
 		if m.form.Err != "" {
 			body = append(body, styleRed.Render("✗ "+m.form.Err), "")
 		}

@@ -71,7 +71,7 @@ func TestBackgroundTaskAndHistory(t *testing.T) {
 			VersionID: "1.21.4",
 			Started:   time.Now(),
 			Done:      int64(i),
-		}, "completed", nil)
+		}, taskStatusCompleted, nil)
 	}
 	if len(m.taskHistory) != 20 {
 		t.Errorf("history length = %d, want 20", len(m.taskHistory))

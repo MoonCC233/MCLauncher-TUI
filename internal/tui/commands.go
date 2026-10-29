@@ -164,12 +164,27 @@ func (m *Model) uninstallVersion(id string) error {
 	if id == "" || !m.installed[id] {
 		return fmt.Errorf("version %s is not installed", id)
 	}
-	if err := os.RemoveAll(m.layout.VersionDir(id)); err != nil {
-		return err
+	dir := m.layout.VersionDir(id)
+	// Move the version aside first so a failure while deleting leaves the
+	// launcher and the game directory consistent: either the version is still
+	// complete, or it is gone and only leftover files remain to clean up.
+	staged := dir + ".uninstall-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	if err := os.Rename(dir, staged); err != nil {
+		if _, statErr := os.Stat(dir); statErr != nil {
+			// Already gone; treat the uninstall as done.
+			staged = ""
+		} else {
+			return err
+		}
 	}
-	delete(m.installed, id)
+	m.installed = install.InstalledSet(m.layout)
 	m.rebuildVersions()
 	m.addLog("launcher", "uninstalled "+id)
+	if staged != "" {
+		if err := os.RemoveAll(staged); err != nil {
+			m.addLog("error", fmt.Sprintf("remove %s: %v", staged, err))
+		}
+	}
 	return nil
 }
 
@@ -387,6 +402,9 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				fail(err)
 				return
 			}
+			if checkCancel() {
+				return
+			}
 			session, err := launch.Start(spec)
 			if err != nil {
 				fail(err)
@@ -469,13 +487,13 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalNone
 	}
 	if msg.cancelled || errors.Is(msg.err, context.Canceled) {
-		m.recordTask(task, "cancelled", nil)
+		m.recordTask(task, taskStatusCancelled, nil)
 		m.addLog("launcher", "task cancelled")
 		m.setToast(m.t("Cancelled"), toastInfo)
 		return m, nil
 	}
 	if msg.err != nil {
-		m.recordTask(task, "failed", msg.err)
+		m.recordTask(task, taskStatusFailed, msg.err)
 		m.addLog("error", msg.err.Error())
 		if backgrounded {
 			m.setToast(m.t("Task failed — see Downloads"), toastError)
@@ -489,7 +507,6 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.modal = modalAlert
 		return m, nil
 	}
-	m.recordTask(task, "completed", nil)
 	m.installed = install.InstalledSet(m.layout)
 	if msg.kind == taskInstall && task != nil && task.CreateName != "" {
 		versionID := task.VersionID
@@ -498,6 +515,10 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		}
 		inst, err := m.cfg.AddInstance(task.CreateName, versionID, task.CreateMemory)
 		if err != nil {
+			// The files are installed but the instance could not be saved, so the
+			// task has to show up as failed instead of completed.
+			m.recordTask(task, taskStatusFailed, err)
+			m.addLog("error", err.Error())
 			m.alert = AlertState{Title: m.t("Could not create instance"), Body: err.Error()}
 			if backgrounded {
 				m.setToast(m.t("Could not create instance"), toastError)
@@ -506,6 +527,7 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 			m.modal = modalAlert
 			return m, nil
 		}
+		m.recordTask(task, taskStatusCompleted, nil)
 		m.instanceCursor = len(m.cfg.Instances) - 1
 		m.homeCursor = 0
 		if !backgrounded {
@@ -515,6 +537,7 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 		m.addLog("launcher", "created instance "+inst.Name)
 		return m, nil
 	}
+	m.recordTask(task, taskStatusCompleted, nil)
 	if msg.kind == taskInstall {
 		m.setToast(m.tf("Installed %s", msg.versionID), toastSuccess)
 		m.addLog("launcher", "installed "+msg.versionID)

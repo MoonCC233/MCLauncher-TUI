@@ -320,6 +320,9 @@ func (m *Model) scrollBy(dir int) (tea.Model, tea.Cmd) {
 				m.logFollow = true
 			}
 		}
+	case ScreenDownloads:
+		m.downloadsScroll += dir * 3
+		m.clampDownloadsScroll()
 	}
 	return m, nil
 }

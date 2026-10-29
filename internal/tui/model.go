@@ -264,6 +264,8 @@ type Model struct {
 	task        *TaskState
 	taskHistory []TaskRecord
 
+	downloadsScroll int
+
 	hits []hitRegion
 
 	game *GameState
@@ -432,6 +434,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case taskDoneMsg:
 		return m.handleTaskDone(msg)
 	case gameStartedMsg:
+		backgrounded := m.task != nil && m.task.Backgrounded
+		m.recordTask(m.task, taskStatusCompleted, nil)
 		m.game = &GameState{
 			Session:      msg.session,
 			InstanceID:   msg.instanceID,
@@ -441,9 +445,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Pid:          msg.pid,
 		}
 		m.task = nil
-		m.modal = modalNone
 		m.addLog("launcher", fmt.Sprintf("started %s · pid %d", msg.instanceName, msg.pid))
 		m.setToast(m.t("Minecraft is running"), toastSuccess)
+		if backgrounded {
+			// A backgrounded launch keeps whatever the user is looking at.
+			return m, nil
+		}
+		m.modal = modalNone
 		m.screen = ScreenConsole
 		m.logFollow = true
 		m.logScroll = 0
@@ -541,6 +549,10 @@ func (m *Model) switchScreen(screen Screen) {
 	}
 	if screen == ScreenInstances {
 		m.clampInstanceCursor()
+	}
+	if screen == ScreenDownloads {
+		m.downloadsScroll = 0
+		m.clampDownloadsScroll()
 	}
 }
 

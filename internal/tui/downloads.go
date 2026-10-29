@@ -9,6 +9,14 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
+// Task statuses recorded in the Downloads history. They double as translation
+// keys, so TestTaskStatusesTranslated keeps them in every catalog.
+const (
+	taskStatusCompleted = "completed"
+	taskStatusFailed    = "failed"
+	taskStatusCancelled = "cancelled"
+)
+
 func (m *Model) backgroundTask(openDownloads bool) {
 	if m.task == nil {
 		return
@@ -35,6 +43,23 @@ func (m *Model) updateDownloads(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.setToast(m.t("Cancelling…"), toastInfo)
 		}
 		return m, nil
+	case "up", "k":
+		m.downloadsScroll--
+		m.clampDownloadsScroll()
+	case "down", "j":
+		m.downloadsScroll++
+		m.clampDownloadsScroll()
+	case "pgup":
+		m.downloadsScroll -= m.downloadsPage()
+		m.clampDownloadsScroll()
+	case "pgdown":
+		m.downloadsScroll += m.downloadsPage()
+		m.clampDownloadsScroll()
+	case "home":
+		m.downloadsScroll = 0
+	case "end", "G":
+		m.downloadsScroll = len(m.downloadsContent(max(20, m.width)))
+		m.clampDownloadsScroll()
 	}
 	return m, nil
 }
@@ -64,6 +89,21 @@ func (m *Model) recordTask(task *TaskState, status string, err error) {
 	if len(m.taskHistory) > 20 {
 		m.taskHistory = m.taskHistory[:20]
 	}
+	m.downloadsScroll = 0
+}
+
+// downloadsPage is the number of content rows the Downloads body shows at once.
+func (m *Model) downloadsPage() int {
+	visible := m.height - 10
+	if visible < 4 {
+		visible = 4
+	}
+	return visible
+}
+
+func (m *Model) clampDownloadsScroll() {
+	content := len(m.downloadsContent(max(20, m.width)))
+	m.downloadsScroll = clampInt(m.downloadsScroll, 0, max(0, content-m.downloadsPage()))
 }
 
 func (m *Model) viewDownloads(w, h int) []string {
@@ -71,10 +111,25 @@ func (m *Model) viewDownloads(w, h int) []string {
 	if m.task != nil {
 		right = m.trKnown(m.task.Stage)
 	}
-	lines := []string{
+	header := []string{
 		m.sectionHeader(m.t("Downloads"), right, w),
 		"",
 	}
+	content := m.downloadsContent(w)
+	visible := h - len(header)
+	if visible < 4 {
+		visible = 4
+	}
+	offset := clampInt(m.downloadsScroll, 0, max(0, len(content)-visible))
+	m.downloadsScroll = offset
+	end := min(len(content), offset+visible)
+	return append(header, content[offset:end]...)
+}
+
+// downloadsContent renders the active task and the retained history. The view
+// windows this list, so a long history stays reachable with the arrow keys.
+func (m *Model) downloadsContent(w int) []string {
+	var lines []string
 	if m.task != nil {
 		task := m.task
 		lines = append(lines,
@@ -103,8 +158,7 @@ func (m *Model) viewDownloads(w, h int) []string {
 	}
 	lines = append(lines, "", styleDim.Render(m.t("HISTORY")))
 	if len(m.taskHistory) == 0 {
-		lines = append(lines, styleDim.Render(m.t("Completed tasks will appear here.")))
-		return lines
+		return append(lines, styleDim.Render(m.t("Completed tasks will appear here.")))
 	}
 	for _, record := range m.taskHistory {
 		label := record.Title
@@ -112,10 +166,10 @@ func (m *Model) viewDownloads(w, h int) []string {
 		color := styleGreen
 		marker := "✓"
 		switch record.Status {
-		case "failed":
+		case taskStatusFailed:
 			color = styleRed
 			marker = "✗"
-		case "cancelled":
+		case taskStatusCancelled:
 			color = styleYellow
 			marker = "○"
 		}

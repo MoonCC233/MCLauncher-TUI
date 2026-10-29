@@ -384,6 +384,9 @@ func (c *Config) AddInstance(name, versionID string, memoryMB int) (*Instance, e
 	}
 	c.Instances = append(c.Instances, inst)
 	if err := c.Save(); err != nil {
+		// Roll the in-memory addition back so the UI never shows an instance
+		// that did not reach disk.
+		c.Instances = c.Instances[:len(c.Instances)-1]
 		return nil, err
 	}
 	return &c.Instances[len(c.Instances)-1], nil

@@ -20,6 +20,15 @@ func TestUninstallVersionRemovesFiles(t *testing.T) {
 	if _, err := os.Stat(dir); !os.IsNotExist(err) {
 		t.Fatalf("version directory still exists: %v", err)
 	}
+	entries, err := os.ReadDir(m.layout.Versions)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if len(entry.Name()) > len(id) && entry.Name()[:len(id)] == id+".uninstall-" {
+			t.Fatalf("leftover staging directory %q", entry.Name())
+		}
+	}
 	if m.installed[id] {
 		t.Fatal("version still marked as installed")
 	}

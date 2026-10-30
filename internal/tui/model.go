@@ -147,14 +147,17 @@ type TaskState struct {
 	Backgrounded    bool
 	Stage           string
 	Detail          string
-	Done            int64
-	Total           int64
-	FilesDone       int
-	FilesTotal      int
-	Started         time.Time
-	Cancel          context.CancelFunc
-	Cancelled       bool
-	Err             error
+	// ContentTitle is the display name of the pack, mod or shader a taskPack
+	// download is installing, so the toast can name it.
+	ContentTitle string
+	Done         int64
+	Total        int64
+	FilesDone    int
+	FilesTotal   int
+	Started      time.Time
+	Cancel       context.CancelFunc
+	Cancelled    bool
+	Err          error
 }
 
 type TaskRecord struct {

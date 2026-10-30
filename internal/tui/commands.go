@@ -564,7 +564,12 @@ func (m *Model) handleTaskDone(msg taskDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.kind == taskPack {
 		m.reloadPacks()
 		m.recordTask(task, taskStatusCompleted, nil)
-		m.setToast(m.t("Resource pack installed"), toastSuccess)
+		// Name what was installed: packs, shaders and mods all come through here.
+		installed := task.ContentTitle
+		if installed == "" {
+			installed = m.packKindName(m.packs.kind)
+		}
+		m.setToast(m.tf("Installed %s", installed), toastSuccess)
 		return m, nil
 	}
 	m.installed = install.InstalledSet(m.layout)

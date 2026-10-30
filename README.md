@@ -284,6 +284,8 @@ go test ./...
 go build ./...
 ```
 
+参与贡献（构建、测试、界面文案与提交约定）请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
 项目结构：
 
 ```text
@@ -297,6 +299,7 @@ internal/mods/          模组扫描、元数据解析、启用/禁用与删除
 internal/packs/         资源包、光影与模组的安装、启停和目录扫描
 internal/catalog/       Modrinth 搜索与下载元数据
 internal/gametitle/     Windows 游戏窗口标题修改
+internal/remote/        GitHub Releases、贡献者、issue 与更新公告读取
 internal/update/        GitHub Release 检查、镜像下载与启动器替换
 internal/launch/        Java 命令行构建、进程启动、输出流
 internal/java/          Java 运行时扫描、版本解析、选择与 JDK 下载

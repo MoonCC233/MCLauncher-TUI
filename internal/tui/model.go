@@ -309,6 +309,10 @@ type Model struct {
 	lastClickX int
 	lastClickY int
 
+	hoverX, hoverY int
+	hoverValid     bool
+	mouseDown      bool
+
 	modalX int
 	modalY int
 	modalW int

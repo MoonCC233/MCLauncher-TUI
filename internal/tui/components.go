@@ -74,12 +74,16 @@ func sectionHeaderStyled(left, right string, width int) string {
 	return left + " " + styleBorder.Render(strings.Repeat("─", ruleW)) + " " + right
 }
 
-// hintSpec is a clickable keyboard hint shown in a footer or modal.
+// hintSpec is a clickable button shown in a footer or modal. Key is the
+// internal action the button replays; it is no longer displayed, so buttons
+// stay usable without knowing the keyboard shortcut.
 type hintSpec struct {
 	Key   string
 	Label string
 	Msg   tea.KeyMsg
 }
+
+const buttonGap = "  "
 
 func hint(key, label string) hintSpec {
 	return hintSpec{Key: key, Label: label, Msg: keyMsg(key)}
@@ -89,41 +93,93 @@ func hintAction(key, label, action string) hintSpec {
 	return hintSpec{Key: key, Label: label, Msg: keyMsg(action)}
 }
 
-func keyHint(key, label string) string {
-	return stylePrimaryB.Render(key) + " " + styleDim.Render(label)
+// buttonWidth is the cell width of the compact outlined button.
+func (m *Model) buttonWidth(label string) int {
+	return ansi.StringWidth(label) + 4
 }
 
-func hints(parts ...string) string {
-	return strings.Join(parts, styleBorder.Render("  ·  "))
+// buttonAt renders one button. Normal buttons use the panel fill with an accent
+// outline and accent label; hover fills the button with the accent color; the
+// pressed state uses the dimmed accent while the mouse button is held.
+func (m *Model) buttonAt(label string, x, y int) string {
+	w := m.buttonWidth(label)
+	hovered := m.hoverValid && m.hoverY == y && m.hoverX >= x && m.hoverX < x+w
+	text := "▐ " + label + " ▌"
+	switch {
+	case hovered && m.mouseDown:
+		return lipgloss.NewStyle().Background(colPrimaryDim).Foreground(colBackground).Bold(true).Render(text)
+	case hovered:
+		return lipgloss.NewStyle().Background(colPrimary).Foreground(colBackground).Bold(true).Render(text)
+	default:
+		return lipgloss.NewStyle().Background(colPanelAlt).Foreground(colPrimary).Bold(true).Render(text)
+	}
 }
 
-// renderHints draws a row of clickable hints and records the hit regions at
+// layoutButtons keeps the buttons that fit in maxWidth.
+func (m *Model) layoutButtons(maxWidth int, parts []hintSpec) ([]hintSpec, int) {
+	gap := ansi.StringWidth(buttonGap)
+	width, fit := 0, 0
+	for i, part := range parts {
+		w := m.buttonWidth(part.Label)
+		if i > 0 {
+			w += gap
+		}
+		if maxWidth > 0 && width+w > maxWidth {
+			break
+		}
+		width += w
+		fit++
+	}
+	return parts[:fit], width
+}
+
+// layoutButtonRows wraps a button bar into as many rows as needed. Modal
+// footers use this so a narrow panel never hides an action.
+func (m *Model) layoutButtonRows(maxWidth int, parts []hintSpec) [][]hintSpec {
+	if len(parts) == 0 {
+		return nil
+	}
+	gap := ansi.StringWidth(buttonGap)
+	var rows [][]hintSpec
+	var row []hintSpec
+	width := 0
+	for _, part := range parts {
+		w := m.buttonWidth(part.Label)
+		if maxWidth > 0 && len(row) > 0 && width+gap+w > maxWidth {
+			rows = append(rows, row)
+			row = nil
+			width = 0
+		}
+		if len(row) > 0 {
+			width += gap
+		}
+		row = append(row, part)
+		width += w
+	}
+	if len(row) > 0 {
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+// renderHints draws a row of clickable buttons and records the hit regions at
 // the given screen coordinates. In RTL languages the order is reversed.
 func (m *Model) renderHints(x, y int, parts ...hintSpec) string {
 	return m.renderHintsWidth(x, y, 0, parts...)
 }
 
-// renderHintsWidth is renderHints with a maximum width. Hints that do not fit
-// are dropped instead of being cut in half. The logical order (which hints are
-// most important) decides what fits; RTL only mirrors the result afterwards.
+// renderHintsWidth is renderHints with a maximum width. Buttons that do not fit
+// are dropped instead of being cut in half. The logical order (which buttons
+// are most important) decides what fits; RTL only mirrors the result afterwards.
 func (m *Model) renderHintsWidth(x, y, maxWidth int, parts ...hintSpec) string {
-	sep := styleBorder.Render("  ·  ")
-	sepW := ansi.StringWidth(sep)
-	if maxWidth > 0 {
-		width, fit := 0, 0
-		for i, part := range parts {
-			w := ansi.StringWidth(keyHint(part.Key, part.Label))
-			if i > 0 {
-				w += sepW
-			}
-			if width+w > maxWidth {
-				break
-			}
-			width += w
-			fit++
-		}
-		parts = parts[:fit]
-	}
+	parts, _ = m.layoutButtons(maxWidth, parts)
+	return m.renderHintParts(x, y, parts...)
+}
+
+// renderHintParts renders already-fitted buttons. Callers that need a total
+// width can measure first and render at the final column afterwards, which
+// keeps hover hit-testing accurate.
+func (m *Model) renderHintParts(x, y int, parts ...hintSpec) string {
 	if len(parts) == 0 {
 		return ""
 	}
@@ -137,10 +193,10 @@ func (m *Model) renderHintsWidth(x, y, maxWidth int, parts ...hintSpec) string {
 	var b strings.Builder
 	for i, part := range parts {
 		if i > 0 {
-			b.WriteString(sep)
+			b.WriteString(buttonGap)
 		}
 		start := x + ansi.StringWidth(b.String())
-		text := keyHint(part.Key, part.Label)
+		text := m.buttonAt(part.Label, start, y)
 		b.WriteString(text)
 		if y >= 0 {
 			m.addHit(start, y, ansi.StringWidth(text), 1, hitRegion{Kind: hitKey, Key: part.Msg})

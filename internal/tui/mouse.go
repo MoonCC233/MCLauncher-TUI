@@ -121,6 +121,8 @@ func keyMsg(s string) tea.KeyMsg {
 }
 
 func (m *Model) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	m.hoverX, m.hoverY = msg.X, msg.Y
+	m.hoverValid = true
 	if tea.MouseEvent(msg).IsWheel() {
 		dir := 1
 		if msg.Button == tea.MouseButtonWheelUp {
@@ -128,9 +130,17 @@ func (m *Model) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 		}
 		return m.scrollBy(dir)
 	}
+	if msg.Action == tea.MouseActionRelease {
+		m.mouseDown = false
+		return m, nil
+	}
+	if msg.Action == tea.MouseActionMotion {
+		return m, nil
+	}
 	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft {
 		return m, nil
 	}
+	m.mouseDown = true
 	if m.modal != modalNone {
 		if hit, ok := m.hitAt(msg.X, msg.Y); ok {
 			return m.activateHit(hit)

@@ -115,7 +115,6 @@ var requiredCatalogKeys = []string{
 	"Downloading game files",
 	"edit",
 	"Edit instance",
-	"enter create instance · i install only · o open version folder",
 	"error",
 	"esc clear",
 	"Extra flags passed to Java, e.g. -XX:+UseG1GC",

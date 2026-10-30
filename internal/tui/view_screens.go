@@ -339,13 +339,21 @@ func (m *Model) viewVersions(w, h int) []string {
 			state = styleGreen.Render(m.t("installed"))
 		}
 		date := m.releaseDate(v.ReleaseTime)
-		hint := m.t("enter create instance · i install only · o open version folder")
+		hintY := bodyTop + len(lines) + 1
+		if hintY-bodyTop >= m.bodyHeight() {
+			hintY = -1
+		}
+		actions := []hintSpec{
+			hint("enter", m.t("create")),
+			hint("i", m.t("install")),
+			hint("o", m.t("folder")),
+		}
 		if m.installed[v.ID] {
-			hint += " · d " + m.t("uninstall installed version")
+			actions = append(actions, hint("d", m.t("uninstall installed version")))
 		}
 		lines = append(lines,
 			"  "+stylePrimary.Render("▌ ")+styleBold.Render(v.ID)+styleDim.Render("  "+m.versionLabel(*v)+" · "+m.tf("released %s", date))+"  "+state,
-			"  "+styleDim.Render(hint),
+			"  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4, actions...),
 		)
 	}
 	return lines

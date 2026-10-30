@@ -21,9 +21,16 @@ func (m *Model) View() string {
 	if !m.ready || m.width <= 0 || m.height <= 0 {
 		return m.t("Loading mclauncher…")
 	}
+	// A modal owns the pointer: do not highlight buttons on the screen behind
+	// it while it is open.
+	hover := m.hoverValid
+	if m.modal != modalNone {
+		m.hoverValid = false
+	}
 	header := m.headerView()
 	body := m.bodyView()
 	footer := m.footerView()
+	m.hoverValid = hover
 	base := clipLines(header+"\n"+body+"\n"+footer, m.width, m.height)
 	if m.modal != modalNone {
 		return m.modalView(base)
@@ -277,28 +284,29 @@ func (m *Model) sidebarView(height int) []string {
 	return out
 }
 
-func (m *Model) shiftHits(from, dx int) {
-	if dx == 0 {
-		return
-	}
-	for i := from; i < len(m.hits); i++ {
-		m.hits[i].X += dx
-	}
-}
-
 func (m *Model) footerView() string {
 	y := m.height - 1
 	avail := m.width - 2
 	if avail < 10 {
 		avail = 10
 	}
+
 	right := ""
+	rightW := 0
+	helpX := -1
 	if m.game != nil {
 		right = styleGreen.Render("● "+m.t("running")) + styleDim.Render(" "+elapsedSince(m.game.Started))
+		rightW = ansi.StringWidth(right)
 	} else {
-		right = styleDim.Render("? " + m.t("help"))
+		helpLabel := m.t("help")
+		rightW = m.buttonWidth(helpLabel)
+		if m.rtl() {
+			helpX = 1
+		} else {
+			helpX = 1 + max(0, avail-rightW)
+		}
+		right = m.buttonAt(helpLabel, helpX, y)
 	}
-	rightW := ansi.StringWidth(right)
 
 	var left string
 	leftW := 0
@@ -313,31 +321,22 @@ func (m *Model) footerView() string {
 		left = style.Render("● ") + styleMuted.Render(m.toast.Text)
 		leftW = ansi.StringWidth(left)
 	} else if maxHints := avail - rightW - 1; maxHints > 0 {
-		// Render at zero first so the hint row can be measured, then move the
-		// hit regions to their final column.
-		from := len(m.hits)
-		left = m.renderHintsWidth(0, y, maxHints, m.screenHints()...)
-		leftW = ansi.StringWidth(left)
+		parts, width := m.layoutButtons(maxHints, m.screenHints())
+		leftW = width
 		hintX := 1
 		if m.rtl() {
 			hintX = 1 + avail - leftW
 		}
-		m.shiftHits(from, hintX)
+		left = m.renderHintParts(hintX, y, parts...)
 	}
 
 	gap := max(1, avail-leftW-rightW)
 	line := left + strings.Repeat(" ", gap) + right
-	helpX := 1 + max(0, avail-rightW)
 	if m.rtl() {
 		line = right + strings.Repeat(" ", gap) + left
-		helpX = 1
 	}
-	if m.game == nil {
-		hitW := rightW
-		if maxW := 1 + avail - helpX; hitW > maxW {
-			hitW = maxW
-		}
-		m.addHit(helpX, y, hitW, 1, hitRegion{Kind: hitKey, Key: keyMsg("?")})
+	if m.game == nil && helpX >= 0 {
+		m.addHit(helpX, y, rightW, 1, hitRegion{Kind: hitKey, Key: keyMsg("?")})
 	}
 	return " " + fitLine(line, avail) + " "
 }

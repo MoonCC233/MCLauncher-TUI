@@ -282,16 +282,20 @@ func (m *Model) modalView(base string) string {
 		titleStyle = lipgloss.NewStyle().Foreground(colRed).Bold(true)
 	}
 	header, escX := m.modalHeader(titleStyle.Render(title), contentW)
+	footerRows := m.layoutButtonRows(contentW, footer)
 	lines := []string{
 		header,
 		styleBorder.Render(strings.Repeat("─", contentW)),
 		"",
 	}
 	lines = append(lines, body...)
-	footerIndex := -1
-	if len(footer) > 0 {
+	footerStart := -1
+	if len(footerRows) > 0 {
 		lines = append(lines, "")
-		footerIndex = len(lines)
+		footerStart = len(lines)
+		for range footerRows {
+			lines = append(lines, "")
+		}
 		lines = append(lines, "")
 	}
 	for i := range lines {
@@ -321,10 +325,12 @@ func (m *Model) modalView(base string) string {
 	m.modalX, m.modalY, m.modalW, m.modalH = offX, offY, boxW, boxH
 	m.addHit(contentX+escX, contentY, ansi.StringWidth("esc"), 1, hitRegion{Kind: hitKey, Key: keyMsg("esc")})
 
-	if footerIndex >= 0 && footerIndex < len(lines) {
-		// Drop hints that would be cut off by the panel so every recorded hit
-		// region still corresponds to visible text.
-		lines[footerIndex] = fitLine(m.renderHintsWidth(contentX, contentY+footerIndex, contentW, footer...), contentW)
+	for i, row := range footerRows {
+		idx := footerStart + i
+		if idx >= len(lines) {
+			break
+		}
+		lines[idx] = fitLine(m.renderHintParts(contentX, contentY+idx, row...), contentW)
 	}
 	for _, h := range pending {
 		if h.Y < 0 || h.Y >= len(lines) {

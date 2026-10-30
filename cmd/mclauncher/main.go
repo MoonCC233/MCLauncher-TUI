@@ -145,7 +145,7 @@ func main() {
 	update.CleanupOldBinary()
 	model := tui.New(cfg, layout, util.NewHTTPClient(), version.Full(), notice)
 	model.ApplyWindowTitle()
-	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	program := tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseAllMotion())
 	model.SetSender(program.Send)
 	final, runErr := program.Run()
 	// Bubble Tea can exit on input errors as well as the quit key; make sure a

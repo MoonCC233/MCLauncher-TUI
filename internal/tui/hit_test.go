@@ -189,7 +189,7 @@ func TestInstanceEmptyHintHitMatchesRenderedRow(t *testing.T) {
 
 	row, col := -1, -1
 	for i, line := range lines {
-		if x := cellIndex(line, "n browse versions"); x >= 0 {
+		if x := cellIndex(line, "browse versions"); x >= 0 {
 			row, col = i, x
 			break
 		}
@@ -293,9 +293,9 @@ func TestFooterHelpHitMatchesRenderedPosition(t *testing.T) {
 		t.Fatalf("frame has %d rows, want %d", len(lines), m.height)
 	}
 	row := lines[m.height-1]
-	col := cellIndex(row, "? help")
+	col := cellIndex(row, m.t("help"))
 	if col < 0 {
-		t.Fatal("footer help hint not rendered")
+		t.Fatal("footer help button not rendered")
 	}
 	mouseClick(m, col, m.height-1)
 	if m.modal != modalHelp {
@@ -425,7 +425,7 @@ func TestVersionsLayoutWithManifestWarning(t *testing.T) {
 				m.manifestErr = warning
 				lines := plainView(m)
 
-				if cellIndex(lines[m.height-2], "enter create instance") < 0 {
+				if cellIndex(lines[m.height-2], m.t("create")) < 0 {
 					t.Fatalf("version detail row was pushed out of the frame: %q", lines[m.height-2])
 				}
 				if warning != "" {

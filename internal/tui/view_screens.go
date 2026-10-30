@@ -91,24 +91,6 @@ func (m *Model) viewHome(w, h int) []string {
 			m.rowHit(ScreenHome, i, len(lines)-1, w)
 		}
 	}
-	lines = append(lines, "")
-
-	action := m.t("play")
-	if inst := m.homeInstance(); inst != nil {
-		action = m.tf("play %s", util.Truncate(inst.Name, 22))
-	}
-	hintY := bodyTop + len(lines)
-	if hintY-bodyTop >= m.bodyHeight() {
-		// The hint row is clipped away on very short terminals; keep the text
-		// for width calculations but do not record phantom click targets.
-		hintY = -1
-	}
-	lines = append(lines, "  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4,
-		hint("enter", action),
-		hint("n", m.t("new instance")),
-		hint("a", m.t("add account")),
-		hint("tab", m.t("sections")),
-	))
 	lines = append(lines, "", "  "+styleDim.Render(m.t("Tip: on Versions, press / to search every release back to 2011.")))
 	return lines
 }
@@ -182,18 +164,9 @@ func (m *Model) viewInstances(w, h int) []string {
 			"  "+styleMuted.Render(m.t("Open Versions with n, choose a release and press Enter.")),
 			"  "+styleDim.Render(m.t("The launcher installs the version, then creates an isolated game directory.")),
 		)
-		for len(lines) < h-4 {
+		for len(lines) < h-2 {
 			lines = append(lines, "")
 		}
-		lines = append(lines, "")
-		hintY := bodyTop + len(lines)
-		if hintY-bodyTop >= m.bodyHeight() {
-			hintY = -1
-		}
-		lines = append(lines, "  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4,
-			hint("n", m.t("browse versions")),
-			hint("tab", m.t("sections")),
-		))
 		return lines
 	}
 	m.clampInstanceCursor()
@@ -339,21 +312,8 @@ func (m *Model) viewVersions(w, h int) []string {
 			state = styleGreen.Render(m.t("installed"))
 		}
 		date := m.releaseDate(v.ReleaseTime)
-		hintY := bodyTop + len(lines) + 1
-		if hintY-bodyTop >= m.bodyHeight() {
-			hintY = -1
-		}
-		actions := []hintSpec{
-			hint("enter", m.t("create")),
-			hint("i", m.t("install")),
-			hint("o", m.t("folder")),
-		}
-		if m.installed[v.ID] {
-			actions = append(actions, hint("d", m.t("uninstall installed version")))
-		}
 		lines = append(lines,
 			"  "+stylePrimary.Render("▌ ")+styleBold.Render(v.ID)+styleDim.Render("  "+m.versionLabel(*v)+" · "+m.tf("released %s", date))+"  "+state,
-			"  "+m.renderHintsWidth(m.contentX()+2, hintY, w-4, actions...),
 		)
 	}
 	return lines

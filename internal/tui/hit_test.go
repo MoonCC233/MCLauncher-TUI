@@ -186,24 +186,18 @@ func TestInstanceEmptyHintHitMatchesRenderedRow(t *testing.T) {
 	m.lang = i18n.EN
 	m.switchScreen(ScreenInstances)
 	lines := plainView(m)
-
-	row, col := -1, -1
-	for i, line := range lines {
-		if x := cellIndex(line, "browse versions"); x >= 0 {
-			row, col = i, x
-			break
-		}
-	}
-	if row < 0 {
-		t.Fatal("inline instance hint not rendered")
+	row := m.height - 2
+	col := cellIndex(lines[row], m.t("new"))
+	if col < 0 {
+		t.Fatal("instance action button not rendered")
 	}
 	hit, ok := m.hitAt(col, row)
 	if !ok || hit.Kind != hitKey || hit.Key.String() != "n" {
-		t.Fatalf("hit at rendered hint = %+v, ok = %v, want the n hint", hit, ok)
+		t.Fatalf("hit at rendered button = %+v, ok = %v, want the n action", hit, ok)
 	}
 	mouseClick(m, col, row)
 	if m.screen != ScreenVersions {
-		t.Fatalf("screen = %v, want versions after clicking the inline hint", m.screen)
+		t.Fatalf("screen = %v, want versions after clicking the new action", m.screen)
 	}
 }
 
@@ -292,12 +286,12 @@ func TestFooterHelpHitMatchesRenderedPosition(t *testing.T) {
 	if len(lines) != m.height {
 		t.Fatalf("frame has %d rows, want %d", len(lines), m.height)
 	}
-	row := lines[m.height-1]
+	row := lines[m.height-2]
 	col := cellIndex(row, m.t("help"))
 	if col < 0 {
-		t.Fatal("footer help button not rendered")
+		t.Fatal("action bar help button not rendered")
 	}
-	mouseClick(m, col, m.height-1)
+	mouseClick(m, col, m.height-2)
 	if m.modal != modalHelp {
 		t.Fatalf("modal = %v, want help after clicking the footer hint", m.modal)
 	}
@@ -425,8 +419,15 @@ func TestVersionsLayoutWithManifestWarning(t *testing.T) {
 				m.manifestErr = warning
 				lines := plainView(m)
 
-				if cellIndex(lines[m.height-2], m.t("create")) < 0 {
-					t.Fatalf("version detail row was pushed out of the frame: %q", lines[m.height-2])
+				found := false
+				for i := bodyTop; i < m.height-2; i++ {
+					if cellIndex(lines[i], "released") >= 0 {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatal("version detail row was pushed out of the frame")
 				}
 				if warning != "" {
 					if cellIndex(strings.Join(lines, "\n"), "manifest warning") < 0 {

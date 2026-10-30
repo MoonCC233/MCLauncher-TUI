@@ -26,20 +26,20 @@ func TestFooterButtonsAreMouseFirstAndHover(t *testing.T) {
 	m.width, m.height = 120, 38
 	m.lang = i18n.EN
 	lines := plainView(m)
-	footer := lines[m.height-1]
+	footer := lines[m.height-2]
 
 	if strings.Contains(footer, "? help") || strings.Contains(footer, "enter play") {
-		t.Errorf("footer still shows key hints: %q", footer)
+		t.Errorf("action bar still shows key hints: %q", footer)
 	}
 	for _, label := range []string{m.t("play"), m.t("new instance"), m.t("add account"), m.t("sections"), m.t("help")} {
 		if !strings.Contains(footer, label) {
-			t.Errorf("footer button %q is missing: %q", label, footer)
+			t.Errorf("action button %q is missing: %q", label, footer)
 		}
 	}
 
 	label := m.t("add account")
 	col := cellIndex(footer, label)
-	row := m.height - 1
+	row := m.height - 2
 	if col < 0 {
 		t.Fatal("add account button not found")
 	}
@@ -68,9 +68,9 @@ func TestButtonPressedAndReleaseStates(t *testing.T) {
 	m.lang = i18n.EN
 	m.switchScreen(ScreenConsole)
 	lines := plainView(m)
-	footer := lines[m.height-1]
+	footer := lines[m.height-2]
 	col := cellIndex(footer, m.t("clear"))
-	row := m.height - 1
+	row := m.height - 2
 	if col < 0 {
 		t.Fatal("clear button not found")
 	}

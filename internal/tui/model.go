@@ -869,7 +869,8 @@ func (m *Model) listHeight() int {
 }
 
 func (m *Model) bodyHeight() int {
-	h := m.height - 3
+	// Two header rows, one screen-action row and one status/footer row.
+	h := m.height - 4
 	if h < 5 {
 		h = 5
 	}

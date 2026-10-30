@@ -29,9 +29,10 @@ func (m *Model) View() string {
 	}
 	header := m.headerView()
 	body := m.bodyView()
+	actions := m.actionBarView()
 	footer := m.footerView()
 	m.hoverValid = hover
-	base := clipLines(header+"\n"+body+"\n"+footer, m.width, m.height)
+	base := clipLines(header+"\n"+body+"\n"+actions+"\n"+footer, m.width, m.height)
 	if m.modal != modalNone {
 		return m.modalView(base)
 	}
@@ -284,31 +285,56 @@ func (m *Model) sidebarView(height int) []string {
 	return out
 }
 
+// actionBarView draws the current screen's actions at the bottom of its
+// content area, with the global help button pinned to the opposite edge.
+func (m *Model) actionBarView() string {
+	y := m.height - 2
+	contentW := m.contentWidth()
+	helpLabel := m.t("help")
+	helpW := m.buttonWidth(helpLabel)
+	maxW := contentW - helpW - 2
+	if maxW < 10 {
+		maxW = 10
+	}
+	parts, leftW := m.layoutButtons(maxW, m.screenHints())
+	hintX := m.contentX()
+	helpX := m.contentX() + contentW - helpW
+	if m.rtl() {
+		helpX = m.contentX()
+		hintX = m.contentX() + contentW - leftW
+	}
+	left := m.renderHintParts(hintX, y, parts...)
+	right := m.buttonAt(helpLabel, helpX, y)
+	m.addHit(helpX, y, helpW, 1, hitRegion{Kind: hitKey, Key: keyMsg("?")})
+	gap := max(1, contentW-leftW-helpW)
+	line := left + strings.Repeat(" ", gap) + right
+	if m.rtl() {
+		line = right + strings.Repeat(" ", gap) + left
+	}
+	main := " " + fitLine(line, contentW) + " "
+	if m.sidebarWidth() == 0 {
+		return fitLine(main, m.width)
+	}
+	side := strings.Repeat(" ", m.sidebarWidth())
+	sep := styleBorder.Render("│")
+	if m.rtl() {
+		return fitLine(main, m.mainWidth()) + sep + side
+	}
+	return side + sep + fitLine(main, m.mainWidth())
+}
+
 func (m *Model) footerView() string {
-	y := m.height - 1
 	avail := m.width - 2
 	if avail < 10 {
 		avail = 10
 	}
-
 	right := ""
 	rightW := 0
-	helpX := -1
 	if m.game != nil {
 		right = styleGreen.Render("● "+m.t("running")) + styleDim.Render(" "+elapsedSince(m.game.Started))
 		rightW = ansi.StringWidth(right)
-	} else {
-		helpLabel := m.t("help")
-		rightW = m.buttonWidth(helpLabel)
-		if m.rtl() {
-			helpX = 1
-		} else {
-			helpX = 1 + max(0, avail-rightW)
-		}
-		right = m.buttonAt(helpLabel, helpX, y)
 	}
-
-	var left string
+	left := ""
 	leftW := 0
 	if m.toast.Text != "" {
 		style := stylePrimaryB
@@ -320,23 +346,11 @@ func (m *Model) footerView() string {
 		}
 		left = style.Render("● ") + styleMuted.Render(m.toast.Text)
 		leftW = ansi.StringWidth(left)
-	} else if maxHints := avail - rightW - 1; maxHints > 0 {
-		parts, width := m.layoutButtons(maxHints, m.screenHints())
-		leftW = width
-		hintX := 1
-		if m.rtl() {
-			hintX = 1 + avail - leftW
-		}
-		left = m.renderHintParts(hintX, y, parts...)
 	}
-
 	gap := max(1, avail-leftW-rightW)
 	line := left + strings.Repeat(" ", gap) + right
 	if m.rtl() {
 		line = right + strings.Repeat(" ", gap) + left
-	}
-	if m.game == nil && helpX >= 0 {
-		m.addHit(helpX, y, rightW, 1, hitRegion{Kind: hitKey, Key: keyMsg("?")})
 	}
 	return " " + fitLine(line, avail) + " "
 }
@@ -405,7 +419,7 @@ func (m *Model) screenHints() []hintSpec {
 			hint("o", m.t("Repository")),
 		}
 	}
-	return []hintSpec{hint("?", m.t("help"))}
+	return nil
 }
 
 func elapsedSince(t time.Time) string {

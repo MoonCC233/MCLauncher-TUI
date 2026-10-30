@@ -23,18 +23,21 @@ func (m *Model) modalWidth() int {
 }
 
 func (m *Model) modalContentWidth() int {
-	return m.modalWidth() - 6
+	// The flat panel has two cells of horizontal padding and no border.
+	return m.modalWidth() - 4
 }
 
-func (m *Model) modalView() string {
+func (m *Model) modalView(base string) string {
 	var (
 		title  string
 		body   []string
 		footer []hintSpec
-		accent = colPrimary
 	)
 	contentW := m.modalContentWidth()
 	var pending []hitRegion
+	// The dimmed screen is only scenery; clicks inside the modal must never
+	// fall through to the rows behind it.
+	m.hits = m.hits[:0]
 
 	switch m.modal {
 	case modalHelp:
@@ -62,10 +65,8 @@ func (m *Model) modalView() string {
 		body = append(body, all[start:end]...)
 		footer = []hintSpec{
 			hintAction("↑↓", m.t("scroll"), "down"),
-			hint("esc", m.t("close")),
 		}
 	case modalForm:
-		accent = colPrimary
 		title = m.form.Title
 		bodyStart := 3
 		if m.form.Kind == formInstance {
@@ -104,11 +105,9 @@ func (m *Model) modalView() string {
 		footer = []hintSpec{
 			hint("tab", m.t("next field")),
 			hint("enter", submit),
-			hint("esc", m.t("cancel")),
 		}
 	case modalConfirm:
-		accent = colRed
-		title = styleRed.Render(m.confirm.Title)
+		title = m.confirm.Title
 		body = []string{}
 		for _, line := range wrapPlain(m.confirm.Body, contentW-2) {
 			body = append(body, styleMuted.Render(line))
@@ -116,7 +115,6 @@ func (m *Model) modalView() string {
 		body = append(body, "")
 		footer = []hintSpec{
 			hintAction("y / enter", m.t("confirm"), "enter"),
-			hint("esc", m.t("cancel")),
 		}
 	case modalPrompt:
 		title = m.prompt.Title
@@ -130,7 +128,6 @@ func (m *Model) modalView() string {
 		}
 		footer = []hintSpec{
 			hint("enter", m.t("save")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalJava:
 		title = m.t("Java runtime")
@@ -140,7 +137,6 @@ func (m *Model) modalView() string {
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
 			hint("r", m.t("rescan")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalLanguage:
 		title = m.t("Language")
@@ -149,7 +145,6 @@ func (m *Model) modalView() string {
 		pending = append(pending, pickerHits...)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalAccountAdd:
 		title = m.t("Select account type")
@@ -158,10 +153,8 @@ func (m *Model) modalView() string {
 		pending = append(pending, pickerHits...)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalMicrosoft:
-		accent = colCyan
 		title = m.t("Microsoft account")
 		body = m.microsoftModalBody(contentW)
 		footer = m.microsoftModalHints()
@@ -172,7 +165,6 @@ func (m *Model) modalView() string {
 		pending = append(pending, pickerHits...)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalTheme:
 		title = m.t("Theme")
@@ -181,7 +173,6 @@ func (m *Model) modalView() string {
 		pending = append(pending, pickerHits...)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalTitleAnim:
 		title = m.t("Title animation")
@@ -190,7 +181,6 @@ func (m *Model) modalView() string {
 		pending = append(pending, pickerHits...)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalTitleFont:
 		title = m.t("Title style")
@@ -199,10 +189,8 @@ func (m *Model) modalView() string {
 		pending = append(pending, pickerHits...)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalLoader:
-		accent = colCyan
 		title = m.tf("Install loader for %s", m.loaderPick.Minecraft)
 		switch m.loaderPick.Step {
 		case loaderStepVersion:
@@ -222,7 +210,6 @@ func (m *Model) modalView() string {
 		}
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("back")),
 		}
 
 	case modalPacks:
@@ -235,31 +222,35 @@ func (m *Model) modalView() string {
 			hint("i", m.t("import")),
 			hint("u", m.t("from a URL")),
 			hint("d", m.t("remove")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalPackSearch:
 		title = m.t("Search resource packs")
 		body = m.packSearchBody(contentW)
 		footer = []hintSpec{
 			hint("enter", m.t("search")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalPackVersions:
 		title = m.t("Choose a version")
 		body = m.packVersionsBody(contentW)
 		footer = []hintSpec{
 			hint("enter", m.t("choose")),
-			hint("esc", m.t("cancel")),
 		}
 	case modalAnnounce:
 		title = m.t("Announcements")
 		body = m.announceBody(contentW)
 		footer = []hintSpec{
 			hint("↑↓", m.t("scroll")),
-			hint("esc", m.t("Dismiss")),
+		}
+	case modalSkin:
+		title = m.t("Offline skin")
+		body = m.skinModalBody(contentW)
+		footer = []hintSpec{
+			hint("i", m.t("import")),
+			hint("m", m.t("model")),
+			hint("o", m.t("open")),
+			hint("r", m.t("reload")),
 		}
 	case modalProgress:
-		accent = colPrimary
 		if m.task != nil {
 			title = m.task.Title
 		} else {
@@ -269,11 +260,9 @@ func (m *Model) modalView() string {
 		footer = []hintSpec{
 			hintAction("b", m.t("background"), "b"),
 			hintAction("d", m.t("downloads"), "d"),
-			hintAction("esc", m.t("cancel"), "esc"),
 		}
 	case modalAlert:
-		accent = colRed
-		title = styleRed.Render(m.alert.Title)
+		title = m.alert.Title
 		body = []string{}
 		wrapW := contentW - 2
 		if wrapW < 10 {
@@ -288,8 +277,13 @@ func (m *Model) modalView() string {
 		return ""
 	}
 
+	titleStyle := styleBold
+	if m.modal == modalConfirm || m.modal == modalAlert {
+		titleStyle = lipgloss.NewStyle().Foreground(colRed).Bold(true)
+	}
+	header, escX := m.modalHeader(titleStyle.Render(title), contentW)
 	lines := []string{
-		styleBold.Render(title),
+		header,
 		styleBorder.Render(strings.Repeat("─", contentW)),
 		"",
 	}
@@ -303,8 +297,8 @@ func (m *Model) modalView() string {
 	for i := range lines {
 		lines[i] = fitLine(lines[i], contentW)
 	}
-	// Keep the box inside the terminal on very short windows.
-	maxLines := m.height - 6
+	// Keep the panel inside the terminal on very short windows.
+	maxLines := m.height - 4
 	if maxLines < 4 {
 		maxLines = 4
 	}
@@ -312,11 +306,8 @@ func (m *Model) modalView() string {
 		lines = lines[:maxLines]
 	}
 
-	boxW := contentW + 6
-	boxH := len(lines) + 4
-	// lipgloss.Place rounds the leftover gap down when centering, so the hit
-	// regions have to use the same floor division or every click inside the
-	// modal is shifted by one cell whenever the gap is odd.
+	boxW := contentW + 4
+	boxH := len(lines) + 2
 	offX := (m.width - boxW) / 2
 	offY := (m.height - boxH) / 2
 	if offX < 0 {
@@ -325,12 +316,13 @@ func (m *Model) modalView() string {
 	if offY < 0 {
 		offY = 0
 	}
-	contentX := offX + 3
-	contentY := offY + 2
+	contentX := offX + 2
+	contentY := offY + 1
 	m.modalX, m.modalY, m.modalW, m.modalH = offX, offY, boxW, boxH
+	m.addHit(contentX+escX, contentY, ansi.StringWidth("esc"), 1, hitRegion{Kind: hitKey, Key: keyMsg("esc")})
 
 	if footerIndex >= 0 && footerIndex < len(lines) {
-		// Drop hints that would be cut off by the box so every recorded hit
+		// Drop hints that would be cut off by the panel so every recorded hit
 		// region still corresponds to visible text.
 		lines[footerIndex] = fitLine(m.renderHintsWidth(contentX, contentY+footerIndex, contentW, footer...), contentW)
 	}
@@ -341,12 +333,83 @@ func (m *Model) modalView() string {
 		m.addHit(contentX+h.X, contentY+h.Y, h.W, h.H, h)
 	}
 
-	box := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(accent).
-		Padding(1, 2).
-		Render(strings.Join(lines, "\n"))
-	return clipLines(lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box), m.width, m.height)
+	return m.overlayModal(base, paintPanel(lines, boxW), offX, offY, boxW)
+}
+
+// modalHeader draws the bold title on the left and the esc key on the right.
+// It returns the line and the esc key's cell offset inside the content width.
+func (m *Model) modalHeader(title string, width int) (string, int) {
+	esc := styleMuted.Render("esc")
+	escW := ansi.StringWidth(esc)
+	titleW := ansi.StringWidth(title)
+	if titleW+escW+1 > width {
+		title = ansi.Truncate(title, max(1, width-escW-1), "…")
+		titleW = ansi.StringWidth(title)
+	}
+	gap := width - titleW - escW
+	if gap < 1 {
+		gap = 1
+	}
+	if m.rtl() {
+		return esc + strings.Repeat(" ", gap) + title, 0
+	}
+	return title + strings.Repeat(" ", gap) + esc, width - escW
+}
+
+// paintPanel fills a flat panel background and adds one row of vertical
+// padding above and below the content.
+func paintPanel(lines []string, width int) []string {
+	bg := panelBackgroundSeq()
+	out := make([]string, 0, len(lines)+2)
+	out = append(out, panelRow("", width, bg))
+	for _, line := range lines {
+		out = append(out, panelRow(line, width, bg))
+	}
+	out = append(out, panelRow("", width, bg))
+	return out
+}
+
+func panelRow(line string, width int, bg string) string {
+	line = fitLine(line, max(1, width-4))
+	line = "  " + line + "  "
+	// Nested lipgloss styles end with a reset, which would also clear the panel
+	// background. Re-apply it after every reset so the whole row stays opaque.
+	line = strings.ReplaceAll(line, "\x1b[0m", "\x1b[0m"+bg)
+	return bg + line + "\x1b[0m"
+}
+
+func panelBackgroundSeq() string {
+	c := panelColor()
+	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", c.R, c.G, c.B)
+}
+
+// overlayModal draws the flat panel over a dimmed copy of the screen.
+func (m *Model) overlayModal(base string, panel []string, offX, offY, boxW int) string {
+	const faint = "\x1b[2m"
+	base = strings.ReplaceAll(base, "\x1b[0m", "\x1b[0m"+faint)
+	base = faint + base + "\x1b[0m"
+	baseLines := strings.Split(base, "\n")
+	out := make([]string, 0, m.height)
+	for y := 0; y < m.height; y++ {
+		line := ""
+		if y < len(baseLines) {
+			line = baseLines[y]
+		}
+		line = fitLine(line, m.width)
+		if y >= offY && y < offY+len(panel) {
+			left := ansi.Cut(line, 0, offX)
+			if w := ansi.StringWidth(left); w < offX {
+				left += strings.Repeat(" ", offX-w)
+			}
+			right := ansi.Cut(line, offX+boxW, m.width)
+			if w := ansi.StringWidth(right); w < m.width-(offX+boxW) {
+				right += strings.Repeat(" ", m.width-(offX+boxW)-w)
+			}
+			line = left + "\x1b[0m" + panel[y-offY] + faint + right + "\x1b[0m"
+		}
+		out = append(out, fitLine(line, m.width))
+	}
+	return strings.Join(out, "\n")
 }
 
 func (m *Model) javaPickerBody(contentW int) ([]string, []hitRegion) {

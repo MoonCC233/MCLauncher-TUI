@@ -2,6 +2,7 @@ package tui
 
 import (
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
@@ -13,6 +14,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/packs"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/remote"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/skin"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
 )
 
@@ -136,6 +138,17 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.screen = ScreenVersions
 	case "accounts":
 		m.screen = ScreenAccounts
+	case "skin":
+		m.screen = ScreenAccounts
+		m.accountCursor = 0
+		m.accountOffset = 0
+		m.cfg.Accounts[0].Skin = &config.AccountSkin{
+			Model:     skin.ModelSlim,
+			SHA256:    strings.Repeat("a1", 32),
+			UpdatedAt: now.Add(-2 * time.Hour).Unix(),
+		}
+		m.skinModal = skinModalState{preview: skin.Default(skin.ModelSlim)}
+		m.modal = modalSkin
 	case "settings":
 		m.screen = ScreenSettings
 	case "console":
@@ -325,18 +338,27 @@ func Preview(screenName string, width, height int, language ...string) string {
 			{Login: "sourcery-ai", Contributions: 4, HTMLURL: remote.RepoURL()},
 		}
 		m.about.releases = []update.Release{
-			{TagName: "v0.2.3", Body: "## 更新详情\n\n- 新增「资源与模组」窗口\n- 新建实例时可直接选择加载器\n- 关于页：贡献者、更新公告与反馈", PublishedAt: now},
-			{TagName: "v0.2.2", Body: "## 更新详情\n\n- Java 安装器\n- 启动器内更新", PublishedAt: now.AddDate(0, 0, -1)},
-			{TagName: "v0.2.1", Body: "## 更新详情\n\n- 首个公开版本", PublishedAt: now.AddDate(0, 0, -3)},
+			{TagName: "v0.2.3", Body: previewCopy(m.cfg.Settings.Language,
+				"## 更新详情\n\n- 新增「资源与模组」窗口\n- 新建实例时可直接选择加载器\n- 关于页：贡献者、更新公告与反馈",
+				"## What's new\n\n- Resources & mods window\n- Pick a mod loader while creating an instance\n- About screen: contributors, release notes and feedback"),
+				PublishedAt: now},
+			{TagName: "v0.2.2", Body: previewCopy(m.cfg.Settings.Language,
+				"## 更新详情\n\n- Java 安装器\n- 启动器内更新",
+				"## What's new\n\n- Java installer\n- Update from inside the launcher"),
+				PublishedAt: now.AddDate(0, 0, -1)},
+			{TagName: "v0.2.1", Body: previewCopy(m.cfg.Settings.Language,
+				"## 更新详情\n\n- 首个公开版本",
+				"## What's new\n\n- First public release"),
+				PublishedAt: now.AddDate(0, 0, -3)},
 		}
 		m.about.issues = []remote.Issue{
-			{Number: 12, Title: "1.19 模组搜不到", State: "open", Comments: 3, User: struct {
+			{Number: 12, Title: previewCopy(m.cfg.Settings.Language, "1.19 模组搜不到", "Mods missing on 1.19"), State: "open", Comments: 3, User: struct {
 				Login string `json:"login"`
 			}{Login: "TeAnli"}, HTMLURL: remote.RepoURL()},
-			{Number: 11, Title: "关于页建议显示贡献者", State: "open", Comments: 1, User: struct {
+			{Number: 11, Title: previewCopy(m.cfg.Settings.Language, "关于页建议显示贡献者", "Show contributors on the About screen"), State: "open", Comments: 1, User: struct {
 				Login string `json:"login"`
 			}{Login: "MoonCC233"}, HTMLURL: remote.RepoURL()},
-			{Number: 9, Title: "启动器退出后游戏仍在运行", State: "closed", User: struct {
+			{Number: 9, Title: previewCopy(m.cfg.Settings.Language, "启动器退出后游戏仍在运行", "Game keeps running after the launcher exits"), State: "closed", User: struct {
 				Login string `json:"login"`
 			}{Login: "someone"}, HTMLURL: remote.RepoURL()},
 		}
@@ -353,9 +375,12 @@ func Preview(screenName string, width, height int, language ...string) string {
 	case "announce":
 		m.screen = ScreenHome
 		m.announce.items = []remote.Announcement{{
-			ID:        "demo",
-			Title:     "关于页上线",
-			Body:      "侧栏新增「关于」：可以查看启动器版本、贡献者名单、历次更新公告，以及来自 GitHub 的反馈列表。",
+			ID: "demo",
+			Title: previewCopy(m.cfg.Settings.Language,
+				"关于页上线", "The About screen is here"),
+			Body: previewCopy(m.cfg.Settings.Language,
+				"侧栏新增「关于」：可以查看启动器版本、贡献者名单、历次更新公告，以及来自 GitHub 的反馈列表。",
+				"A new About section in the sidebar shows the launcher version, contributor list, past release notes and a feedback list pulled from GitHub."),
 			Published: now,
 		}}
 		m.modal = modalAnnounce
@@ -363,6 +388,16 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.screen = ScreenHome
 	}
 	return m.View()
+}
+
+// previewCopy picks the demo text for the requested language. Screenshot
+// rendering assumes a font grid where CJK glyphs are exactly twice as wide as
+// ASCII ones, so demo copy never mixes scripts inside one frame.
+func previewCopy(lang, zh, en string) string {
+	if strings.HasPrefix(lang, "zh") {
+		return zh
+	}
+	return en
 }
 
 func demoManifest(now time.Time) *mojang.Manifest {

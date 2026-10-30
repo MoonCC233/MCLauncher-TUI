@@ -21,15 +21,21 @@ import (
 
 // Options contains everything needed to build a Minecraft command line.
 type Options struct {
-	Layout          paths.Layout
-	Version         *mojang.VersionJSON
-	VersionID       string
-	Account         config.Account
-	Java            java.Info
-	GameDir         string
-	AssetsDir       string
-	MemoryMB        int
-	JVMArgs         string
+	Layout    paths.Layout
+	Version   *mojang.VersionJSON
+	VersionID string
+	Account   config.Account
+	Java      java.Info
+	GameDir   string
+	AssetsDir string
+	MemoryMB  int
+	JVMArgs   string
+	// ExtraJVMArgs are appended after the user's JVM flags. The launcher uses
+	// them for authlib-injector when an offline account has a custom skin.
+	ExtraJVMArgs []string
+	// OfflineSkin switches the offline account to the "msa" user type, which is
+	// what authlib-injector expects when serving a custom skin.
+	OfflineSkin     bool
 	Width           int
 	Height          int
 	LogConfig       string
@@ -127,6 +133,11 @@ func Build(opts Options) (*Spec, error) {
 		accessToken = strings.TrimSpace(opts.Account.AccessToken)
 		userType = "msa"
 		xuid = opts.Account.XUID
+	} else if opts.OfflineSkin {
+		// authlib-injector takes over the session server for offline skins. HMCL
+		// uses the same combination: an "msa" user type and a non-empty token.
+		accessToken = strings.ReplaceAll(strings.ToLower(opts.Account.UUID), "-", "")
+		userType = "msa"
 	}
 
 	replacements := map[string]string{
@@ -174,6 +185,7 @@ func Build(opts Options) (*Spec, error) {
 	)
 	launcherArgs = append(launcherArgs, jvmArgs...)
 	launcherArgs = append(launcherArgs, util.SplitArgs(opts.JVMArgs)...)
+	launcherArgs = append(launcherArgs, opts.ExtraJVMArgs...)
 	if opts.LogConfig != "" {
 		if st, err := os.Stat(opts.LogConfig); err == nil && !st.IsDir() {
 			launcherArgs = append(launcherArgs, "-Dlog4j.configurationFile="+opts.LogConfig)

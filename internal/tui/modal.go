@@ -49,6 +49,8 @@ func (m *Model) updateModal(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updatePackVersions(msg)
 	case modalAnnounce:
 		return m.updateAnnounce(msg)
+	case modalSkin:
+		return m.updateSkinModal(msg)
 	case modalProgress:
 		switch msg.String() {
 		case "esc":
@@ -163,6 +165,13 @@ func (m *Model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			m.modal = modalPacks
 			return m, nil
+		case confirmRemoveSkin:
+			if err := m.removeSkin(m.confirm.Target); err != nil {
+				m.alert = AlertState{Title: m.t("Offline skin"), Body: err.Error()}
+				m.modal = modalAlert
+				return m, nil
+			}
+			return m, nil
 		}
 		m.modal = modalNone
 	case "esc", "n", "N":
@@ -177,6 +186,8 @@ func (m *Model) updatePrompt(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		switch m.prompt.Kind {
 		case promptOptiFineJar:
 			m.modal = modalLoader
+		case promptSkinPath:
+			m.modal = modalSkin
 		default:
 			m.modal = modalNone
 		}
@@ -336,8 +347,17 @@ func (m *Model) helpContent(width int) []string {
 		{m.t("Accounts & settings"), []entry{
 			{"a", m.t("add account")},
 			{"enter", m.t("set the active account")},
+			{"s", m.t("edit the offline skin")},
 			{"s", m.t("rescan Java runtimes")},
 			{"← → / - +", m.t("adjust memory or download threads")},
+		}},
+		{m.t("Offline skin"), []entry{
+			{"s", m.t("edit the offline skin")},
+			{"i", m.t("import")},
+			{"m", m.t("model")},
+			{"o", m.t("open")},
+			{"r", m.t("reload")},
+			{"d", m.t("remove")},
 		}},
 		{m.t("Console"), []entry{
 			{"↑ ↓ / pgup pgdown", m.t("scroll through game output")},

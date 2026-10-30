@@ -31,16 +31,25 @@ func ReadJSON(path string, v any) error {
 // WriteJSONAtomic writes JSON through a temporary file and renames it into
 // place, so a crash never leaves a half-written config behind.
 func WriteJSONAtomic(path string, v any) error {
-	if err := EnsureDir(filepath.Dir(path)); err != nil {
-		return err
-	}
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
 	data = append(data, '\n')
+	return WriteFileAtomic(path, data, 0o644)
+}
+
+// WriteFileAtomic writes data through a temporary file and renames it into
+// place. Windows keeps the target open for a moment now and then (antivirus,
+// search indexer, a second launcher reading it), which makes the rename fail
+// even though nothing is wrong with the file; retry briefly and then fall back
+// to writing in place so a transient lock does not lose the user's data.
+func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
+	if err := EnsureDir(filepath.Dir(path)); err != nil {
+		return err
+	}
 	tmp := path + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
@@ -59,18 +68,13 @@ func WriteJSONAtomic(path string, v any) error {
 		return err
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		// Windows keeps the target open for a moment now and then (antivirus,
-		// search indexer, a second launcher reading it), which makes the rename
-		// fail even though nothing is wrong with the file. Retry briefly and then
-		// fall back to writing in place, so a transient lock does not lose the
-		// user's settings.
 		for attempt := 0; attempt < 5; attempt++ {
 			time.Sleep(time.Duration(20*(attempt+1)) * time.Millisecond)
 			if retryErr := os.Rename(tmp, path); retryErr == nil {
 				return nil
 			}
 		}
-		if writeErr := os.WriteFile(path, data, 0o644); writeErr != nil {
+		if writeErr := os.WriteFile(path, data, perm); writeErr != nil {
 			_ = os.Remove(tmp)
 			return fmt.Errorf("write %s: %w", path, err)
 		}

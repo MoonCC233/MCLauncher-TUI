@@ -45,6 +45,7 @@ var previewScreens = []string{
 	"loader-versions",
 	"loader-java",
 	"content",
+	"skin",
 }
 
 func TestPreviewFrames(t *testing.T) {

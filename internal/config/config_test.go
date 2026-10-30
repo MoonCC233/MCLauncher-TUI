@@ -623,3 +623,123 @@ func TestUnknownFieldsSurviveReload(t *testing.T) {
 		t.Errorf("unknown setting was lost across reloads: %s", data)
 	}
 }
+
+func TestAccountSkinNormalization(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	cfg := &Config{
+		Path:        path,
+		DataVersion: DataVersion,
+		Settings:    DefaultSettings(),
+		Accounts: []Account{
+			{
+				Username: "MoonCC",
+				Kind:     "offline",
+				Skin:     &AccountSkin{Model: "SLIM", SHA256: strings.Repeat("AB", 32), UpdatedAt: -4},
+			},
+			{
+				Username: "Alex",
+				Kind:     "microsoft",
+				UUID:     "069a79f4-44e9-4726-a5be-fca90e38aaf5",
+				Skin:     &AccountSkin{Model: "classic", SHA256: strings.Repeat("cd", 32)},
+			},
+			{
+				Username: "Broken",
+				Kind:     "offline",
+				Skin:     &AccountSkin{Model: "slim", SHA256: "not-a-hash"},
+			},
+			{
+				Username: "Empty",
+				Kind:     "offline",
+				Skin:     &AccountSkin{Model: "weird", SHA256: strings.Repeat("ef", 32)},
+			},
+		},
+	}
+	cfg.normalize()
+
+	if got := cfg.Accounts[0].Skin; got == nil || got.Model != "slim" || got.SHA256 != strings.Repeat("ab", 32) || got.UpdatedAt != 0 {
+		t.Errorf("MoonCC skin = %+v", got)
+	}
+	if cfg.Accounts[1].Skin != nil {
+		t.Errorf("Microsoft skin should be cleared: %+v", cfg.Accounts[1].Skin)
+	}
+	if cfg.Accounts[2].Skin != nil {
+		t.Errorf("invalid hash should be dropped: %+v", cfg.Accounts[2].Skin)
+	}
+	if got := cfg.Accounts[3].Skin; got == nil || got.Model != "classic" {
+		t.Errorf("unknown model should fall back to classic: %+v", got)
+	}
+	if !cfg.Accounts[0].HasCustomSkin() || cfg.Accounts[1].HasCustomSkin() {
+		t.Error("HasCustomSkin reported the wrong value")
+	}
+}
+
+func TestSkinStorageLifecycle(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	account, err := cfg.AddAccount("MoonCC")
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := cfg.SkinFile(*account)
+	if want := filepath.Join(filepath.Dir(path), "skins", strings.ReplaceAll(account.UUID, "-", "")+".png"); file != want {
+		t.Errorf("SkinFile = %q, want %q", file, want)
+	}
+	if err := os.MkdirAll(cfg.SkinsDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, []byte("png"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	meta := AccountSkin{Model: "slim", SHA256: strings.Repeat("12", 32), UpdatedAt: 99}
+	if err := cfg.SetAccountSkin(account.UUID, meta); err != nil {
+		t.Fatalf("SetAccountSkin: %v", err)
+	}
+	if got := cfg.Accounts[0].Skin; got == nil || got.Model != "slim" {
+		t.Errorf("stored skin = %+v", got)
+	}
+	if err := cfg.SetAccountSkin(account.UUID, AccountSkin{SHA256: "bad"}); err == nil {
+		t.Error("invalid metadata was accepted")
+	}
+	if err := cfg.SetAccountSkin("missing", meta); err == nil {
+		t.Error("missing account was accepted")
+	}
+	if err := cfg.ClearAccountSkin(account.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Accounts[0].Skin != nil {
+		t.Error("ClearAccountSkin left metadata behind")
+	}
+
+	if err := cfg.SetAccountSkin(account.UUID, meta); err != nil {
+		t.Fatal(err)
+	}
+	if err := cfg.RemoveAccount(account.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		t.Errorf("skin file still exists after account removal: %v", err)
+	}
+}
+
+func TestMicrosoftAccountRejectsCustomSkin(t *testing.T) {
+	cfg, err := Load(filepath.Join(t.TempDir(), "config.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	account, err := cfg.AddMicrosoftAccount(auth.MinecraftSession{
+		Username:    "MoonCC",
+		UUID:        "b50ad385829d3141a2167e7d7539ba7f",
+		AccessToken: "token",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = cfg.SetAccountSkin(account.UUID, AccountSkin{SHA256: strings.Repeat("aa", 32)})
+	if err == nil || !strings.Contains(err.Error(), "Mojang skins") {
+		t.Errorf("SetAccountSkin(Microsoft) = %v", err)
+	}
+}

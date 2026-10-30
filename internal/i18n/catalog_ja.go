@@ -542,4 +542,9 @@ var jaCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "s を押してオフラインのカスタムスキンを設定します。",
 	"edit the offline skin":                                                           "オフラインスキンを編集",
 	"Custom skin disabled for this launch: %s":                                        "この起動ではカスタムスキンを無効にしました: %s",
+	// Download mirror.
+	"Download mirror": "ダウンロードミラー",
+	"Official":        "公式",
+	"Official servers, or BMCLAPI when they are slow in your region.": "公式サーバー。地域によって遅い場合は BMCLAPI を選んでください。",
+	"Download source: %s": "ダウンロード元: %s",
 }

@@ -495,7 +495,6 @@ var requiredCatalogKeys = []string{
 	"Could not load the data.",
 	"%d commits",
 	"Config file",
-	// Offline skins
 	"Offline skin",
 	"skin",
 	"model",
@@ -523,4 +522,8 @@ var requiredCatalogKeys = []string{
 	"Press s to set a custom offline skin.",
 	"edit the offline skin",
 	"Custom skin disabled for this launch: %s",
+	"Download mirror",
+	"Official",
+	"Official servers, or BMCLAPI when they are slow in your region.",
+	"Download source: %s",
 }

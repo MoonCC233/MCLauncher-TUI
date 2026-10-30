@@ -487,16 +487,18 @@ func (m *Model) startPackImport(path string) (tea.Model, tea.Cmd) {
 // startPackTask runs one download in the background task slot.
 func (m *Model) startPackTask(title string, record packs.Record, rawURL string) (tea.Model, tea.Cmd) {
 	ctx, cancel := context.WithCancel(context.Background())
+	stage := m.tf("Installing %s", title)
 	m.task = &TaskState{
-		Kind:       taskPack,
-		Title:      m.tf("Installing %s", title),
-		VersionID:  record.VersionID,
-		Stage:      "Downloading resource pack",
-		Detail:     record.Filename,
-		Total:      record.Size,
-		FilesTotal: 1,
-		Started:    time.Now(),
-		Cancel:     cancel,
+		Kind:         taskPack,
+		Title:        stage,
+		VersionID:    record.VersionID,
+		Stage:        stage,
+		Detail:       record.Filename,
+		ContentTitle: title,
+		Total:        record.Size,
+		FilesTotal:   1,
+		Started:      time.Now(),
+		Cancel:       cancel,
 	}
 	m.modal = modalProgress
 	m.addLog("launcher", fmt.Sprintf("content %s (%s)", title, m.packs.kind))
@@ -516,7 +518,7 @@ func (m *Model) startPackTask(title string, record packs.Record, rawURL string) 
 			onProgress := func(done int64) {
 				emitter(installEventMsg{ev: install.Event{
 					Type:   install.EventProgress,
-					Stage:  "Downloading resource pack",
+					Stage:  stage,
 					Detail: record.Filename,
 					Done:   done,
 					Total:  record.Size,

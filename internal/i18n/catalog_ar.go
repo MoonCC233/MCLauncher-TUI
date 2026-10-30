@@ -542,4 +542,9 @@ var arCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "اضغط s لتعيين مظهر مخصص دون اتصال.",
 	"edit the offline skin":                                                           "تعديل المظهر دون اتصال",
 	"Custom skin disabled for this launch: %s":                                        "تم تعطيل المظهر المخصص لهذا التشغيل: %s",
+	// Download mirror.
+	"Download mirror": "مرآة التنزيل",
+	"Official":        "الرسمي",
+	"Official servers, or BMCLAPI when they are slow in your region.": "الخوادم الرسمية، أو BMCLAPI إذا كانت بطيئة في منطقتك.",
+	"Download source: %s": "مصدر التنزيل: %s",
 }

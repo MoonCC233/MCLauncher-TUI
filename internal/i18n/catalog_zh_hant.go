@@ -542,4 +542,9 @@ var zhHantCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "按 s 設定離線自訂外觀。",
 	"edit the offline skin":                                                           "編輯離線外觀",
 	"Custom skin disabled for this launch: %s":                                        "本次啟動已停用自訂外觀：%s",
+	// Download mirror.
+	"Download mirror": "下載鏡像",
+	"Official":        "官方",
+	"Official servers, or BMCLAPI when they are slow in your region.": "官方伺服器；在國內較慢時可切換到 BMCLAPI。",
+	"Download source: %s": "下載來源：%s",
 }

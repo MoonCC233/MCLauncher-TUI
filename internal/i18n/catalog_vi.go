@@ -542,4 +542,9 @@ var viCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Nhấn s để đặt skin ngoại tuyến tùy chỉnh.",
 	"edit the offline skin":                                                           "sửa skin ngoại tuyến",
 	"Custom skin disabled for this launch: %s":                                        "Đã tắt skin tùy chỉnh cho lần khởi chạy này: %s",
+	// Download mirror.
+	"Download mirror": "Máy chủ tải xuống",
+	"Official":        "Chính thức",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Máy chủ chính thức, hoặc BMCLAPI nếu chậm ở khu vực của bạn.",
+	"Download source: %s": "Nguồn tải: %s",
 }

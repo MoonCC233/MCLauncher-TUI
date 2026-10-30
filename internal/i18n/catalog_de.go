@@ -544,4 +544,9 @@ var deCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Drücke s, um einen eigenen Offline-Skin festzulegen.",
 	"edit the offline skin":                                                           "Offline-Skin bearbeiten",
 	"Custom skin disabled for this launch: %s":                                        "Eigener Skin für diesen Start deaktiviert: %s",
+	// Download mirror.
+	"Download mirror": "Download-Spiegel",
+	"Official":        "Offiziell",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Offizielle Server, oder BMCLAPI, wenn sie in deiner Region langsam sind.",
+	"Download source: %s": "Download-Quelle: %s",
 }

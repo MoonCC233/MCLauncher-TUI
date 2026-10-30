@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
@@ -91,7 +92,7 @@ func FetchManifest(ctx context.Context, client *http.Client, layout paths.Layout
 		}
 	}
 	var raw rawManifest
-	err := util.FetchJSON(ctx, client, ManifestURL, &raw)
+	err := fetchManifestCandidates(ctx, client, &raw)
 	if err == nil && len(raw.Versions) > 0 {
 		m := parseManifest(raw, "network")
 		if saveErr := util.WriteJSONAtomic(cachePath, raw); saveErr != nil {
@@ -107,6 +108,45 @@ func FetchManifest(ctx context.Context, client *http.Client, layout paths.Layout
 		return cached, nil
 	}
 	return nil, fmt.Errorf("could not load version manifest: %w", err)
+}
+
+// fetchManifestCandidates reads the manifest from the mirror first when one is
+// selected, then from Mojang.
+func fetchManifestCandidates(ctx context.Context, client *http.Client, target any) error {
+	return fetchJSONCandidatesManifest(ctx, client, mirror.Candidates(ManifestURL), target)
+}
+
+// fetchJSONCandidatesManifest reads the first candidate that answers with a
+// non-empty manifest.
+func fetchJSONCandidatesManifest(ctx context.Context, client *http.Client, urls []string, target any) error {
+	var lastErr error
+	for _, url := range urls {
+		var candidate rawManifest
+		if err := util.FetchJSON(ctx, client, url, &candidate); err != nil {
+			lastErr = err
+			continue
+		}
+		// A mirror that answers with an empty list must not win over the official
+		// manifest, which the caller would then treat as "no versions".
+		if len(candidate.Versions) == 0 {
+			lastErr = fmt.Errorf("%s: empty version manifest", url)
+			continue
+		}
+		if raw, ok := target.(*rawManifest); ok {
+			*raw = candidate
+			return nil
+		}
+		if m, ok := target.(*Manifest); ok {
+			parsed := parseManifest(candidate, "network")
+			*m = *parsed
+			return nil
+		}
+		return fmt.Errorf("unsupported manifest target")
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no version manifest source is available")
+	}
+	return lastErr
 }
 
 func (m *Manifest) Find(id string) *VersionSummary {

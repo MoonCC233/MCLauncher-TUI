@@ -123,6 +123,7 @@ type Settings struct {
 	TitleFont         string `json:"title_font,omitempty"`
 	GameWindowTitle   string `json:"game_window_title,omitempty"`
 	SeenAnnouncement  string `json:"seen_announcement,omitempty"`
+	DownloadMirror    string `json:"download_mirror,omitempty"`
 	DataDir           string `json:"data_dir,omitempty"`
 	MicrosoftClientID string `json:"microsoft_client_id,omitempty"`
 

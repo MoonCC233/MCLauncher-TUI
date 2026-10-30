@@ -542,4 +542,9 @@ var frCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Appuyez sur s pour définir un skin hors ligne personnalisé.",
 	"edit the offline skin":                                                           "modifier le skin hors ligne",
 	"Custom skin disabled for this launch: %s":                                        "Skin personnalisé désactivé pour ce lancement : %s",
+	// Download mirror.
+	"Download mirror": "Miroir de téléchargement",
+	"Official":        "Officiel",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Serveurs officiels, ou BMCLAPI s'ils sont lents dans votre région.",
+	"Download source: %s": "Source de téléchargement : %s",
 }

@@ -150,14 +150,17 @@ type TaskState struct {
 	Backgrounded    bool
 	Stage           string
 	Detail          string
-	Done            int64
-	Total           int64
-	FilesDone       int
-	FilesTotal      int
-	Started         time.Time
-	Cancel          context.CancelFunc
-	Cancelled       bool
-	Err             error
+	// ContentTitle is the display name of the pack, mod or shader a taskPack
+	// download is installing, so the toast can name it.
+	ContentTitle string
+	Done         int64
+	Total        int64
+	FilesDone    int
+	FilesTotal   int
+	Started      time.Time
+	Cancel       context.CancelFunc
+	Cancelled    bool
+	Err          error
 }
 
 type TaskRecord struct {
@@ -1149,6 +1152,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Keep Minecraft running after the launcher quits.")},
 		{ID: "threads", Label: m.t("Download threads"), Value: fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads),
 			Description: m.t("Parallel downloads used while installing game files.")},
+		{ID: "mirror", Label: m.t("Download mirror"), Value: m.downloadMirrorLabel(),
+			Description: m.t("Official servers, or BMCLAPI when they are slow in your region.")},
 		{ID: "language", Label: m.t("Language"), Value: language,
 			Description: m.t("Interface language. System follows your operating system locale.")},
 		{ID: "theme", Label: m.t("Theme"), Value: m.themeValue(),

@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -131,8 +132,12 @@ func (in *Installer) installForgeLike(ctx context.Context, v forgeVariant) (stri
 		}
 	}
 	if needDownload {
+		// Try the mirror first, then the official Maven, so a mirror that is down
+		// does not stop the installer from being fetched.
+		alt := forgeInstallerAlternates(url, v.mavenBases)
 		if err := util.DownloadFile(ctx, in.client(), util.DownloadSpec{
 			URL:  url,
+			Alt:  alt,
 			Dest: installerPath,
 			SHA1: sha1,
 		}, nil); err != nil {
@@ -226,9 +231,7 @@ func (in *Installer) installForgeLike(ctx context.Context, v forgeVariant) (stri
 	if err := normalizeVersionID(in.Layout, v.targetID); err != nil {
 		return "", err
 	}
-	if err := rewriteForgeVersionMirror(in.Layout, v.targetID, v.mirror, v.mavenBases); err != nil {
-		return "", err
-	}
+
 	meta := Meta{
 		Kind:          v.kind,
 		Minecraft:     in.Minecraft,
@@ -555,78 +558,16 @@ func normalizeVersionID(layout paths.Layout, versionID string) error {
 	return util.WriteJSONAtomic(path, version)
 }
 
-// rewriteForgeVersionMirror points the generated version JSON at the configured
-// Maven mirror. The installer only knows about install_profile libraries;
-// finish() also installs the generated version's libraries and would otherwise
-// fall back to the official host.
-func rewriteForgeVersionMirror(layout paths.Layout, versionID, mirror string, bases []string) error {
-	if mirror == "" {
-		return nil
-	}
-	path := layout.VersionJSON(versionID)
-	var raw map[string]any
-	if err := util.ReadJSON(path, &raw); err != nil {
-		return err
-	}
-	libraries, ok := raw["libraries"].([]any)
-	if !ok {
-		return nil
-	}
-	changed := false
-	rewrite := func(value any) any {
-		url, ok := value.(string)
-		if !ok {
-			return value
-		}
-		out := url
-		for _, base := range bases {
-			out = rewriteMavenURL(out, base, mirror)
-		}
-		if out != url {
-			changed = true
-		}
-		return out
-	}
-	for _, item := range libraries {
-		lib, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		if url, ok := lib["url"]; ok {
-			lib["url"] = rewrite(url)
-		}
-		downloads, ok := lib["downloads"].(map[string]any)
-		if !ok {
-			continue
-		}
-		if artifact, ok := downloads["artifact"].(map[string]any); ok {
-			if url, ok := artifact["url"]; ok {
-				artifact["url"] = rewrite(url)
-			}
-		}
-		if classifiers, ok := downloads["classifiers"].(map[string]any); ok {
-			for _, value := range classifiers {
-				if info, ok := value.(map[string]any); ok {
-					if url, ok := info["url"]; ok {
-						info["url"] = rewrite(url)
-					}
-				}
-			}
-		}
-	}
-	if !changed {
-		return nil
-	}
-	return util.WriteJSONAtomic(path, raw)
-}
-
 var sha1RE = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 
 // forgeMirror lets users route Forge Maven traffic through a mirror when the
 // official host is slow or blocked. The same URL is handed to the Forge
 // installer so its library and processor downloads use the mirror too.
 func forgeMirror() string {
-	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FORGE_MIRROR")), "/")
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FORGE_MIRROR")), "/"); override != "" {
+		return override
+	}
+	return strings.TrimRight(mirror.MavenBase(), "/")
 }
 
 // forgeMavenURL resolves a repository-relative path against the configured
@@ -639,7 +580,38 @@ func forgeMavenURL(rel string) string {
 }
 
 func neoforgeMirror() string {
-	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/")
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/"); override != "" {
+		return override
+	}
+	return strings.TrimRight(mirror.MavenBase(), "/")
+}
+
+// forgeInstallerAlternates lists the official installer URLs to fall back to when
+// the primary (mirrored) URL fails.
+func forgeInstallerAlternates(primary string, bases []string) []string {
+	out := []string{}
+	for _, base := range bases {
+		base = strings.TrimRight(base, "/")
+		if base == "" {
+			continue
+		}
+		url := base + "/" + strings.TrimLeft(installerRelativePath(primary), "/")
+		if url != primary {
+			out = append(out, url)
+		}
+	}
+	return out
+}
+
+// installerRelativePath keeps the repository-relative part of an installer URL.
+func installerRelativePath(raw string) string {
+	if i := strings.Index(raw, "/net/minecraftforge/"); i >= 0 {
+		return raw[i+1:]
+	}
+	if i := strings.Index(raw, "/net/neoforged/"); i >= 0 {
+		return raw[i+1:]
+	}
+	return strings.TrimPrefix(raw, "/")
 }
 
 func neoforgeMavenURL(rel string) string {

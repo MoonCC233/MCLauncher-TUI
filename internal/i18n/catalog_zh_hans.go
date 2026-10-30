@@ -542,4 +542,9 @@ var zhHansCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "按 s 设置离线自定义皮肤。",
 	"edit the offline skin":                                                           "编辑离线皮肤",
 	"Custom skin disabled for this launch: %s":                                        "本次启动已禁用自定义皮肤：%s",
+	// Download mirror.
+	"Download mirror": "下载镜像",
+	"Official":        "官方",
+	"Official servers, or BMCLAPI when they are slow in your region.": "官方服务器；在国内较慢时可切换到 BMCLAPI。",
+	"Download source: %s": "下载源：%s",
 }

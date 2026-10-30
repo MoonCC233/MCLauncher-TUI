@@ -542,4 +542,9 @@ var trCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Çevrimdışı özel görünüm ayarlamak için s tuşuna basın.",
 	"edit the offline skin":                                                           "çevrimdışı görünümü düzenle",
 	"Custom skin disabled for this launch: %s":                                        "Bu başlatma için özel görünüm devre dışı: %s",
+	// Download mirror.
+	"Download mirror": "İndirme aynası",
+	"Official":        "Resmî",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Resmî sunucular veya bölgenizde yavaşsa BMCLAPI.",
+	"Download source: %s": "İndirme kaynağı: %s",
 }

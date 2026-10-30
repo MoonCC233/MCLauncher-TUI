@@ -542,4 +542,9 @@ var ptBRCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Pressione s para definir um skin offline personalizado.",
 	"edit the offline skin":                                                           "editar o skin offline",
 	"Custom skin disabled for this launch: %s":                                        "Skin personalizado desativado para esta inicialização: %s",
+	// Download mirror.
+	"Download mirror": "Espelho de download",
+	"Official":        "Oficial",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Servidores oficiais, ou BMCLAPI se estiverem lentos na sua região.",
+	"Download source: %s": "Origem do download: %s",
 }

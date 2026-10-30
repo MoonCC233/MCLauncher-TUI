@@ -542,4 +542,9 @@ var koCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "s를 눌러 오프라인 사용자 지정 스킨을 설정하세요.",
 	"edit the offline skin":                                                           "오프라인 스킨 편집",
 	"Custom skin disabled for this launch: %s":                                        "이번 실행에서는 사용자 지정 스킨이 비활성화되었습니다: %s",
+	// Download mirror.
+	"Download mirror": "다운로드 미러",
+	"Official":        "공식",
+	"Official servers, or BMCLAPI when they are slow in your region.": "공식 서버입니다. 지역에 따라 느리면 BMCLAPI를 선택하세요.",
+	"Download source: %s": "다운로드 소스: %s",
 }

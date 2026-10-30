@@ -542,4 +542,9 @@ var esCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Pulsa s para definir un aspecto personalizado sin conexión.",
 	"edit the offline skin":                                                           "editar el aspecto sin conexión",
 	"Custom skin disabled for this launch: %s":                                        "Aspecto personalizado desactivado para este inicio: %s",
+	// Download mirror.
+	"Download mirror": "Espejo de descarga",
+	"Official":        "Oficial",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Servidores oficiales, o BMCLAPI si van lentos en tu región.",
+	"Download source: %s": "Origen de descarga: %s",
 }

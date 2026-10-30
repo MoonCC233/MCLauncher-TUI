@@ -542,4 +542,9 @@ var ruCatalog = map[string]string{
 	"Press s to set a custom offline skin.":                                           "Нажмите s, чтобы задать свой офлайн-скин.",
 	"edit the offline skin":                                                           "изменить офлайн-скин",
 	"Custom skin disabled for this launch: %s":                                        "Пользовательский скин отключён для этого запуска: %s",
+	// Download mirror.
+	"Download mirror": "Зеркало загрузок",
+	"Official":        "Официальные",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Официальные серверы или BMCLAPI, если они медленные в вашем регионе.",
+	"Download source: %s": "Источник загрузки: %s",
 }

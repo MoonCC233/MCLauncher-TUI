@@ -93,25 +93,25 @@ func hintAction(key, label, action string) hintSpec {
 	return hintSpec{Key: key, Label: label, Msg: keyMsg(action)}
 }
 
-// buttonWidth is the cell width of the compact outlined button.
+// buttonWidth is the cell width of the compact button.
 func (m *Model) buttonWidth(label string) int {
-	return ansi.StringWidth(label) + 4
+	return ansi.StringWidth(label) + 2
 }
 
-// buttonAt renders one button. Normal buttons use the panel fill with an accent
-// outline and accent label; hover fills the button with the accent color; the
-// pressed state uses the dimmed accent while the mouse button is held.
+// buttonAt renders one button. Normal buttons use a darker panel fill with an
+// accent label; hover fills the button with the accent color; the pressed state
+// uses the dimmed accent while the mouse button is held.
 func (m *Model) buttonAt(label string, x, y int) string {
 	w := m.buttonWidth(label)
 	hovered := m.hoverValid && m.hoverY == y && m.hoverX >= x && m.hoverX < x+w
-	text := "▐ " + label + " ▌"
+	text := " " + label + " "
 	switch {
 	case hovered && m.mouseDown:
 		return lipgloss.NewStyle().Background(colPrimaryDim).Foreground(colBackground).Bold(true).Render(text)
 	case hovered:
 		return lipgloss.NewStyle().Background(colPrimary).Foreground(colBackground).Bold(true).Render(text)
 	default:
-		return lipgloss.NewStyle().Background(colPanelAlt).Foreground(colPrimary).Bold(true).Render(text)
+		return lipgloss.NewStyle().Background(colPanel).Foreground(colPrimary).Bold(true).Render(text)
 	}
 }
 

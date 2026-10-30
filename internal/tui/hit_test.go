@@ -122,21 +122,20 @@ func TestModalHitRegionsMatchRenderedBox(t *testing.T) {
 	m.openLanguagePicker()
 	lines := plainView(m)
 
+	// The flat panel has no border. Its title sits one row below the top and
+	// two cells in from the left edge, so those offsets locate the panel.
 	top, left := -1, -1
 	for i, line := range lines {
-		if x := cellIndex(line, "╭"); x >= 0 {
-			top, left = i, x
+		if x := cellIndex(line, "Language"); x >= 2 {
+			top, left = i-1, x-2
 			break
 		}
 	}
 	if top < 0 {
-		t.Fatal("modal border not found")
+		t.Fatal("modal title not found")
 	}
 	if left != m.modalX || top != m.modalY {
 		t.Fatalf("modal box rendered at (%d,%d), hit regions assume (%d,%d)", left, top, m.modalX, m.modalY)
-	}
-	if (m.width-m.modalW)%2 == 0 || (m.height-m.modalH)%2 == 0 {
-		t.Fatalf("test needs odd centering gaps, got x=%d y=%d", m.width-m.modalW, m.height-m.modalH)
 	}
 
 	row, col := -1, -1

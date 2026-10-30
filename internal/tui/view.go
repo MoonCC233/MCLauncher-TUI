@@ -21,13 +21,14 @@ func (m *Model) View() string {
 	if !m.ready || m.width <= 0 || m.height <= 0 {
 		return m.t("Loading mclauncher…")
 	}
-	if m.modal != modalNone {
-		return m.modalView()
-	}
 	header := m.headerView()
 	body := m.bodyView()
 	footer := m.footerView()
-	return clipLines(header+"\n"+body+"\n"+footer, m.width, m.height)
+	base := clipLines(header+"\n"+body+"\n"+footer, m.width, m.height)
+	if m.modal != modalNone {
+		return m.modalView(base)
+	}
+	return base
 }
 
 func (m *Model) sidebarWidth() int {

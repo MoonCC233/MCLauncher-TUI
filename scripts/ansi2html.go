@@ -112,6 +112,9 @@ func main() {
     white-space: pre;
     tab-size: 4;
   }
+  /* Inline backgrounds are shorter than the line box; extend them so panels
+     rendered in the documentation screenshots look like solid terminal cells. */
+  pre span[style*="background"] { padding: 0.14em 0; }
   .bold { font-weight: 700; }
 </style>
 </head>
@@ -157,7 +160,7 @@ func writeLine(out *strings.Builder, line string, st *state) {
 			styles = append(styles, "font-weight:700")
 		}
 		if st.dim {
-			styles = append(styles, "opacity:.75")
+			styles = append(styles, "opacity:.55")
 		}
 		if len(styles) > 0 {
 			out.WriteString(`<span style="` + strings.Join(styles, ";") + `">` + span.String() + `</span>`)

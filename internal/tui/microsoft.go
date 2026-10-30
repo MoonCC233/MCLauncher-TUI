@@ -346,5 +346,5 @@ func (m *Model) microsoftModalHints() []hintSpec {
 	if m.ms.Stage == "failed" {
 		hints = append(hints, hint("r", m.t("Retry")))
 	}
-	return append(hints, hint("esc", m.t("cancel")))
+	return hints
 }

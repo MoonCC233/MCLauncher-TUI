@@ -349,10 +349,10 @@ func renderSkinSprite(s *skin.Skin, bg color.NRGBA) []string {
 }
 
 func panelColor() color.NRGBA {
-	if c, ok := parseHexRGB(string(colPanel)); ok {
+	if c, ok := parseHexRGB(string(colPanelAlt)); ok {
 		return c
 	}
-	return color.NRGBA{R: 0x14, G: 0x14, B: 0x17, A: 0xff}
+	return color.NRGBA{R: 0x1c, G: 0x1c, B: 0x21, A: 0xff}
 }
 
 func parseHexRGB(value string) (color.NRGBA, bool) {

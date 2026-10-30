@@ -258,6 +258,17 @@ func (m *Model) modalView() string {
 			hint("↑↓", m.t("scroll")),
 			hint("esc", m.t("Dismiss")),
 		}
+	case modalSkin:
+		accent = colCyan
+		title = m.t("Offline skin")
+		body = m.skinModalBody(contentW)
+		footer = []hintSpec{
+			hint("i", m.t("import")),
+			hint("m", m.t("model")),
+			hint("o", m.t("open")),
+			hint("r", m.t("reload")),
+			hint("esc", m.t("close")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {

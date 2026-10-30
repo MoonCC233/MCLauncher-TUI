@@ -14,6 +14,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/packs"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/remote"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/skin"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
 )
 
@@ -137,6 +138,17 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.screen = ScreenVersions
 	case "accounts":
 		m.screen = ScreenAccounts
+	case "skin":
+		m.screen = ScreenAccounts
+		m.accountCursor = 0
+		m.accountOffset = 0
+		m.cfg.Accounts[0].Skin = &config.AccountSkin{
+			Model:     skin.ModelSlim,
+			SHA256:    strings.Repeat("a1", 32),
+			UpdatedAt: now.Add(-2 * time.Hour).Unix(),
+		}
+		m.skinModal = skinModalState{preview: skin.Default(skin.ModelSlim)}
+		m.modal = modalSkin
 	case "settings":
 		m.screen = ScreenSettings
 	case "console":

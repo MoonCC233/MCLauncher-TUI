@@ -767,6 +767,16 @@ func (m *Model) viewAccounts(w, h int) []string {
 				created = m.t("never")
 			}
 			lines = append(lines, "  "+styleDim.Render(m.tf("created %s · offline player · deterministic Java UUID", created)))
+			if acc.HasCustomSkin() {
+				updated := util.FormatUnix(acc.Skin.UpdatedAt)
+				if acc.Skin.UpdatedAt <= 0 {
+					updated = m.t("never")
+				}
+				lines = append(lines,
+					"  "+styleGreen.Render("◈ ")+styleMuted.Render(m.tf("custom skin · %s · updated %s", m.t(acc.SkinModel()), updated)))
+			} else {
+				lines = append(lines, "  "+styleDim.Render(m.t("Press s to set a custom offline skin.")))
+			}
 		}
 	}
 	return lines

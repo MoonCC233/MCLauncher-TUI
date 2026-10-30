@@ -266,6 +266,8 @@ func (m *Model) updateAccounts(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.setToast(m.tf("Active account: %s", account.Username), toastSuccess)
 	case "a", "n":
 		m.openAccountTypePicker()
+	case "s":
+		m.openSkinModal()
 	case "d":
 		account := m.currentAccount()
 		if account == nil {
@@ -511,6 +513,11 @@ func (m *Model) submitPrompt() (tea.Model, tea.Cmd) {
 		m.setToast(m.tf("Accent color: %s", accent), toastSuccess)
 		return m, nil
 
+	case promptSkinPath:
+		if err := m.applySkinPath(value); err != nil {
+			m.prompt.Err = err.Error()
+		}
+		return m, nil
 	case promptOptiFineJar:
 		if err := m.chooseOptiFineJar(value); err != nil {
 			m.prompt.Err = err.Error()

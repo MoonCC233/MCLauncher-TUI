@@ -21,6 +21,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/launch"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/skin"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/version"
 )
@@ -226,6 +227,10 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 	javaScanned := m.javaScanned
 	javaNeeded := m.t("needs Java %d+")
 	microsoftExpired := m.t("Microsoft session expired. Sign in again from the Accounts screen.")
+	skinWarning := m.t("Custom skin disabled for this launch: %s")
+	skinPath := m.cfg.SkinFile(accountCopy)
+	skinModel := accountCopy.SkinModel()
+	cacheDir := m.layout.Cache
 
 	ctx, cancel := context.WithCancel(context.Background())
 	m.task = &TaskState{
@@ -392,6 +397,43 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				}
 			}
 
+			// Offline skins are served by a loopback Yggdrasil API and injected with
+			// authlib-injector. A failure here must never block the launch: the
+			// player simply keeps the default skin.
+			var extraJVM []string
+			if !accountCopy.IsMicrosoft() && accountCopy.HasCustomSkin() {
+				stage("Offline skin", accountCopy.Username)
+				loaded, loadErr := skin.Load(skinPath)
+				if loadErr != nil {
+					emitter(consoleLineMsg{source: "launcher", text: fmt.Sprintf(skinWarning, loadErr)})
+				} else {
+					jar, jarErr := skin.EnsureInjector(ctx, client, cacheDir)
+					if jarErr != nil {
+						emitter(consoleLineMsg{source: "launcher", text: fmt.Sprintf(skinWarning, jarErr)})
+					} else if srv, srvErr := skin.NewServer(); srvErr != nil {
+						emitter(consoleLineMsg{source: "launcher", text: fmt.Sprintf(skinWarning, srvErr)})
+					} else if addErr := srv.AddProfile(skin.Profile{
+						UUID:  accountCopy.UUID,
+						Name:  accountCopy.Username,
+						Model: skinModel,
+						Skin:  loaded,
+					}); addErr != nil {
+						_ = srv.Close()
+						emitter(consoleLineMsg{source: "launcher", text: fmt.Sprintf(skinWarning, addErr)})
+					} else {
+						defer srv.Close()
+						extraJVM = append(extraJVM,
+							"-javaagent:"+jar+"="+srv.URL(),
+							"-Dauthlibinjector.side=client",
+						)
+						emitter(consoleLineMsg{source: "launcher", text: "offline skin enabled: " + accountCopy.Username})
+					}
+				}
+			}
+			if checkCancel() {
+				return
+			}
+
 			stage("Starting Minecraft", runtime.Short())
 			spec, err := launch.Build(launch.Options{
 				Layout:          layout,
@@ -403,6 +445,8 @@ func (m *Model) startLaunch(inst config.Instance) tea.Cmd {
 				AssetsDir:       assetsDir,
 				MemoryMB:        memory,
 				JVMArgs:         settings.JVMArgs,
+				ExtraJVMArgs:    extraJVM,
+				OfflineSkin:     len(extraJVM) > 0,
 				Width:           settings.Width,
 				Height:          settings.Height,
 				LogConfig:       logConfig,

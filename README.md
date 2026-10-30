@@ -19,6 +19,7 @@
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
+- **离线皮肤**：在 `Accounts` 选中离线账户按 `s` 打开皮肤窗口，导入 `64×64` 或 `64×32` PNG，选择 `classic` / `slim` 模型，终端里会直接显示半方块人物预览。启动器会把皮肤复制到配置文件旁的 `skins/`，第一次使用时自动下载 authlib-injector，并通过本机回环 Yggdrasil 服务把皮肤注入游戏；也可以随时用任意图片编辑器修改保存的 PNG，回到窗口按 `r` 重新加载。Microsoft 账户继续使用 Mojang 皮肤。
 - **Java 运行时管理**：自动扫描 PATH、JAVA_HOME、Windows 注册表、各本地磁盘的常见安装目录以及 IDE 自带运行时，也可手动指定；可在 Java 选择器里下载 Adoptium Temurin JDK 8/17/21，下载优先走 GitHub 镜像；按版本要求选择 Java，并在版本过旧时提示。
 - **实例参数覆盖**：全局内存、实例内存、额外 JVM 参数；窗口尺寸提供从 854×480 到 4K 的常用预设，也可手动输入自定义分辨率。
 - **可靠的下载**：多线程下载、SHA-1 / SHA-512 校验、原子写入配置文件。
@@ -69,9 +70,9 @@
 | --- | --- |
 | ![贡献者](docs/about-contributors.png) | ![反馈](docs/about-feedback.png) |
 
-| 更新弹窗 |
-| --- |
-| ![更新弹窗](docs/announce.png) |
+| 离线皮肤 | 更新弹窗 |
+| --- | --- |
+| ![离线皮肤](docs/skin.png) | ![更新弹窗](docs/announce.png) |
 
 </details>
 
@@ -126,8 +127,13 @@ Windows 下输出文件为 `mclauncher.exe`。
   MCLAUNCHER_UPDATE_MIRROR=https://gh-proxy.com/{url}
   # 下载 Adoptium JDK 时使用的 GitHub 镜像（可选）
   MCLAUNCHER_JAVA_MIRROR=https://ghfast.top/{url}
+  # 下载 authlib-injector 时使用的 GitHub 镜像（可选）
+  MCLAUNCHER_AUTHLIB_MIRROR=https://ghfast.top/{url}
   ./mclauncher
   ```
+
+  离线皮肤依赖 [authlib-injector](https://github.com/yushijinhun/authlib-injector)（AGPL-3.0），首次启动带皮肤的离线账户时会自动下载到 `cache/authlib-injector-1.2.8.jar` 并校验 SHA-256。也可以用 `MCLAUNCHER_AUTHLIB_INJECTOR` 指定本地已有 jar（例如更新的版本），启动器会直接使用该文件。
+
   `MCLAUNCHER_QUILT_MIRROR` / `MCLAUNCHER_QUILT_MAVEN_MIRROR` 可指向 Quilt 的第三方镜像；Quilt 的 profile 也会引用 Fabric Maven，必要时同时设置 `MCLAUNCHER_FABRIC_MAVEN_MIRROR`。Forge/NeoForge 的依赖库会先由启动器下载并校验，然后安装器在离线模式下完成补丁。检查启动器更新和下载 JDK 时也会优先尝试内置 GitHub 镜像（`gh-proxy.com`、`ghfast.top` 等）。镜像由第三方提供，请自行确认可用性与信任程度。
 - 现代终端：支持真彩色与完整 Unicode 制表符（Windows Terminal、iTerm2、Kitty、WezTerm 等）。
 
@@ -137,7 +143,8 @@ Windows 下输出文件为 `mclauncher.exe`。
    进入 `Accounts`，按 `a` 选择账户类型：  
    - **离线账户**：输入 3–16 位字母、数字或下划线用户名，按 Java 版离线 UUID 规则生成身份。  
    - **Microsoft 正版账户**：选择 `Sign in with Microsoft`。启动器会申请设备代码并自动打开 `https://www.microsoft.com/link`，在浏览器中输入弹窗里的代码并完成登录；也可以按 `c` 复制代码、按 `r` 重新申请。登录成功后会自动获取 Minecraft 档案、UUID 与 XUID。  
-   多个账户可共存，按 `enter` 设为当前账户。
+   多个账户可共存，按 `enter` 设为当前账户。  
+   选中离线账户后按 `s` 可设置自定义皮肤：`i` 导入 PNG（`64×64` 或 `64×32`），`m` 切换 `classic` / `slim`，`o` 用系统图片查看器打开当前文件，`r` 在外部编辑后重新加载，`d` 移除皮肤。皮肤文件保存在配置文件旁的 `skins/`，启动游戏时由启动器临时启动的本机 Yggdrasil 服务提供；首次使用会自动下载 authlib-injector（约 350 KB）。
 
 2. **安装版本**  
    进入 `Versions`，等待版本清单加载。使用 `/` 搜索，`t` 在“全部 / 正式版 / 快照 / 远古版 / 愚人节版”之间循环切换；愚人节版本会显示紫色 `April Fools` 标签。  
@@ -195,7 +202,8 @@ Windows 下输出文件为 `mclauncher.exe`。
 | Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
 | 资源与模组 | `tab` / `1`-`3` 切换材质包、光影、模组 · `enter` 启用或禁用 · `/` 搜索 Modrinth · `i` 导入本地文件 · `u` 添加 https 链接 · `d` 删除 · `esc` 关闭 |
 | 关于 | `tab` / `1`-`4` 切换软件信息、贡献者、更新公告、反馈 · `enter` 在浏览器中打开 · `r` 重新加载 · `a` 重新查看公告 · `o` 打开仓库 · `n` 新建 issue |
-| Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `d` 移除账户 |
+| Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `s` 编辑离线皮肤 · `d` 移除账户 |
+| 离线皮肤 | `i` 导入 PNG · `m` 切换 classic / slim · `o` 打开皮肤文件 · `r` 重新加载 · `d` 移除 · `esc` 关闭 |
 | Settings | `enter` 编辑 / 检查启动器更新 · `s` / `r` 重新扫描 Java · `←` `→` / `-` `+` 调整数值 · `o` 打开数据目录 |
 | Console | `x` 停止游戏 · `c` 清屏 · `o` 打开日志目录 · `G` / `end` 跟随最新日志 · 退出启动器会停止游戏 |
 | Downloads | `enter` 重开当前进度 · `x` 取消当前任务 · `↑` `↓` / `pgup` `pgdown` 翻看历史 |
@@ -240,6 +248,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 ```text
 <当前目录>/.minecraft/
 ├── config.json                 # 账户、实例与设置（固定保存在启动根目录）
+├── skins/<uuid>.png            # 离线账户的自定义皮肤（跟随 config.json，不随数据目录切换）
 ├── downloads-history.json      # 最近 20 条安装 / 启动任务记录
 ├── versions/<id>/              # 版本 JSON、client jar、natives、安装标记
 │   └── .mclauncher-loader.json # 加载器类型、版本与基础版本（仅加载器版本）
@@ -256,7 +265,7 @@ Windows 下输出文件为 `mclauncher.exe`。
 └── cache/
 ```
 
-可以在 `Settings → Data directory` 中把**游戏数据**改到其他位置，例如 `D:\MCLauncher\.minecraft` 或 `~/mc-data`。切换后启动器会立即使用新目录并在下次启动时继续生效；`config.json` 仍留在原来的启动根目录，避免改路径后丢失设置。清空该设置即可恢复默认 `.minecraft`。下载历史同样保存在数据目录中，切换后会显示新目录的历史记录。
+可以在 `Settings → Data directory` 中把**游戏数据**改到其他位置，例如 `D:\MCLauncher\.minecraft` 或 `~/mc-data`。切换后启动器会立即使用新目录并在下次启动时继续生效；`config.json` 与 `skins/` 仍留在原来的启动根目录，避免改路径后丢失设置和皮肤。清空该设置即可恢复默认 `.minecraft`。下载历史同样保存在数据目录中，切换后会显示新目录的历史记录。
 
 也可以通过环境变量或命令行参数覆盖启动根目录：
 
@@ -280,7 +289,7 @@ MCLAUNCHER_DATA_DIR=D:\MCLauncher ./mclauncher
 --lang <code>           指定界面语言（如 zh-Hans、pt-BR、ar）
 --version               打印版本并退出
 --preview               渲染一帧静态界面到 stdout
---preview-screen <name> home | instances | versions | accounts | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | content | about | about-contributors | about-releases | about-feedback | announce
+--preview-screen <name> home | instances | versions | accounts | skin | settings | console | downloads | help | form | progress | theme | language | java | account-type | microsoft | microsoft-error | resolution | loader | loader-versions | loader-java | content | about | about-contributors | about-releases | about-feedback | announce
 --width <n>             预览宽度（默认 120）
 --height <n>            预览高度（默认 38）
 ```
@@ -310,6 +319,7 @@ internal/loader/        Fabric / Quilt / Forge / NeoForge / OptiFine 安装与�
 internal/mods/          模组扫描、元数据解析、启用/禁用与删除
 internal/packs/         资源包、光影与模组的安装、启停和目录扫描
 internal/catalog/       Modrinth 搜索与下载元数据
+internal/skin/          离线皮肤校验、终端预览、本机 Yggdrasil 服务与 authlib-injector 下载
 internal/gametitle/     Windows 游戏窗口标题修改
 internal/remote/        GitHub Releases、贡献者、issue 与更新公告读取
 internal/update/        GitHub Release 检查、镜像下载与启动器替换

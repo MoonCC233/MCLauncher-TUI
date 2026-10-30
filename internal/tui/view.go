@@ -372,6 +372,7 @@ func (m *Model) screenHints() []hintSpec {
 		return []hintSpec{
 			hint("enter", m.t("activate")),
 			hint("a", m.t("add")),
+			hint("s", m.t("skin")),
 			hint("d", m.t("remove")),
 		}
 	case ScreenSettings:

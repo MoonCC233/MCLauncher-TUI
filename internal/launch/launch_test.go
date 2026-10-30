@@ -260,6 +260,24 @@ func TestBuildJVMArgsAndLogConfig(t *testing.T) {
 		t.Error("user JVM args should come before the main class")
 	}
 
+	// Launcher-provided JVM args follow the user's flags and still stay before
+	// the main class. This is where authlib-injector is injected.
+	opts.ExtraJVMArgs = []string{"-javaagent:authlib-injector.jar=http://127.0.0.1:12345", "-Dauthlibinjector.side=client"}
+	spec, err = Build(opts)
+	if err != nil {
+		t.Fatalf("Build(extra JVM args): %v", err)
+	}
+	extra := opts.ExtraJVMArgs[0]
+	if !contains(spec.Args, extra) || !contains(spec.Args, opts.ExtraJVMArgs[1]) {
+		t.Errorf("args missing extra JVM args:\n%v", spec.Args)
+	}
+	if indexOf(spec.Args, "-XX:+UseG1GC") > indexOf(spec.Args, extra) {
+		t.Error("user JVM args should come before extra JVM args")
+	}
+	if indexOf(spec.Args, extra) > indexOf(spec.Args, "net.minecraft.client.main.Main") {
+		t.Error("extra JVM args should come before the main class")
+	}
+
 	// A missing log config is silently ignored.
 	opts.LogConfig = filepath.Join(t.TempDir(), "missing.xml")
 	spec, err = Build(opts)
@@ -270,6 +288,32 @@ func TestBuildJVMArgsAndLogConfig(t *testing.T) {
 		if strings.HasPrefix(arg, "-Dlog4j.configurationFile=") {
 			t.Errorf("missing log config should not be passed: %q", arg)
 		}
+	}
+}
+
+func TestBuildOfflineSkinArgs(t *testing.T) {
+	opts := fixture(t)
+	spec, err := Build(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A plain offline account keeps the legacy user type.
+	if !contains(spec.Args, "legacy") || !contains(spec.Args, "0") {
+		t.Errorf("default offline args = %v", spec.Args)
+	}
+
+	opts.OfflineSkin = true
+	spec, err = Build(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !contains(spec.Args, "msa") {
+		t.Errorf("offline skin should use the msa user type:\n%v", spec.Args)
+	}
+	token := strings.ReplaceAll(opts.Account.UUID, "-", "")
+	idx := indexOf(spec.Args, "--accessToken")
+	if idx < 0 || idx+1 >= len(spec.Args) || spec.Args[idx+1] != token {
+		t.Errorf("offline skin access token %q missing:\n%v", token, spec.Args)
 	}
 }
 

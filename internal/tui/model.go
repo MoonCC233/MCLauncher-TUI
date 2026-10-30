@@ -71,6 +71,7 @@ const (
 	modalPackSearch
 	modalPackVersions
 	modalAnnounce
+	modalSkin
 )
 
 type formKind int
@@ -96,6 +97,7 @@ const (
 	promptGameWindowTitle
 	promptPackPath
 	promptPackURL
+	promptSkinPath
 )
 
 type confirmKind int
@@ -106,6 +108,7 @@ const (
 	confirmUninstallVersion
 	confirmInstallUpdate
 	confirmRemovePack
+	confirmRemoveSkin
 )
 
 type taskKind string
@@ -289,6 +292,7 @@ type Model struct {
 	announce        announceState
 	about           aboutState
 	ms              MicrosoftLoginState
+	skinModal       skinModalState
 
 	javaRuntimes []java.Info
 	javaScanned  bool

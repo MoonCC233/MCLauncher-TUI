@@ -11,6 +11,7 @@ import (
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/skin"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -59,21 +60,43 @@ func ValidTitleAnim(id string) bool {
 	return false
 }
 
+// AccountSkin points at the custom skin stored next to the config file. Only
+// offline accounts use it; Microsoft accounts keep their Mojang skin.
+type AccountSkin struct {
+	Model     string `json:"model,omitempty"`
+	SHA256    string `json:"sha256,omitempty"`
+	UpdatedAt int64  `json:"updated_at,omitempty"`
+}
+
 type Account struct {
-	Username     string `json:"username"`
-	UUID         string `json:"uuid"`
-	Kind         string `json:"kind"`
-	AccessToken  string `json:"access_token,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
-	XUID         string `json:"xuid,omitempty"`
-	ClientID     string `json:"client_id,omitempty"`
-	ExpiresAt    int64  `json:"expires_at,omitempty"`
-	CreatedAt    int64  `json:"created_at"`
+	Username     string       `json:"username"`
+	UUID         string       `json:"uuid"`
+	Kind         string       `json:"kind"`
+	AccessToken  string       `json:"access_token,omitempty"`
+	RefreshToken string       `json:"refresh_token,omitempty"`
+	XUID         string       `json:"xuid,omitempty"`
+	ClientID     string       `json:"client_id,omitempty"`
+	ExpiresAt    int64        `json:"expires_at,omitempty"`
+	CreatedAt    int64        `json:"created_at"`
+	Skin         *AccountSkin `json:"skin,omitempty"`
 }
 
 func (a Account) IsMicrosoft() bool { return a.Kind == "microsoft" }
 
 func (a Account) UUIDHex() string { return strings.ReplaceAll(a.UUID, "-", "") }
+
+// HasCustomSkin reports whether this account has a usable offline skin.
+func (a Account) HasCustomSkin() bool {
+	return !a.IsMicrosoft() && a.Skin != nil && a.Skin.SHA256 != ""
+}
+
+// SkinModel returns the model to send to the game.
+func (a Account) SkinModel() string {
+	if a.Skin == nil {
+		return skin.ModelClassic
+	}
+	return skin.NormalizeModel(a.Skin.Model)
+}
 
 type Instance struct {
 	ID           string `json:"id"`
@@ -223,6 +246,7 @@ func (c *Config) normalize() {
 			if a.ExpiresAt < 0 {
 				a.ExpiresAt = 0
 			}
+			a.Skin = nil
 		} else {
 			a.Kind = "offline"
 			if a.UUID == "" {
@@ -233,6 +257,7 @@ func (c *Config) normalize() {
 			a.XUID = ""
 			a.ClientID = ""
 			a.ExpiresAt = 0
+			a.Skin = normalizeAccountSkin(a.Skin)
 		}
 		key := strings.ToLower(a.UUID)
 		nameKey := strings.ToLower(a.Username)
@@ -285,6 +310,86 @@ func (c *Config) ActiveAccount() *Account {
 
 func (c *Config) SetActiveAccount(uuid string) {
 	c.ActiveAccountUUID = uuid
+}
+
+// FindAccount returns the account with uuid, or nil.
+func (c *Config) FindAccount(uuid string) *Account {
+	for i := range c.Accounts {
+		if strings.EqualFold(c.Accounts[i].UUID, uuid) {
+			return &c.Accounts[i]
+		}
+	}
+	return nil
+}
+
+// SkinsDir is the custom-skin folder next to the config file. Keeping skins
+// beside the bootstrap config means switching data directories never loses
+// them.
+func (c *Config) SkinsDir() string {
+	if c.Path == "" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(c.Path), "skins")
+}
+
+// SkinFile is the PNG path for an account, or "" when it cannot be resolved.
+func (c *Config) SkinFile(a Account) string {
+	dir := c.SkinsDir()
+	uuid := strings.ToLower(a.UUIDHex())
+	if dir == "" || uuid == "" {
+		return ""
+	}
+	return filepath.Join(dir, uuid+".png")
+}
+
+// SetAccountSkin stores skin metadata for an offline account.
+func (c *Config) SetAccountSkin(uuid string, meta AccountSkin) error {
+	for i := range c.Accounts {
+		if !strings.EqualFold(c.Accounts[i].UUID, uuid) {
+			continue
+		}
+		if c.Accounts[i].IsMicrosoft() {
+			return fmt.Errorf("Microsoft accounts use Mojang skins")
+		}
+		normalized := normalizeAccountSkin(&meta)
+		if normalized == nil {
+			return fmt.Errorf("invalid skin metadata")
+		}
+		c.Accounts[i].Skin = normalized
+		return c.Save()
+	}
+	return fmt.Errorf("account not found")
+}
+
+// ClearAccountSkin forgets an account's custom skin metadata.
+func (c *Config) ClearAccountSkin(uuid string) error {
+	for i := range c.Accounts {
+		if !strings.EqualFold(c.Accounts[i].UUID, uuid) {
+			continue
+		}
+		c.Accounts[i].Skin = nil
+		return c.Save()
+	}
+	return fmt.Errorf("account not found")
+}
+
+func normalizeAccountSkin(s *AccountSkin) *AccountSkin {
+	if s == nil {
+		return nil
+	}
+	hash := strings.ToLower(strings.TrimSpace(s.SHA256))
+	if len(hash) != 64 {
+		return nil
+	}
+	if _, err := hex.DecodeString(hash); err != nil {
+		return nil
+	}
+	s.Model = skin.NormalizeModel(strings.ToLower(strings.TrimSpace(s.Model)))
+	s.SHA256 = hash
+	if s.UpdatedAt < 0 {
+		s.UpdatedAt = 0
+	}
+	return s
 }
 
 func (c *Config) AddAccount(name string) (*Account, error) {
@@ -346,6 +451,9 @@ func (c *Config) AddMicrosoftAccount(session auth.MinecraftSession) (*Account, e
 			if existing.CreatedAt > 0 {
 				account.CreatedAt = existing.CreatedAt
 			}
+			if existing.HasCustomSkin() {
+				_ = os.Remove(c.SkinFile(existing))
+			}
 			if c.ActiveAccountUUID == existing.UUID {
 				c.ActiveAccountUUID = uuid
 			}
@@ -378,6 +486,7 @@ func (c *Config) UpdateMicrosoftAccount(uuid string, session auth.MinecraftSessi
 		c.Accounts[i].XUID = session.XUID
 		c.Accounts[i].ClientID = session.ClientID
 		c.Accounts[i].ExpiresAt = session.ExpiresAt
+		c.Accounts[i].Skin = nil
 		if c.ActiveAccountUUID == uuid {
 			c.ActiveAccountUUID = c.Accounts[i].UUID
 		}
@@ -387,13 +496,21 @@ func (c *Config) UpdateMicrosoftAccount(uuid string, session auth.MinecraftSessi
 }
 
 func (c *Config) RemoveAccount(uuid string) error {
+	skinPath := ""
 	out := c.Accounts[:0]
 	for _, a := range c.Accounts {
 		if a.UUID != uuid {
 			out = append(out, a)
+			continue
+		}
+		if a.HasCustomSkin() {
+			skinPath = c.SkinFile(a)
 		}
 	}
 	c.Accounts = out
+	if skinPath != "" {
+		_ = os.Remove(skinPath)
+	}
 	if c.ActiveAccountUUID == uuid {
 		c.ActiveAccountUUID = ""
 		if len(c.Accounts) > 0 {

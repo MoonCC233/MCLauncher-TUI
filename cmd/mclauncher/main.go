@@ -26,7 +26,7 @@ func main() {
 		dataDir       = flag.String("data-dir", "", "data directory (overrides MCLAUNCHER_DATA_DIR)")
 		showVersion   = flag.Bool("version", false, "print version and exit")
 		preview       = flag.Bool("preview", false, "render a demo frame to stdout and exit")
-		previewScreen = flag.String("preview-screen", "home", "preview screen: home, instances, versions, accounts, settings, console, downloads, help, form, progress, theme, language, java, account-type, microsoft, microsoft-error, resolution, loader, loader-versions, loader-java, content")
+		previewScreen = flag.String("preview-screen", "home", "preview screen: home, instances, versions, accounts, settings, console, downloads, help, form, progress, theme, language, java, account-type, microsoft, microsoft-error, resolution, loader, loader-versions, loader-java, content, about, about-contributors, about-releases, about-feedback, announce")
 		previewWidth  = flag.Int("width", 120, "preview width")
 		previewHeight = flag.Int("height", 38, "preview height")
 		lang          = flag.String("lang", "", "UI language: en, es, fr, de, zh-Hans, zh-Hant, ja, ar, pt-BR, pt-PT, ru, ko, tr, vi")
@@ -119,7 +119,7 @@ func main() {
 	} else {
 		log.SetOutput(os.Stderr)
 	}
-	log.Printf("mclauncher %s starting (data: %s)", version.Full(), layout.Root)
+	log.Printf("mclauncher %s starting (data: %s, config: %s)", version.Full(), layout.Root, cfg.Path)
 	defer log.Printf("mclauncher exiting")
 
 	if _, statErr := os.Stat(cfg.Path); os.IsNotExist(statErr) {

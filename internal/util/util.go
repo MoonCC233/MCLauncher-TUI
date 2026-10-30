@@ -58,7 +58,25 @@ func WriteJSONAtomic(path string, v any) error {
 		_ = os.Remove(tmp)
 		return err
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		// Windows keeps the target open for a moment now and then (antivirus,
+		// search indexer, a second launcher reading it), which makes the rename
+		// fail even though nothing is wrong with the file. Retry briefly and then
+		// fall back to writing in place, so a transient lock does not lose the
+		// user's settings.
+		for attempt := 0; attempt < 5; attempt++ {
+			time.Sleep(time.Duration(20*(attempt+1)) * time.Millisecond)
+			if retryErr := os.Rename(tmp, path); retryErr == nil {
+				return nil
+			}
+		}
+		if writeErr := os.WriteFile(path, data, 0o644); writeErr != nil {
+			_ = os.Remove(tmp)
+			return fmt.Errorf("write %s: %w", path, err)
+		}
+		_ = os.Remove(tmp)
+	}
+	return nil
 }
 
 func SHA1File(path string) (string, error) {

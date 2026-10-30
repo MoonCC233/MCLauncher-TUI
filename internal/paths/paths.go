@@ -64,6 +64,15 @@ func (l Layout) Marker(id string) string {
 func (l Layout) LoaderMeta(id string) string {
 	return filepath.Join(l.Versions, id, ".mclauncher-loader.json")
 }
+
+// ContributorCache holds the last contributor list fetched from GitHub.
+func (l Layout) ContributorCache() string { return filepath.Join(l.Cache, "contributors.json") }
+
+// ReleaseCache holds the last release list fetched from GitHub.
+func (l Layout) ReleaseCache() string { return filepath.Join(l.Cache, "releases.json") }
+
+// IssueCache holds the last issue list fetched from GitHub.
+func (l Layout) IssueCache() string { return filepath.Join(l.Cache, "issues.json") }
 func (l Layout) InstanceDir(instanceID string) string {
 	return filepath.Join(l.Instances, instanceID)
 }

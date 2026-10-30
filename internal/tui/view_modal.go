@@ -251,6 +251,13 @@ func (m *Model) modalView() string {
 			hint("enter", m.t("choose")),
 			hint("esc", m.t("cancel")),
 		}
+	case modalAnnounce:
+		title = m.t("Announcements")
+		body = m.announceBody(contentW)
+		footer = []hintSpec{
+			hint("↑↓", m.t("scroll")),
+			hint("esc", m.t("Dismiss")),
+		}
 	case modalProgress:
 		accent = colPrimary
 		if m.task != nil {

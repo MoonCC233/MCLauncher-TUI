@@ -34,11 +34,12 @@ const (
 	ScreenSettings
 	ScreenConsole
 	ScreenDownloads
+	ScreenAbout
 	screenCount
 )
 
-var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console", "Downloads"}
-var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸", "↓"}
+var screenNameKeys = [screenCount]string{"Home", "Instances", "Versions", "Accounts", "Settings", "Console", "Downloads", "About"}
+var screenIcons = [screenCount]string{"⌂", "▤", "◈", "◉", "⚙", "▸", "↓", "✦"}
 
 type settingsRow struct {
 	ID          string
@@ -69,6 +70,7 @@ const (
 	modalPacks
 	modalPackSearch
 	modalPackVersions
+	modalAnnounce
 )
 
 type formKind int
@@ -284,6 +286,8 @@ type Model struct {
 	titleAnimPick   int
 	titleFontPick   int
 	packs           packsState
+	announce        announceState
+	about           aboutState
 	ms              MicrosoftLoginState
 
 	javaRuntimes []java.Info
@@ -384,7 +388,7 @@ func (m *Model) sendMsg(msg tea.Msg) {
 
 func (m *Model) Init() tea.Cmd {
 	m.javaScanning = true
-	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(m.layout.Java), tickCmd())
+	return tea.Batch(m.loadManifestCmd(false), scanJavaCmd(m.layout.Java), tickCmd(), m.loadAnnouncementsCmd(false))
 }
 
 func (m *Model) quitApp() (tea.Model, tea.Cmd) {
@@ -494,6 +498,14 @@ func (m *Model) updateMsg(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.animFrame++
 		}
 		return m, nil
+	case announcementsMsg:
+		return m.handleAnnouncements(msg)
+	case contributorsMsg:
+		return m.handleContributors(msg)
+	case releasesMsg:
+		return m.handleReleases(msg)
+	case issuesMsg:
+		return m.handleIssues(msg)
 	case manifestMsg:
 		m.manifestLoading = false
 		if msg.manifest != nil {
@@ -675,6 +687,8 @@ func (m *Model) updateGlobalKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.updateConsole(msg)
 	case ScreenDownloads:
 		return m.updateDownloads(msg)
+	case ScreenAbout:
+		return m.updateAbout(msg)
 	}
 	return m, nil
 }

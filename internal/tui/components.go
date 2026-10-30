@@ -257,3 +257,62 @@ func plural(n int, singular, plural string) string {
 	}
 	return fmt.Sprintf("%d %s", n, plural)
 }
+
+// wrapText breaks text into lines no wider than width. Explicit newlines are
+// kept, spaces are preferred as break points, and CJK text without spaces falls
+// back to rune boundaries.
+func wrapText(text string, width int) []string {
+	if width < 4 {
+		width = 4
+	}
+	var out []string
+	for _, paragraph := range strings.Split(strings.ReplaceAll(text, "\r\n", "\n"), "\n") {
+		if strings.TrimSpace(paragraph) == "" {
+			out = append(out, "")
+			continue
+		}
+		line := ""
+		flush := func() {
+			if line != "" {
+				out = append(out, line)
+				line = ""
+			}
+		}
+		for _, word := range strings.Fields(paragraph) {
+			candidate := word
+			if line != "" {
+				candidate = line + " " + word
+			}
+			if ansi.StringWidth(candidate) <= width {
+				line = candidate
+				continue
+			}
+			flush()
+			// A single word can still be wider than the line, which is the normal
+			// case for Chinese text.
+			for ansi.StringWidth(word) > width {
+				runes := []rune(word)
+				cut := 0
+				for cut < len(runes) && ansi.StringWidth(string(runes[:cut+1])) <= width {
+					cut++
+				}
+				if cut == 0 {
+					cut = 1
+				}
+				out = append(out, string(runes[:cut]))
+				word = string(runes[cut:])
+			}
+			line = word
+		}
+		flush()
+	}
+	return out
+}
+
+// padLabel pads a label by display width, so CJK and latin labels line up.
+func padLabel(text string, width int) string {
+	if gap := width - ansi.StringWidth(text); gap > 0 {
+		return text + strings.Repeat(" ", gap)
+	}
+	return text
+}

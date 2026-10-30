@@ -42,6 +42,10 @@
 | --- | --- |
 | ![加载器](docs/loader.png) | ![资源与模组](docs/content.png) |
 
+| 关于 | 更新公告 |
+| --- | --- |
+| ![关于](docs/about.png) | ![更新公告](docs/about-releases.png) |
+
 <details>
 <summary>更多截图</summary>
 
@@ -60,6 +64,14 @@
 | 加载器版本 | 安装器 Java |
 | --- | --- |
 | ![加载器版本](docs/loader-versions.png) | ![安装器 Java](docs/loader-java.png) |
+
+| 贡献者 | 反馈 |
+| --- | --- |
+| ![贡献者](docs/about-contributors.png) | ![反馈](docs/about-feedback.png) |
+
+| 更新弹窗 |
+| --- |
+| ![更新弹窗](docs/announce.png) |
 
 </details>
 

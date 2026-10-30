@@ -515,4 +515,9 @@ var viCatalog = map[string]string{
 	"Could not load the data.":                 "Không tải được dữ liệu.",
 	"%d commits":                               "%d commit",
 	"Config file":                              "Tệp cấu hình",
+	// Download mirror.
+	"Download mirror": "Máy chủ tải xuống",
+	"Official":        "Chính thức",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Máy chủ chính thức, hoặc BMCLAPI nếu chậm ở khu vực của bạn.",
+	"Download source: %s": "Nguồn tải: %s",
 }

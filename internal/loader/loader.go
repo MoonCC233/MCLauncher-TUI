@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -112,8 +113,10 @@ const (
 // full v2 base, for example https://bmclapi2.bangbang93.com/fabric-meta/v2.
 func fabricMetaURL(path string) string {
 	base := fabricMetaBase
-	if mirror := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MIRROR")), "/"); mirror != "" {
-		base = mirror
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MIRROR")), "/"); override != "" {
+		base = override
+	} else if mirrored := mirror.FabricMetaBase(); mirrored != "" {
+		base = mirrored
 	}
 	return base + "/" + strings.TrimLeft(path, "/")
 }
@@ -121,18 +124,26 @@ func fabricMetaURL(path string) string {
 // quiltMetaURL is the Quilt equivalent of fabricMetaURL.
 func quiltMetaURL(path string) string {
 	base := quiltMetaBase
-	if mirror := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MIRROR")), "/"); mirror != "" {
-		base = mirror
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MIRROR")), "/"); override != "" {
+		base = override
+	} else if mirrored := mirror.QuiltMetaBase(); mirrored != "" {
+		base = mirrored
 	}
 	return base + "/" + strings.TrimLeft(path, "/")
 }
 
 func fabricMavenMirror() string {
-	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MAVEN_MIRROR")), "/")
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MAVEN_MIRROR")), "/"); override != "" {
+		return override
+	}
+	return strings.TrimRight(mirror.MavenBase(), "/")
 }
 
 func quiltMavenMirror() string {
-	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MAVEN_MIRROR")), "/")
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MAVEN_MIRROR")), "/"); override != "" {
+		return override
+	}
+	return strings.TrimRight(mirror.MavenBase(), "/")
 }
 
 func rewriteMavenURL(url, base, mirror string) string {

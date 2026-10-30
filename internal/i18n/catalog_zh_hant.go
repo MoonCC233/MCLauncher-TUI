@@ -515,4 +515,9 @@ var zhHantCatalog = map[string]string{
 	"Could not load the data.":                 "載入資料失敗。",
 	"%d commits":                               "%d 次提交",
 	"Config file":                              "設定檔",
+	// Download mirror.
+	"Download mirror": "下載鏡像",
+	"Official":        "官方",
+	"Official servers, or BMCLAPI when they are slow in your region.": "官方伺服器；在國內較慢時可切換到 BMCLAPI。",
+	"Download source: %s": "下載來源：%s",
 }

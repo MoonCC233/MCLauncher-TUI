@@ -515,4 +515,9 @@ var esCatalog = map[string]string{
 	"Could not load the data.":                 "No se pudieron cargar los datos.",
 	"%d commits":                               "%d commits",
 	"Config file":                              "Archivo de configuración",
+	// Download mirror.
+	"Download mirror": "Espejo de descarga",
+	"Official":        "Oficial",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Servidores oficiales, o BMCLAPI si van lentos en tu región.",
+	"Download source: %s": "Origen de descarga: %s",
 }

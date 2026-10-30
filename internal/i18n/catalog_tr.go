@@ -515,4 +515,9 @@ var trCatalog = map[string]string{
 	"Could not load the data.":                 "Veriler yüklenemedi.",
 	"%d commits":                               "%d commit",
 	"Config file":                              "Ayar dosyası",
+	// Download mirror.
+	"Download mirror": "İndirme aynası",
+	"Official":        "Resmî",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Resmî sunucular veya bölgenizde yavaşsa BMCLAPI.",
+	"Download source: %s": "İndirme kaynağı: %s",
 }

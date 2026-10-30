@@ -517,4 +517,9 @@ var deCatalog = map[string]string{
 	"Could not load the data.":                 "Daten konnten nicht geladen werden.",
 	"%d commits":                               "%d Commits",
 	"Config file":                              "Konfigurationsdatei",
+	// Download mirror.
+	"Download mirror": "Download-Spiegel",
+	"Official":        "Offiziell",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Offizielle Server, oder BMCLAPI, wenn sie in deiner Region langsam sind.",
+	"Download source: %s": "Download-Quelle: %s",
 }

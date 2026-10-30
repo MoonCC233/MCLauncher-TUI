@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
@@ -91,7 +92,7 @@ func FetchManifest(ctx context.Context, client *http.Client, layout paths.Layout
 		}
 	}
 	var raw rawManifest
-	err := util.FetchJSON(ctx, client, ManifestURL, &raw)
+	err := fetchManifestCandidates(ctx, client, &raw)
 	if err == nil && len(raw.Versions) > 0 {
 		m := parseManifest(raw, "network")
 		if saveErr := util.WriteJSONAtomic(cachePath, raw); saveErr != nil {
@@ -107,6 +108,23 @@ func FetchManifest(ctx context.Context, client *http.Client, layout paths.Layout
 		return cached, nil
 	}
 	return nil, fmt.Errorf("could not load version manifest: %w", err)
+}
+
+// fetchManifestCandidates reads the manifest from the mirror first when one is
+// selected, then from Mojang.
+func fetchManifestCandidates(ctx context.Context, client *http.Client, target any) error {
+	var lastErr error
+	for _, url := range mirror.Candidates(ManifestURL) {
+		if err := util.FetchJSON(ctx, client, url, target); err != nil {
+			lastErr = err
+			continue
+		}
+		return nil
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no version manifest source is available")
+	}
+	return lastErr
 }
 
 func (m *Manifest) Find(id string) *VersionSummary {

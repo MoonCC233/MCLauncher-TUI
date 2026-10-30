@@ -333,6 +333,8 @@ func (m *Model) adjustSetting(key string) {
 		}
 	case "quitgame":
 		m.toggleKeepGameRunning()
+	case "mirror":
+		m.toggleDownloadMirror()
 	case "threads":
 		next := util.Clamp(m.cfg.Settings.DownloadThreads+delta, 1, 32)
 		if next != m.cfg.Settings.DownloadThreads {
@@ -385,6 +387,8 @@ func (m *Model) editSetting() tea.Cmd {
 		m.openPrompt(promptGameWindowTitle, m.t("Game window title"), m.cfg.Settings.GameWindowTitle, m.t("Rename the Minecraft window (Windows only); leave empty to keep the game's own title."), 80)
 	case "quitgame":
 		m.toggleKeepGameRunning()
+	case "mirror":
+		m.toggleDownloadMirror()
 	case "threads":
 		m.openPrompt(promptThreads, m.t("Download threads"), fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads), m.t("1–32 parallel downloads"), 4)
 	case "language":

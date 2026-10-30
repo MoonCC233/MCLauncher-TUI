@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/install"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -626,7 +627,10 @@ var sha1RE = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 // official host is slow or blocked. The same URL is handed to the Forge
 // installer so its library and processor downloads use the mirror too.
 func forgeMirror() string {
-	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FORGE_MIRROR")), "/")
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FORGE_MIRROR")), "/"); override != "" {
+		return override
+	}
+	return strings.TrimRight(mirror.MavenBase(), "/")
 }
 
 // forgeMavenURL resolves a repository-relative path against the configured
@@ -639,7 +643,10 @@ func forgeMavenURL(rel string) string {
 }
 
 func neoforgeMirror() string {
-	return strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/")
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/"); override != "" {
+		return override
+	}
+	return strings.TrimRight(mirror.MavenBase(), "/")
 }
 
 func neoforgeMavenURL(rel string) string {

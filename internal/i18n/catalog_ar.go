@@ -515,4 +515,9 @@ var arCatalog = map[string]string{
 	"Could not load the data.":                 "تعذّر تحميل البيانات.",
 	"%d commits":                               "%d إيداع",
 	"Config file":                              "ملف الإعدادات",
+	// Download mirror.
+	"Download mirror": "مرآة التنزيل",
+	"Official":        "الرسمي",
+	"Official servers, or BMCLAPI when they are slow in your region.": "الخوادم الرسمية، أو BMCLAPI إذا كانت بطيئة في منطقتك.",
+	"Download source: %s": "مصدر التنزيل: %s",
 }

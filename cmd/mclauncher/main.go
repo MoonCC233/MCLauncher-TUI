@@ -14,6 +14,7 @@ import (
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/tui"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/update"
@@ -140,6 +141,7 @@ func main() {
 		}
 	}
 
+	mirror.Set(mirror.Kind(cfg.Settings.DownloadMirror))
 	update.CleanupOldBinary()
 	model := tui.New(cfg, layout, util.NewHTTPClient(), version.Full(), notice)
 	model.ApplyWindowTitle()

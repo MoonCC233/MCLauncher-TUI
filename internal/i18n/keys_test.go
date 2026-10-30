@@ -495,4 +495,8 @@ var requiredCatalogKeys = []string{
 	"Could not load the data.",
 	"%d commits",
 	"Config file",
+	"Download mirror",
+	"Official",
+	"Official servers, or BMCLAPI when they are slow in your region.",
+	"Download source: %s",
 }

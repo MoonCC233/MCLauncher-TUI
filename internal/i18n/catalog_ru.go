@@ -515,4 +515,9 @@ var ruCatalog = map[string]string{
 	"Could not load the data.":                 "Не удалось загрузить данные.",
 	"%d commits":                               "%d коммитов",
 	"Config file":                              "Файл настроек",
+	// Download mirror.
+	"Download mirror": "Зеркало загрузок",
+	"Official":        "Официальные",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Официальные серверы или BMCLAPI, если они медленные в вашем регионе.",
+	"Download source: %s": "Источник загрузки: %s",
 }

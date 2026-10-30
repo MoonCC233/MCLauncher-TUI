@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mojang"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
@@ -424,8 +425,10 @@ func (in *Installer) downloadAll(ctx context.Context, client *http.Client, tasks
 				}
 				task := tasks[idx]
 				tracker.setDetail(task.label)
+				urls := mirror.Candidates(task.url)
 				err := util.DownloadFile(workCtx, client, util.DownloadSpec{
-					URL:  task.url,
+					URL:  urls[0],
+					Alt:  urls[1:],
 					Dest: task.dest,
 					SHA1: task.sha1,
 					Size: task.size,

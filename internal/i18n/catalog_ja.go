@@ -515,4 +515,9 @@ var jaCatalog = map[string]string{
 	"Could not load the data.":                 "データを読み込めませんでした。",
 	"%d commits":                               "%d コミット",
 	"Config file":                              "設定ファイル",
+	// Download mirror.
+	"Download mirror": "ダウンロードミラー",
+	"Official":        "公式",
+	"Official servers, or BMCLAPI when they are slow in your region.": "公式サーバー。地域によって遅い場合は BMCLAPI を選んでください。",
+	"Download source: %s": "ダウンロード元: %s",
 }

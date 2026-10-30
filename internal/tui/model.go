@@ -1145,6 +1145,8 @@ func (m *Model) settingsRows() []settingsRow {
 			Description: m.t("Keep Minecraft running after the launcher quits.")},
 		{ID: "threads", Label: m.t("Download threads"), Value: fmt.Sprintf("%d", m.cfg.Settings.DownloadThreads),
 			Description: m.t("Parallel downloads used while installing game files.")},
+		{ID: "mirror", Label: m.t("Download mirror"), Value: m.downloadMirrorLabel(),
+			Description: m.t("Official servers, or BMCLAPI when they are slow in your region.")},
 		{ID: "language", Label: m.t("Language"), Value: language,
 			Description: m.t("Interface language. System follows your operating system locale.")},
 		{ID: "theme", Label: m.t("Theme"), Value: m.themeValue(),

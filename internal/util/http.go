@@ -37,7 +37,10 @@ func NewHTTPClient() *http.Client {
 }
 
 type DownloadSpec struct {
-	URL  string
+	URL string
+	// Alt holds further URLs to try when URL fails, for example the official
+	// server after a mirror answered 404.
+	Alt  []string
 	Dest string
 	SHA1 string
 	Size int64
@@ -52,34 +55,41 @@ func DownloadFile(ctx context.Context, client *http.Client, spec DownloadSpec, o
 	}
 	part := spec.Dest + ".part"
 	var lastErr error
-	for attempt := 0; attempt < 3; attempt++ {
-		if err := ctx.Err(); err != nil {
-			return err
+	for _, url := range append([]string{spec.URL}, spec.Alt...) {
+		if url == "" {
+			continue
 		}
-		if onProgress != nil {
-			onProgress(0)
-		}
-		if err := downloadOnce(ctx, client, spec, part, onProgress); err != nil {
-			lastErr = err
-			_ = os.Remove(part)
-			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "403") {
-				break
+		for attempt := 0; attempt < 3; attempt++ {
+			if err := ctx.Err(); err != nil {
+				return err
 			}
-			if attempt < 2 {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-time.After(time.Duration(attempt+1) * 700 * time.Millisecond):
+			if onProgress != nil {
+				onProgress(0)
+			}
+			if err := downloadOnce(ctx, client, spec, url, part, onProgress); err != nil {
+				lastErr = err
+				_ = os.Remove(part)
+				// A missing file or a refused request is not worth retrying on the
+				// same host; fall through to the next URL instead.
+				if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "403") {
+					break
 				}
+				if attempt < 2 {
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case <-time.After(time.Duration(attempt+1) * 700 * time.Millisecond):
+					}
+				}
+				continue
 			}
-			continue
+			if err := os.Rename(part, spec.Dest); err != nil {
+				_ = os.Remove(part)
+				lastErr = err
+				continue
+			}
+			return nil
 		}
-		if err := os.Rename(part, spec.Dest); err != nil {
-			_ = os.Remove(part)
-			lastErr = err
-			continue
-		}
-		return nil
 	}
 	if lastErr == nil {
 		lastErr = fmt.Errorf("download failed")
@@ -87,10 +97,10 @@ func DownloadFile(ctx context.Context, client *http.Client, spec DownloadSpec, o
 	return lastErr
 }
 
-func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, part string, onProgress func(int64)) error {
+func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, url, part string, onProgress func(int64)) error {
 	attemptCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
-	req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet, spec.URL, nil)
+	req, err := http.NewRequestWithContext(attemptCtx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -99,11 +109,11 @@ func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, p
 	req.Header.Set("Accept-Encoding", "identity")
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("GET %s: %w", spec.URL, err)
+		return fmt.Errorf("GET %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GET %s: HTTP %d", spec.URL, resp.StatusCode)
+		return fmt.Errorf("GET %s: HTTP %d", url, resp.StatusCode)
 	}
 	// Some mirrors accept the connection and then stop sending data. Abort the
 	// attempt when the body has made no progress for a while so DownloadFile

@@ -515,4 +515,9 @@ var koCatalog = map[string]string{
 	"Could not load the data.":                 "데이터를 불러오지 못했습니다.",
 	"%d commits":                               "%d개 커밋",
 	"Config file":                              "설정 파일",
+	// Download mirror.
+	"Download mirror": "다운로드 미러",
+	"Official":        "공식",
+	"Official servers, or BMCLAPI when they are slow in your region.": "공식 서버입니다. 지역에 따라 느리면 BMCLAPI를 선택하세요.",
+	"Download source: %s": "다운로드 소스: %s",
 }

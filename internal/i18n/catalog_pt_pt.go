@@ -515,4 +515,9 @@ var ptPTCatalog = map[string]string{
 	"Could not load the data.":                 "Não foi possível carregar os dados.",
 	"%d commits":                               "%d commits",
 	"Config file":                              "Ficheiro de configuração",
+	// Download mirror.
+	"Download mirror": "Espelho de transferência",
+	"Official":        "Oficial",
+	"Official servers, or BMCLAPI when they are slow in your region.": "Servidores oficiais, ou BMCLAPI se estiverem lentos na sua região.",
+	"Download source: %s": "Origem da transferência: %s",
 }

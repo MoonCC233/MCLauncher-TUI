@@ -515,4 +515,9 @@ var zhHansCatalog = map[string]string{
 	"Could not load the data.":                 "加载数据失败。",
 	"%d commits":                               "%d 次提交",
 	"Config file":                              "配置文件",
+	// Download mirror.
+	"Download mirror": "下载镜像",
+	"Official":        "官方",
+	"Official servers, or BMCLAPI when they are slow in your region.": "官方服务器；在国内较慢时可切换到 BMCLAPI。",
+	"Download source: %s": "下载源：%s",
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 )
 
-func TestModalStyleIsFlatAndDimsBackground(t *testing.T) {
+func TestModalStyleIsFlatAndKeepsBackground(t *testing.T) {
 	m := newTestModel(t)
 	m.width, m.height = 120, 38
 	m.lang = i18n.EN
@@ -21,14 +21,14 @@ func TestModalStyleIsFlatAndDimsBackground(t *testing.T) {
 			t.Errorf("flat modal still renders rounded corner %q", corner)
 		}
 	}
-	if !strings.Contains(raw, "\x1b[2m") {
-		t.Error("background content is not dimmed")
+	if strings.Contains(raw, "\x1b[2m") {
+		t.Error("background content should stay at normal brightness")
 	}
 
 	lines := strings.Split(ansi.Strip(raw), "\n")
 	joined := strings.Join(lines, "\n")
 	if !strings.Contains(joined, "mclauncher") {
-		t.Error("background screen was discarded instead of dimmed")
+		t.Error("background screen was discarded instead of kept")
 	}
 	header := ""
 	for _, line := range lines {

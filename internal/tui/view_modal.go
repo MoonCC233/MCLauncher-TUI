@@ -383,11 +383,9 @@ func panelBackgroundSeq() string {
 	return fmt.Sprintf("\x1b[48;2;%d;%d;%dm", c.R, c.G, c.B)
 }
 
-// overlayModal draws the flat panel over a dimmed copy of the screen.
+// overlayModal draws the flat panel over the screen, leaving the surrounding
+// content at its normal brightness.
 func (m *Model) overlayModal(base string, panel []string, offX, offY, boxW int) string {
-	const faint = "\x1b[2m"
-	base = strings.ReplaceAll(base, "\x1b[0m", "\x1b[0m"+faint)
-	base = faint + base + "\x1b[0m"
 	baseLines := strings.Split(base, "\n")
 	out := make([]string, 0, m.height)
 	for y := 0; y < m.height; y++ {
@@ -405,7 +403,7 @@ func (m *Model) overlayModal(base string, panel []string, offX, offY, boxW int) 
 			if w := ansi.StringWidth(right); w < m.width-(offX+boxW) {
 				right += strings.Repeat(" ", m.width-(offX+boxW)-w)
 			}
-			line = left + "\x1b[0m" + panel[y-offY] + faint + right + "\x1b[0m"
+			line = left + "\x1b[0m" + panel[y-offY] + right + "\x1b[0m"
 		}
 		out = append(out, fitLine(line, m.width))
 	}

@@ -160,7 +160,7 @@ func writeLine(out *strings.Builder, line string, st *state) {
 			styles = append(styles, "font-weight:700")
 		}
 		if st.dim {
-			styles = append(styles, "opacity:.55")
+			styles = append(styles, "opacity:.75")
 		}
 		if len(styles) > 0 {
 			out.WriteString(`<span style="` + strings.Join(styles, ";") + `">` + span.String() + `</span>`)

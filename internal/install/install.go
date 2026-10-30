@@ -135,8 +135,10 @@ func (in *Installer) Install(ctx context.Context) error {
 			need = false
 		}
 		if need {
+			urls := mirror.Candidates(version.AssetIndex.URL)
 			err := util.DownloadFile(ctx, client, util.DownloadSpec{
-				URL:  version.AssetIndex.URL,
+				URL:  urls[0],
+				Alt:  urls[1:],
 				Dest: indexPath,
 				SHA1: version.AssetIndex.SHA1,
 				Size: version.AssetIndex.Size,
@@ -277,7 +279,7 @@ func (in *Installer) Install(ctx context.Context) error {
 	in.emit(Event{
 		Type:       EventStage,
 		Stage:      "Downloading game files",
-		Detail:     fmt.Sprintf("%d files · %s", len(pending), util.HumanBytes(pendingBytes)),
+		Detail:     fmt.Sprintf("%d files 路 %s", len(pending), util.HumanBytes(pendingBytes)),
 		Total:      pendingBytes,
 		FilesTotal: len(pending),
 	})

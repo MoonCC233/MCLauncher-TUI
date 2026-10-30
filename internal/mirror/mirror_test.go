@@ -81,3 +81,38 @@ func TestBasesAndUnknownKind(t *testing.T) {
 		t.Errorf("maven base = %q", MavenBase())
 	}
 }
+
+func TestVersionMetadataMapsToTheMirror(t *testing.T) {
+	Set(BMCLAPI)
+	defer Set(Official)
+
+	raw := "https://piston-meta.mojang.com/v1/packages/0123456789abcdef0123456789abcdef01234567/1.21.4.json"
+	got, ok := Rewrite(raw)
+	if !ok {
+		t.Fatal("version metadata has no mirror mapping")
+	}
+	if want := bmclapiBase + "/version/1.21.4/json"; got != want {
+		t.Errorf("Rewrite = %q, want %q", got, want)
+	}
+	// Anything else on piston-meta stays official.
+	if _, ok := Rewrite("https://piston-meta.mojang.com/v1/packages/abc/other.txt"); ok {
+		t.Error("only version JSON paths should be rewritten")
+	}
+}
+
+func TestSetAndCurrentAreSafeToCallConcurrently(t *testing.T) {
+	defer Set(Official)
+	done := make(chan struct{})
+	go func() {
+		for i := 0; i < 200; i++ {
+			Set(BMCLAPI)
+			Set(Official)
+		}
+		close(done)
+	}()
+	for i := 0; i < 200; i++ {
+		_ = Enabled()
+		_ = Candidates("https://libraries.minecraft.net/x.jar")
+	}
+	<-done
+}

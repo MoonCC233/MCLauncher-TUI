@@ -2,10 +2,16 @@
 // mirror. It is a small URL mapping table plus the currently selected source:
 // everything that downloads a file asks this package for the URLs to try, so a
 // single setting switches the whole launcher.
+//
+// The mirror covers the version manifest and version metadata, libraries, assets
+// and the loader repositories. Client jars (piston-data.mojang.com) and log4j
+// configuration files have no mirror equivalent and keep coming from Mojang.
 package mirror
 
 import (
+	"regexp"
 	"strings"
+	"sync"
 )
 
 // Kind is the download source the player picked in Settings.
@@ -24,7 +30,12 @@ var Kinds = []Kind{Official, BMCLAPI}
 // bmclapiBase is the root of the BMCLAPI mirror.
 const bmclapiBase = "https://bmclapi2.bangbang93.com"
 
-var current = Official
+var (
+	// mu guards current: the setting can change while download workers are
+	// reading it, so every access goes through the lock.
+	mu      sync.RWMutex
+	current = Official
+)
 
 // Set switches the mirror used for the rest of the run. Unknown values fall back
 // to the official servers.
@@ -32,14 +43,20 @@ func Set(kind Kind) {
 	if kind != BMCLAPI {
 		kind = Official
 	}
+	mu.Lock()
 	current = kind
+	mu.Unlock()
 }
 
 // Current returns the source in use.
-func Current() Kind { return current }
+func Current() Kind {
+	mu.RLock()
+	defer mu.RUnlock()
+	return current
+}
 
 // Enabled reports whether downloads should go through the mirror.
-func Enabled() bool { return current != Official }
+func Enabled() bool { return Current() != Official }
 
 // Base returns the mirror root, or "" when the official servers are in use.
 func Base() string {
@@ -84,8 +101,24 @@ func Rewrite(raw string) (string, bool) {
 	case strings.HasSuffix(raw, "/mc/game/version_manifest_v2.json"):
 		return base + "/mc/game/version_manifest_v2.json", true
 	}
+	if id := versionJSONID(raw); id != "" {
+		// The mirror serves a version's metadata under its id, not the object hash.
+		return base + "/version/" + id + "/json", true
+	}
 	return "", false
 }
+
+// versionJSONID extracts the version id from a piston-meta object URL such as
+// https://piston-meta.mojang.com/v1/packages/<hash>/1.21.4.json.
+func versionJSONID(raw string) string {
+	m := versionJSONPath.FindStringSubmatch(raw)
+	if m == nil {
+		return ""
+	}
+	return m[1]
+}
+
+var versionJSONPath = regexp.MustCompile(`^https://piston-meta\.mojang\.com/v1/packages/[0-9a-f]+/([^/]+)\.json$`)
 
 // Candidates returns the URLs to try for one download: the mirror first when it
 // is enabled, then the official URL so a missing mirror file never breaks an

@@ -111,62 +111,53 @@ const (
 // fabricMetaURL resolves a path against the official Fabric meta service or
 // the mirror configured with MCLAUNCHER_FABRIC_MIRROR. The mirror expects the
 // full v2 base, for example https://bmclapi2.bangbang93.com/fabric-meta/v2.
-func fabricMetaURL(path string) string {
-	base := fabricMetaBase
-	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MIRROR")), "/"); override != "" {
-		base = override
-	} else if mirrored := mirror.FabricMetaBase(); mirrored != "" {
-		base = mirrored
-	}
-	return base + "/" + strings.TrimLeft(path, "/")
-}
-
-// quiltMetaURL is the Quilt equivalent of fabricMetaURL.
-func quiltMetaURL(path string) string {
-	base := quiltMetaBase
-	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MIRROR")), "/"); override != "" {
-		base = override
-	} else if mirrored := mirror.QuiltMetaBase(); mirrored != "" {
-		base = mirrored
-	}
-	return base + "/" + strings.TrimLeft(path, "/")
-}
-
-func fabricMavenMirror() string {
-	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MAVEN_MIRROR")), "/"); override != "" {
-		return override
-	}
-	return strings.TrimRight(mirror.MavenBase(), "/")
-}
-
-func quiltMavenMirror() string {
-	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MAVEN_MIRROR")), "/"); override != "" {
-		return override
-	}
-	return strings.TrimRight(mirror.MavenBase(), "/")
-}
-
-func rewriteMavenURL(url, base, mirror string) string {
-	if url == "" || mirror == "" || base == "" || !strings.HasPrefix(url, base) {
-		return url
-	}
-	return mirror + "/" + strings.TrimPrefix(url, base)
-}
-
-func rewriteProfileMaven(v *mojang.VersionJSON, base, mirror string) {
-	if v == nil || mirror == "" {
-		return
-	}
-	for i := range v.Libraries {
-		lib := &v.Libraries[i]
-		lib.URL = rewriteMavenURL(lib.URL, base, mirror)
-		lib.Downloads.Artifact.URL = rewriteMavenURL(lib.Downloads.Artifact.URL, base, mirror)
-		for key, info := range lib.Downloads.Classifiers {
-			info.URL = rewriteMavenURL(info.URL, base, mirror)
-			lib.Downloads.Classifiers[key] = info
+// fabricMetaURLs lists where one Fabric meta path can be read from: the
+// configured mirror first, then the official API, so a mirror that is down or
+// missing a path never breaks loader discovery.
+// fetchJSONAny reads the first URL that answers with JSON.
+func fetchJSONAny(ctx context.Context, client *http.Client, urls []string, target any) error {
+	var lastErr error
+	for _, url := range urls {
+		if err := util.FetchJSON(ctx, client, url, target); err != nil {
+			lastErr = err
+			continue
 		}
+		return nil
 	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no source is available")
+	}
+	return lastErr
 }
+
+func fabricMetaURLs(path string) []string {
+	path = "/" + strings.TrimLeft(path, "/")
+	urls := []string{}
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MIRROR")), "/"); override != "" {
+		urls = append(urls, override+path)
+	} else if mirrored := mirror.FabricMetaBase(); mirrored != "" {
+		urls = append(urls, mirrored+path)
+	}
+	return append(urls, fabricMetaBase+path)
+}
+
+// fabricMetaURL is the first candidate, kept for callers that only need one.
+func fabricMetaURL(path string) string { return fabricMetaURLs(path)[0] }
+
+// quiltMetaURLs is the Quilt equivalent of fabricMetaURLs.
+func quiltMetaURLs(path string) []string {
+	path = "/" + strings.TrimLeft(path, "/")
+	urls := []string{}
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MIRROR")), "/"); override != "" {
+		urls = append(urls, override+path)
+	} else if mirrored := mirror.QuiltMetaBase(); mirrored != "" {
+		urls = append(urls, mirrored+path)
+	}
+	return append(urls, quiltMetaBase+path)
+}
+
+// quiltMetaURL is the first candidate.
+func quiltMetaURL(path string) string { return quiltMetaURLs(path)[0] }
 
 // FetchVersions downloads the available loader builds for a Minecraft version.
 // OptiFine has no public API; it is imported from a local jar instead.
@@ -220,8 +211,7 @@ func parseMetaVersions(raw []loaderVersionEntry) []RemoteVersion {
 
 func fetchFabricVersions(ctx context.Context, client *http.Client, minecraft string) ([]RemoteVersion, error) {
 	var raw []loaderVersionEntry
-	url := fabricMetaURL("versions/loader/" + minecraft)
-	if err := util.FetchJSON(ctx, client, url, &raw); err != nil {
+	if err := fetchJSONAny(ctx, client, fabricMetaURLs("versions/loader/"+minecraft), &raw); err != nil {
 		return nil, err
 	}
 	return parseMetaVersions(raw), nil
@@ -229,8 +219,7 @@ func fetchFabricVersions(ctx context.Context, client *http.Client, minecraft str
 
 func fetchQuiltVersions(ctx context.Context, client *http.Client, minecraft string) ([]RemoteVersion, error) {
 	var raw []loaderVersionEntry
-	url := quiltMetaURL("versions/loader/" + minecraft)
-	if err := util.FetchJSON(ctx, client, url, &raw); err != nil {
+	if err := fetchJSONAny(ctx, client, quiltMetaURLs("versions/loader/"+minecraft), &raw); err != nil {
 		return nil, err
 	}
 	return parseMetaVersions(raw), nil
@@ -437,9 +426,9 @@ func (in *Installer) Install(ctx context.Context) error {
 	)
 	switch in.Kind {
 	case Fabric:
-		versionID, err = in.installProfile(ctx, fabricMetaURL("versions/loader/"+in.Minecraft+"/"+in.LoaderVersion+"/profile/json"), Fabric)
+		versionID, err = in.installProfile(ctx, fabricMetaURLs("versions/loader/"+in.Minecraft+"/"+in.LoaderVersion+"/profile/json"), Fabric)
 	case Quilt:
-		versionID, err = in.installProfile(ctx, quiltMetaURL("versions/loader/"+in.Minecraft+"/"+in.LoaderVersion+"/profile/json"), Quilt)
+		versionID, err = in.installProfile(ctx, quiltMetaURLs("versions/loader/"+in.Minecraft+"/"+in.LoaderVersion+"/profile/json"), Quilt)
 	case Forge:
 		versionID, err = in.installForge(ctx)
 	case NeoForge:
@@ -480,20 +469,14 @@ func (in *Installer) finish(ctx context.Context, versionID string) error {
 	return nil
 }
 
-func (in *Installer) installProfile(ctx context.Context, url string, kind Kind) (string, error) {
+func (in *Installer) installProfile(ctx context.Context, urls []string, kind Kind) (string, error) {
 	in.emit(install.Event{Type: install.EventStage, Stage: "Downloading loader profile", Detail: string(kind) + " " + in.LoaderVersion})
 	var profile mojang.VersionJSON
-	if err := util.FetchJSON(ctx, in.client(), url, &profile); err != nil {
+	if err := fetchJSONAny(ctx, in.client(), urls, &profile); err != nil {
 		return "", err
 	}
-	switch kind {
-	case Fabric:
-		rewriteProfileMaven(&profile, "https://maven.fabricmc.net/", fabricMavenMirror())
-	case Quilt:
-		rewriteProfileMaven(&profile, "https://maven.quiltmc.org/", quiltMavenMirror())
-		// Quilt profiles use Fabric's Maven for ASM, intermediary and mixin.
-		rewriteProfileMaven(&profile, "https://maven.fabricmc.net/", fabricMavenMirror())
-	}
+	// The profile keeps the official repository URLs: mirror routing happens when
+	// the libraries are downloaded, so switching the setting later still works.
 	versionID := in.VersionID()
 	profile.ID = versionID
 	profile.InheritsFrom = in.Minecraft

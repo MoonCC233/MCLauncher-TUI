@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
@@ -55,6 +56,23 @@ func FetchVersionJSON(ctx context.Context, client *http.Client, layout paths.Lay
 		return nil, err
 	}
 	return LoadVersionJSON(layout, id)
+}
+
+// fetchJSONCandidates reads the first candidate URL that answers with JSON, so a
+// mirror that is down or missing the file falls back to the official host.
+func fetchJSONCandidates(ctx context.Context, client *http.Client, urls []string, target any) error {
+	var lastErr error
+	for _, url := range urls {
+		if err := util.FetchJSON(ctx, client, url, target); err != nil {
+			lastErr = err
+			continue
+		}
+		return nil
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no source is available")
+	}
+	return lastErr
 }
 
 func loadVersionTree(layout paths.Layout, id string, seen map[string]bool, depth int) (*VersionJSON, error) {
@@ -244,7 +262,7 @@ func fetchVersionTree(ctx context.Context, client *http.Client, layout paths.Lay
 		return fmt.Errorf("version %q is not installed", id)
 	}
 	var v VersionJSON
-	if err := util.FetchJSON(ctx, client, summary.URL, &v); err != nil {
+	if err := fetchJSONCandidates(ctx, client, mirror.Candidates(summary.URL), &v); err != nil {
 		if localErr == nil {
 			return nil
 		}

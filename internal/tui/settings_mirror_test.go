@@ -56,3 +56,23 @@ func TestDownloadMirrorRowIsInSettings(t *testing.T) {
 		t.Errorf("row value = %q", row.Value)
 	}
 }
+
+// A failed save must not leave the running launcher on a source the next start
+// would not load.
+func TestDownloadMirrorRevertsWhenTheSaveFails(t *testing.T) {
+	m := testModel(t)
+	// A directory where the config file should be makes every save fail.
+	dir := t.TempDir()
+	m.cfg.Path = dir
+	defer mirror.Set(mirror.Official)
+
+	before := m.cfg.Settings.DownloadMirror
+	m.toggleDownloadMirror()
+
+	if m.cfg.Settings.DownloadMirror != before {
+		t.Errorf("setting = %q, want it reverted to %q", m.cfg.Settings.DownloadMirror, before)
+	}
+	if mirror.Current() != mirror.Official {
+		t.Errorf("mirror = %q, want the running launcher to stay on the official source", mirror.Current())
+	}
+}

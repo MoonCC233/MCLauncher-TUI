@@ -54,12 +54,21 @@ func DownloadFile(ctx context.Context, client *http.Client, spec DownloadSpec, o
 		return err
 	}
 	part := spec.Dest + ".part"
-	var lastErr error
+	urls := make([]string, 0, 1+len(spec.Alt))
 	for _, url := range append([]string{spec.URL}, spec.Alt...) {
-		if url == "" {
-			continue
+		if url != "" {
+			urls = append(urls, url)
 		}
-		for attempt := 0; attempt < 3; attempt++ {
+	}
+	var lastErr error
+	for i, url := range urls {
+		// Only the last URL keeps the full retry budget: a mirror that stalls
+		// must not delay the fallback to the official server by three timeouts.
+		attempts := 1
+		if i == len(urls)-1 {
+			attempts = 3
+		}
+		for attempt := 0; attempt < attempts; attempt++ {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -74,7 +83,7 @@ func DownloadFile(ctx context.Context, client *http.Client, spec DownloadSpec, o
 				if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "403") {
 					break
 				}
-				if attempt < 2 {
+				if attempt < attempts-1 {
 					select {
 					case <-ctx.Done():
 						return ctx.Err()

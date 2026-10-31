@@ -7,10 +7,7 @@ import (
 	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 )
 
-func TestFabricMetaURLsTryTheMirrorFirst(t *testing.T) {
-	mirror.Set(mirror.BMCLAPI)
-	defer mirror.Set(mirror.Official)
-
+func TestFabricMetaURLsTryTheDomesticMirrorFirst(t *testing.T) {
 	urls := fabricMetaURLs("versions/loader/1.21.4")
 	if len(urls) != 2 {
 		t.Fatalf("urls = %v, want the mirror and the official API", urls)
@@ -21,13 +18,30 @@ func TestFabricMetaURLsTryTheMirrorFirst(t *testing.T) {
 	if urls[1] != fabricMetaBase+"/versions/loader/1.21.4" {
 		t.Errorf("second url = %q, want the official API", urls[1])
 	}
+}
 
-	// Without a mirror only the official API is left.
-	mirror.Set(mirror.Official)
-	urls = fabricMetaURLs("versions/loader/1.21.4")
-	if len(urls) != 1 || urls[0] != fabricMetaBase+"/versions/loader/1.21.4" {
-		t.Errorf("urls = %v, want only the official API", urls)
+func TestLoaderMetadataURLsIncludeTheDomesticMirror(t *testing.T) {
+	forge := forgeMetadataURLs("net/minecraftforge/forge/maven-metadata.xml")
+	if !containsURL(forge, mirror.BMCLAPIBase) || !containsURL(forge, mirror.SJTUBase) || !containsURL(forge, forgeMavenBase) {
+		t.Errorf("forge urls = %v", forge)
 	}
+	neo := neoforgeMetadataURLs("net/neoforged/neoforge/maven-metadata.xml")
+	if !containsURL(neo, mirror.BMCLAPIBase) || !containsURL(neo, mirror.SJTUBase) || !containsURL(neo, neoforgeMavenBase) {
+		t.Errorf("neoforge urls = %v", neo)
+	}
+	quilt := quiltMetaURLs("versions/loader/1.21.4")
+	if len(quilt) < 2 || !strings.Contains(quilt[0], "bangbang93") || quilt[1] != quiltMetaBase+"/versions/loader/1.21.4" {
+		t.Errorf("quilt urls = %v", quilt)
+	}
+}
+
+func containsURL(urls []string, prefix string) bool {
+	for _, raw := range urls {
+		if strings.HasPrefix(raw, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestForgeInstallerAlternatesKeepTheRepositoryPath(t *testing.T) {

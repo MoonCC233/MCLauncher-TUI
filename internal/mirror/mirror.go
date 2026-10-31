@@ -27,8 +27,18 @@ const (
 // Kinds lists the selectable sources, in picker order.
 var Kinds = []Kind{Official, BMCLAPI}
 
+// BMCLAPIBase is the public root of the BMCLAPI mirror. Loader discovery uses
+// it even when the player has not switched the global download mirror, because
+// the official loader APIs are often unreachable from mainland China.
+const BMCLAPIBase = "https://bmclapi2.bangbang93.com"
+
+// SJTUBase mirrors the BMCLAPI Maven tree from Shanghai Jiao Tong University.
+// It is a direct file mirror without the redirects used by the main BMCLAPI
+// host, which makes loader metadata and installers much more reliable.
+const SJTUBase = "https://mirror.sjtu.edu.cn/bmclapi"
+
 // bmclapiBase is the root of the BMCLAPI mirror.
-const bmclapiBase = "https://bmclapi2.bangbang93.com"
+const bmclapiBase = BMCLAPIBase
 
 var (
 	// mu guards current: the setting can change while download workers are

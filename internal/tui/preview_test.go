@@ -45,6 +45,8 @@ var previewScreens = []string{
 	"loader-versions",
 	"loader-java",
 	"content",
+	"content-search",
+	"content-detail",
 	"skin",
 }
 

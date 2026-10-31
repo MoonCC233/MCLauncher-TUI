@@ -99,10 +99,14 @@ func (m *Model) updateForm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "shift+tab", "up":
 		return m, m.focusFormRow(-1)
 	case "enter":
-		// The loader row is an entry point into the loader picker, not a value to
-		// cycle in place.
+		// A loader row is an entry point into that loader's picker, not a value
+		// to cycle in place.
 		if m.formLoaderFocus() {
-			return m.openLoaderForForm()
+			index := m.formLoaderIndex()
+			if index >= 0 && index < len(formLoaderKinds) {
+				return m.openLoaderForFormKind(formLoaderKinds[index])
+			}
+			return m, nil
 		}
 		return m.submitForm()
 	}

@@ -190,9 +190,8 @@ type FormState struct {
 	Focus     int
 	Err       string
 
-	// LoaderRow shows the "Mod loader" choice of the new-instance form.
+	// LoaderRow shows the loader list of the new-instance install sheet.
 	LoaderRow bool
-	Loader    loader.Kind
 }
 
 type PromptState struct {
@@ -221,6 +220,9 @@ type loaderPicker struct {
 	OptiFineJar   string
 	Loading       bool
 	Err           string
+	// FromForm marks a picker opened by the new-instance install sheet, so
+	// cancelling returns to the form instead of the loader-kind list.
+	FromForm bool
 }
 
 type AlertState struct {

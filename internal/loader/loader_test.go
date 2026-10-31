@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/paths"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
@@ -208,8 +209,26 @@ func TestMetaMirrors(t *testing.T) {
 		t.Errorf("fabricMetaURL = %q, want %q", got, want)
 	}
 	t.Setenv("MCLAUNCHER_QUILT_MIRROR", "")
-	if got, want := quiltMetaURL("versions/loader/1.20.1"), quiltMetaBase+"/versions/loader/1.20.1"; got != want {
+	if got, want := quiltMetaURL("versions/loader/1.20.1"), mirror.BMCLAPIBase+"/quilt-meta/v3/versions/loader/1.20.1"; got != want {
 		t.Errorf("quiltMetaURL = %q, want %q", got, want)
+	}
+}
+
+func TestParseQuiltLoaderList(t *testing.T) {
+	raw := []loaderRootEntry{
+		{Version: "0.27.0"},
+		{Version: "0.27.0-beta.1"},
+		{Version: ""},
+	}
+	versions := parseQuiltLoaderList(raw)
+	if len(versions) != 2 {
+		t.Fatalf("versions = %+v", versions)
+	}
+	if versions[0].Version != "0.27.0" || !versions[0].Stable {
+		t.Errorf("first = %+v, want the stable release", versions[0])
+	}
+	if versions[1].Version != "0.27.0-beta.1" || versions[1].Stable {
+		t.Errorf("second = %+v, want a beta", versions[1])
 	}
 }
 

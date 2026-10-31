@@ -25,6 +25,8 @@ const (
 	hitLoaderKindRow
 	hitLoaderVersionRow
 	hitLoaderJavaRow
+	hitFormSubmit
+	hitFormLoaderRow
 	hitAboutTab
 )
 
@@ -113,6 +115,22 @@ func keyMsg(s string) tea.KeyMsg {
 		return tea.KeyMsg{Type: tea.KeyHome}
 	case "end":
 		return tea.KeyMsg{Type: tea.KeyEnd}
+	case "ctrl+t":
+		return tea.KeyMsg{Type: tea.KeyCtrlT}
+	case "ctrl+s":
+		return tea.KeyMsg{Type: tea.KeyCtrlS}
+	case "ctrl+o":
+		return tea.KeyMsg{Type: tea.KeyCtrlO}
+	case "ctrl+f":
+		return tea.KeyMsg{Type: tea.KeyCtrlF}
+	case "ctrl+k":
+		return tea.KeyMsg{Type: tea.KeyCtrlK}
+	case "ctrl+p":
+		return tea.KeyMsg{Type: tea.KeyCtrlP}
+	case "ctrl+n":
+		return tea.KeyMsg{Type: tea.KeyCtrlN}
+	case "ctrl+r":
+		return tea.KeyMsg{Type: tea.KeyCtrlR}
 	case " ":
 		return tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
 	default:
@@ -279,6 +297,14 @@ func (m *Model) activateHit(hit hitRegion) (tea.Model, tea.Cmd) {
 			return m.startLoaderInstall()
 		}
 		return m, nil
+	case hitFormSubmit:
+		return m.submitForm()
+	case hitFormLoaderRow:
+		if hit.Index < 0 || hit.Index >= len(formLoaderKinds) {
+			return m, nil
+		}
+		_ = m.setFormFocus(len(m.form.Fields) + hit.Index)
+		return m.openLoaderForFormKind(formLoaderKinds[hit.Index])
 
 	}
 	return m, nil

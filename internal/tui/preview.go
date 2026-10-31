@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/auth"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/catalog"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/config"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/java"
@@ -231,7 +232,7 @@ func Preview(screenName string, width, height int, language ...string) string {
 		}
 	case "form":
 		m.screen = ScreenVersions
-		m.openInstanceForm("1.21.4")
+		m.openInstanceForm("26.1.2")
 	case "language":
 		m.screen = ScreenSettings
 		m.openLanguagePicker()
@@ -315,12 +316,12 @@ func Preview(screenName string, width, height int, language ...string) string {
 		m.packs.instanceID = "a1b2c3d4e5"
 		m.packs.instanceName = "Survival"
 		m.packs.kind = packs.ResourcePack
-		m.packs.query = newTextInput("", "", 36, 48)
+		m.packs.query = newTextInput("", "", 48, 64)
 		m.packs.cursor = 1
 		m.packs.list = []packs.Record{
-			{Title: "Bare Bones", Filename: "BareBones_1.21.zip", Size: 4_200_000, InstalledAt: now.Unix() - 3600},
-			{Title: "Fresh Animations", Filename: "FreshAnimations_v1.11.1.zip", Size: 743_793, InstalledAt: now.Unix() - 900},
-			{Title: "Stay True", Filename: "StayTrue_v1.21.zip", Size: 18_300_000, InstalledAt: now.Unix() - 120},
+			{Title: "Bare Bones", Filename: "BareBones_1.21.zip", Size: 4_200_000, InstalledAt: now.Unix() - 3600, Source: "modrinth"},
+			{Title: "Fresh Animations", Filename: "FreshAnimations_v1.11.1.zip", Size: 743_793, InstalledAt: now.Unix() - 900, Source: "curseforge"},
+			{Title: "Stay True", Filename: "StayTrue_v1.21.zip", Size: 18_300_000, InstalledAt: now.Unix() - 120, Source: "modrinth"},
 		}
 		m.packs.enabled = map[string]bool{
 			"BareBones_1.21.zip":          false,
@@ -328,6 +329,47 @@ func Preview(screenName string, width, height int, language ...string) string {
 			"StayTrue_v1.21.zip":          true,
 		}
 		m.modal = modalPacks
+	case "content-search":
+		m.screen = ScreenInstances
+		m.packs.instanceID = "a1b2c3d4e5"
+		m.packs.instanceName = "Survival"
+		m.packs.kind = packs.ResourcePack
+		m.packs.source = catalog.SourceModrinth
+		m.packs.sort = catalog.SortDownloads
+		m.packs.page = 0
+		m.packs.total = 128
+		m.packs.query = newTextInput("", "bare bones", 48, 64)
+		m.packs.searchedFor = "bare bones"
+		m.packs.results = []catalog.Project{
+			{ID: "rox3U8B6", Title: "Bare Bones", Author: "siuol", Downloads: 12_400_000, Description: "The clean, flat resource pack that keeps Minecraft readable.", Source: catalog.SourceModrinth},
+			{ID: "DCHWs5EF", Title: "Bare Bones x Fresh Animations", Author: "Fresh", Downloads: 986_000, Description: "Bare Bones textures with animated mobs and items.", Source: catalog.SourceModrinth},
+			{ID: "7vuMiTHm", Title: "Bare Bones - Connected Glass", Author: "siuol", Downloads: 418_000, Description: "Connected glass for the Bare Bones pack.", Source: catalog.SourceCurseForge},
+			{ID: "stayout", Title: "Stay True", Author: "Yuruze", Downloads: 3_100_000, Description: "A vanilla-friendly pack with warm, hand-drawn textures.", Source: catalog.SourceModrinth},
+			{ID: "faithful", Title: "Faithful 32x", Author: "Faithful Team", Downloads: 9_800_000, Description: "A double-resolution pack that stays close to vanilla.", Source: catalog.SourceCurseForge},
+			{ID: "fresh", Title: "Fresh Animations", Author: "FreshLX", Downloads: 6_200_000, Description: "Animated mob models and expressive movement.", Source: catalog.SourceModrinth},
+		}
+		m.packs.searchCursor = 0
+		m.modal = modalPackSearch
+	case "content-detail":
+		m.screen = ScreenInstances
+		m.packs.instanceID = "a1b2c3d4e5"
+		m.packs.instanceName = "Survival"
+		m.packs.kind = packs.ResourcePack
+		m.packs.source = catalog.SourceModrinth
+		m.packs.query = newTextInput("", "bare bones", 48, 64)
+		m.packs.project = catalog.Project{
+			ID: "rox3U8B6", Title: "Bare Bones", Author: "siuol",
+			Description: "The clean, flat resource pack that keeps Minecraft readable. Updated for 1.21.",
+			Downloads:   12_400_000, Source: catalog.SourceModrinth,
+		}
+		m.packs.versions = []catalog.Version{
+			{ID: "v1", VersionNumber: "1.4.12", GameVersions: []string{"1.21.4"}, Downloads: 2_100_000, Files: []catalog.File{{Filename: "Bare Bones 1.21.11.zip", Size: 5_488_875, Primary: true}}},
+			{ID: "v2", VersionNumber: "1.4.11", GameVersions: []string{"1.21.1"}, Downloads: 980_000, Files: []catalog.File{{Filename: "Bare Bones 1.21.1.zip", Size: 5_300_000, Primary: true}}},
+			{ID: "v3", VersionNumber: "1.4.10", GameVersions: []string{"1.20.6"}, Downloads: 640_000, Files: []catalog.File{{Filename: "Bare Bones 1.20.6.zip", Size: 5_100_000, Primary: true}}},
+			{ID: "v4", VersionNumber: "1.4.9", GameVersions: []string{"1.20.1"}, Downloads: 420_000, Files: []catalog.File{{Filename: "Bare Bones 1.20.1.zip", Size: 4_900_000, Primary: true}}},
+		}
+		m.packs.versionCursor = 0
+		m.modal = modalPackVersions
 	case "about", "about-software", "about-contributors", "about-releases", "about-feedback":
 		m.screen = ScreenAbout
 		m.cfg.Path = filepath.Join(m.layout.Root, "config.json")

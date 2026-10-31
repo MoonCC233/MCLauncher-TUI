@@ -15,19 +15,12 @@ func TestInstanceFormHasLoaderRow(t *testing.T) {
 	if !m.form.LoaderRow {
 		t.Fatal("a vanilla version should offer the loader row")
 	}
-	if got := m.formRowCount(); got != len(m.form.Fields)+1 {
-		t.Errorf("form rows = %d, want %d", got, len(m.form.Fields)+1)
-	}
-	if got := m.formLoaderValue(); got != m.t("None") {
-		t.Errorf("default loader = %q, want None", got)
+	if got := m.formRowCount(); got != len(m.form.Fields)+len(formLoaderKinds) {
+		t.Errorf("form rows = %d, want %d", got, len(m.form.Fields)+len(formLoaderKinds))
 	}
 
-	// The row is reached with tab and wraps back to the first field.
-	m.form.Focus = len(m.form.Fields) - 1
-	m.focusFormRow(1)
-	if !m.formLoaderFocus() {
-		t.Fatal("tab should reach the loader row")
-	}
+	// The loader rows are reached with tab and wrap back to the first field.
+	m.form.Focus = m.formRowCount() - 1
 	m.focusFormRow(1)
 	if m.form.Focus != 0 {
 		t.Errorf("focus = %d, want it to wrap to the first field", m.form.Focus)
@@ -50,15 +43,21 @@ func TestLoaderRowOpensThePicker(t *testing.T) {
 	m.form.Focus = len(m.form.Fields) // the loader row
 
 	model, cmd := m.updateForm(tea.KeyMsg{Type: tea.KeyEnter})
-	if cmd != nil {
-		t.Errorf("opening the picker should not start a background command yet")
+	if cmd == nil {
+		t.Error("opening a specific loader row should load its versions")
 	}
 	next := model.(*Model)
 	if next.modal != modalLoader {
 		t.Fatalf("modal = %v, want the loader picker", next.modal)
 	}
-	if next.loaderPick.Step != loaderStepKind {
-		t.Errorf("step = %v, want the loader kind step", next.loaderPick.Step)
+	if next.loaderPick.Step != loaderStepVersion {
+		t.Errorf("step = %v, want the loader version step", next.loaderPick.Step)
+	}
+	if next.loaderPick.Kind != loader.Forge {
+		t.Errorf("kind = %q, want the first loader row", next.loaderPick.Kind)
+	}
+	if !next.loaderPick.FromForm {
+		t.Error("the picker should remember that it came from the install sheet")
 	}
 	if next.loaderPick.Minecraft != "1.21.4" {
 		t.Errorf("minecraft = %q, want 1.21.4", next.loaderPick.Minecraft)
@@ -113,7 +112,7 @@ func TestCancellingThePickerReturnsToTheForm(t *testing.T) {
 	m.openInstanceForm("1.21.4")
 	m.form.Fields[0].SetValue("Modded")
 	m.form.Focus = len(m.form.Fields)
-	m.openLoaderForForm()
+	m.openLoaderForFormKind(loader.Forge)
 
 	if m.modal != modalLoader {
 		t.Fatalf("modal = %v, want the loader picker", m.modal)

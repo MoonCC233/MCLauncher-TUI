@@ -79,7 +79,7 @@ func (in *Installer) installForge(ctx context.Context) (string, error) {
 		kind:       Forge,
 		label:      "Forge",
 		mavenBase:  forgeMavenBase,
-		mavenBases: []string{"https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"},
+		mavenBases: []string{mirror.BMCLAPIBase + "/maven/", "https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"},
 		mirror:     forgeMirror(),
 		installerRel: fmt.Sprintf(
 			"net/minecraftforge/forge/%s/forge-%s-installer.jar", coord, coord),
@@ -101,7 +101,7 @@ func (in *Installer) installNeoForge(ctx context.Context) (string, error) {
 		kind:         NeoForge,
 		label:        "NeoForge",
 		mavenBase:    neoforgeMavenBase,
-		mavenBases:   []string{"https://maven.neoforged.net/releases/", "https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"},
+		mavenBases:   []string{mirror.BMCLAPIBase + "/maven/", "https://maven.neoforged.net/releases/", "https://maven.minecraftforge.net/", "https://files.minecraftforge.net/maven/"},
 		mirror:       neoforgeMirror(),
 		installerRel: installerRel,
 		cacheDir:     "neoforge",
@@ -560,18 +560,19 @@ func normalizeVersionID(layout paths.Layout, versionID string) error {
 
 var sha1RE = regexp.MustCompile(`^[0-9a-fA-F]{40}$`)
 
-// forgeMirror lets users route Forge Maven traffic through a mirror when the
-// official host is slow or blocked. The same URL is handed to the Forge
-// installer so its library and processor downloads use the mirror too.
+// forgeMirror lets the launcher route Forge Maven traffic through a domestic
+// mirror by default. The same URL is handed to the Forge installer so its
+// library and processor downloads use the mirror too; the official repositories
+// remain as fallbacks in the download candidates.
 func forgeMirror() string {
 	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FORGE_MIRROR")), "/"); override != "" {
 		return override
 	}
-	return strings.TrimRight(mirror.MavenBase(), "/")
+	return mirror.SJTUBase
 }
 
-// forgeMavenURL resolves a repository-relative path against the configured
-// mirror, or the official Forge Maven when no mirror is set.
+// forgeMavenURL resolves a repository-relative path against the preferred
+// mirror, or the official Forge Maven when no mirror is configured.
 func forgeMavenURL(rel string) string {
 	if mirror := forgeMirror(); mirror != "" {
 		return mirror + "/" + strings.TrimLeft(rel, "/")
@@ -583,7 +584,7 @@ func neoforgeMirror() string {
 	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/"); override != "" {
 		return override
 	}
-	return strings.TrimRight(mirror.MavenBase(), "/")
+	return mirror.SJTUBase
 }
 
 // forgeInstallerAlternates lists the official installer URLs to fall back to when

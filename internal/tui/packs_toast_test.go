@@ -15,7 +15,7 @@ func TestPackTaskToastNamesTheContent(t *testing.T) {
 	m.setPackKind(packs.Mod)
 	m.packs.instanceID = inst.ID
 
-	if _, cmd := m.startPackTask("Sodium 0.6.13", packs.Record{Filename: "sodium.jar"}, "https://example.test/sodium.jar"); cmd == nil {
+	if _, cmd := m.startPackTask("Sodium 0.6.13", packs.Record{Filename: "sodium.jar"}, "https://example.test/sodium.jar", nil); cmd == nil {
 		t.Fatal("starting a pack task should return a command")
 	}
 	if m.task == nil {

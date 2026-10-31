@@ -62,7 +62,7 @@ func TestPacksSearchFlow(t *testing.T) {
 		t.Fatalf("results = %+v loading = %v", m.packs.results, m.packs.loading)
 	}
 	body := strings.Join(m.packSearchBody(90), "\n")
-	for _, want := range []string{"Fresh Textures", m.tf("%d downloads", 4200)} {
+	for _, want := range []string{"Fresh Textures", "4.2K"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("search body missing %q:\n%s", want, body)
 		}
@@ -435,5 +435,175 @@ func TestPackSearchUsesTheInstanceVersionForVanilla(t *testing.T) {
 	m.packs.kind = packs.Mod
 	if got := m.packLoader(); got != "" {
 		t.Errorf("loader = %q, want none for a vanilla instance", got)
+	}
+}
+
+func TestPackSourceSwitch(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+
+	if m.packs.source != catalog.SourceModrinth {
+		t.Fatalf("source = %q, want Modrinth by default", m.packs.source)
+	}
+	if _, cmd := m.updatePacks(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}); cmd == nil {
+		t.Error("changing the source should start a new search")
+	}
+	if m.packs.source != catalog.SourceCurseForge {
+		t.Fatalf("source = %q, want CurseForge after s", m.packs.source)
+	}
+	if body := strings.Join(m.packListBody(90), "\n"); !strings.Contains(body, "CurseForge") {
+		t.Errorf("body should show the active source:\n%s", body)
+	}
+
+	// The version view keeps the source of the project it came from.
+	project := catalog.Project{ID: "42", Title: "JEI", Source: catalog.SourceCurseForge}
+	m.handlePackVersions(packVersionsMsg{project: project, versions: []catalog.Version{{
+		ID: "7", VersionNumber: "7.0",
+		Files: []catalog.File{{Filename: "jei.jar", Size: 10, Primary: true}},
+	}}})
+	if body := strings.Join(m.packVersionsBody(90), "\n"); !strings.Contains(body, "CurseForge") {
+		t.Errorf("version body should show the project source:\n%s", body)
+	}
+
+	m.modal = modalPacks
+	if _, cmd := m.updatePacks(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("s")}); cmd == nil {
+		t.Error("changing back should start a new search")
+	}
+	if m.packs.source != catalog.SourceModrinth {
+		t.Errorf("source = %q, want Modrinth after switching back", m.packs.source)
+	}
+}
+
+func TestPackSourceSearchBodiesShowTheSource(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+
+	if body := strings.Join(m.packSearchBody(90), "\n"); !strings.Contains(body, "Modrinth") {
+		t.Errorf("search body should show the source:\n%s", body)
+	}
+	m.packs.source = catalog.SourceCurseForge
+	if body := strings.Join(m.packSearchBody(90), "\n"); !strings.Contains(body, "CurseForge") {
+		t.Errorf("search body should follow the source:\n%s", body)
+	}
+}
+
+func TestPackDownloadFiltersCycle(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+	m.packs.kind = packs.Mod
+
+	if cmd := m.cyclePackSort(); cmd == nil {
+		t.Error("changing the sort should reload the search")
+	}
+	if m.packs.sort != catalog.SortDownloads {
+		t.Errorf("sort = %q, want downloads", m.packs.sort)
+	}
+	if cmd := m.cyclePackSort(); cmd == nil || m.packs.sort != catalog.SortNewest {
+		t.Errorf("sort = %q, want newest", m.packs.sort)
+	}
+
+	if cmd := m.cyclePackVersionFilter(); cmd == nil {
+		t.Error("changing the version filter should reload the search")
+	}
+	if m.packs.versionFilter != "all" {
+		t.Errorf("version filter = %q, want all", m.packs.versionFilter)
+	}
+	if got := m.packVersionFilterValue(); got != "" {
+		t.Errorf("version value = %q, want no restriction", got)
+	}
+
+	if cmd := m.cyclePackLoaderFilter(); cmd == nil {
+		t.Error("changing the loader should reload the search")
+	}
+	if m.packs.loaderFilter != "all" {
+		t.Errorf("loader filter = %q, want all", m.packs.loaderFilter)
+	}
+	if got := m.packLoaderFilterValue(); got != "" {
+		t.Errorf("loader value = %q, want no restriction", got)
+	}
+	m.cyclePackLoaderFilter()
+	if m.packs.loaderFilter != "fabric" {
+		t.Errorf("loader filter = %q, want fabric", m.packs.loaderFilter)
+	}
+	if got := m.packLoaderFilterValue(); got != "fabric" {
+		t.Errorf("loader value = %q", got)
+	}
+}
+
+func TestPackPagination(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+	m.packs.total = 45
+
+	if got := m.packPageCount(); got != 3 {
+		t.Errorf("page count = %d, want 3", got)
+	}
+	if cmd := m.changePackPage(1); cmd == nil || m.packs.page != 1 {
+		t.Fatalf("page = %d, want the next page", m.packs.page)
+	}
+	m.packs.page = 2
+	if cmd := m.changePackPage(1); cmd != nil {
+		t.Error("moving past the last page should do nothing")
+	}
+	if cmd := m.changePackPage(-3); cmd != nil {
+		t.Error("moving before the first page should do nothing")
+	}
+}
+
+func TestPackSearchTabSwitchesKindWithoutLosingTheQuery(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+	m.modal = modalPackSearch
+	m.packs.kind = packs.ResourcePack
+	m.packs.query.SetValue("sodium")
+
+	if _, cmd := m.updatePackSearch(tea.KeyMsg{Type: tea.KeyTab}); cmd == nil {
+		t.Error("tab should switch kind and reload the search")
+	}
+	if m.packs.kind != packs.ShaderPack {
+		t.Errorf("kind = %q, want shaders", m.packs.kind)
+	}
+	if got := m.currentPackQuery(); got != "sodium" {
+		t.Errorf("query = %q, want it preserved", got)
+	}
+}
+
+func TestPackSearchBodyShowsTheFilterBar(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+	m.packs.total = 45
+	m.packs.page = 1
+	m.packs.sort = catalog.SortDownloads
+
+	body := strings.Join(m.packSearchBody(100), "\n")
+	for _, want := range []string{
+		"Modrinth", "1.21.4", "Downloads", "Page 2 / 3", "45 results",
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("filter bar missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestPackVersionsBodyShowsProjectDetails(t *testing.T) {
+	m, inst := packModel(t)
+	m.openPacksBrowser(inst)
+	m.packs.project = catalog.Project{
+		ID: "42", Title: "Sodium", Author: "CaffeineMC",
+		Description: "A modern rendering engine.", Downloads: 1_200_000,
+		Source: catalog.SourceCurseForge,
+	}
+	m.packs.versions = []catalog.Version{{
+		ID: "v1", VersionNumber: "1.2.3", GameVersions: []string{"1.21.4"},
+		Loaders: []string{"fabric"}, Downloads: 4_200,
+		Files: []catalog.File{{Filename: "sodium.jar", Size: 1024, Primary: true}},
+	}}
+	m.handlePackVersions(packVersionsMsg{project: m.packs.project, versions: m.packs.versions})
+
+	body := strings.Join(m.packVersionsBody(100), "\n")
+	for _, want := range []string{"Sodium", "CaffeineMC", "A modern rendering engine.", "CurseForge", "1.2.3", "1.21.4", "fabric", "4.2K"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("version body missing %q:\n%s", want, body)
+		}
 	}
 }

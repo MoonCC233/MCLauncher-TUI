@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 )
 
 // pendingCreate remembers an instance that is created once its loader finished
@@ -14,43 +16,69 @@ type pendingCreate struct {
 	base   string
 }
 
-// formRowCount is the number of focusable rows: the text fields plus the loader
-// row when it is shown.
+// formLoaderKinds is the loader menu shown inside the new-instance form.
+var formLoaderKinds = []loader.Kind{
+	loader.Forge,
+	loader.NeoForge,
+	loader.Fabric,
+	loader.Quilt,
+	loader.OptiFine,
+}
+
+// formRowCount is the number of focusable rows: the text fields plus the
+// loader rows when they are shown.
 func (m *Model) formRowCount() int {
 	rows := len(m.form.Fields)
 	if m.form.LoaderRow {
-		rows++
+		rows += len(formLoaderKinds)
 	}
 	return rows
 }
 
-// formLoaderFocus reports whether the loader row currently has focus.
+// formLoaderFocus reports whether a loader row currently has focus.
 func (m *Model) formLoaderFocus() bool {
-	return m.form.LoaderRow && m.form.Focus == len(m.form.Fields)
+	return m.form.LoaderRow && m.form.Focus >= len(m.form.Fields) && m.form.Focus < m.formRowCount()
+}
+
+// formLoaderIndex is the selected loader row, or -1 when a text field is
+// focused.
+func (m *Model) formLoaderIndex() int {
+	if !m.formLoaderFocus() {
+		return -1
+	}
+	return m.form.Focus - len(m.form.Fields)
 }
 
 // focusFormRow moves the form focus by delta across the fields and the loader
-// row, blurring or focusing the text input as needed.
+// rows, blurring or focusing the text input as needed.
 func (m *Model) focusFormRow(delta int) tea.Cmd {
 	rows := m.formRowCount()
 	if rows == 0 {
 		return nil
 	}
-	if m.form.Focus < len(m.form.Fields) {
+	return m.setFormFocus((m.form.Focus + delta%rows + rows) % rows)
+}
+
+// setFormFocus moves the form focus to one row, blurring the previous input and
+// focusing the new one when it is a text field.
+func (m *Model) setFormFocus(index int) tea.Cmd {
+	if index < 0 || index >= m.formRowCount() {
+		return nil
+	}
+	if m.form.Focus >= 0 && m.form.Focus < len(m.form.Fields) {
 		m.form.Fields[m.form.Focus].Blur()
 	}
-	m.form.Focus = (m.form.Focus + delta%rows + rows) % rows
+	m.form.Focus = index
 	m.form.Err = ""
-	if m.form.Focus < len(m.form.Fields) {
-		return m.form.Fields[m.form.Focus].Focus()
+	if index < len(m.form.Fields) {
+		return m.form.Fields[index].Focus()
 	}
 	return nil
 }
 
-// openLoaderForForm leaves the form for the loader picker: the player then picks
-// the loader, its version and the Java runtime, exactly like from the Versions
-// screen. The instance is created once the loader is installed.
-func (m *Model) openLoaderForForm() (tea.Model, tea.Cmd) {
+// openLoaderForFormKind opens the loader picker directly on the version step of
+// one loader, which is what clicking a loader row in the install sheet does.
+func (m *Model) openLoaderForFormKind(kind loader.Kind) (tea.Model, tea.Cmd) {
 	name, memory, ok := m.instanceFormValues()
 	if !ok {
 		return m, nil
@@ -58,7 +86,22 @@ func (m *Model) openLoaderForForm() (tea.Model, tea.Cmd) {
 	base := m.form.VersionID
 	m.pendingCreate = &pendingCreate{name: name, memory: memory, base: base}
 	m.openLoaderPicker(base)
-	return m, nil
+	m.loaderPick.FromForm = true
+	m.loaderPick.Kind = kind
+	m.loaderPick.Err = ""
+	m.loaderPick.Cursor = 0
+
+	if kind == loader.OptiFine {
+		m.openPrompt(promptOptiFineJar, m.t("OptiFine jar"), "",
+			m.t("Full path to an OptiFine_<version>_<edition>.jar file"), 260)
+		return m, nil
+	}
+
+	m.loaderPick.Step = loaderStepVersion
+	m.loaderPick.Loading = true
+	m.loaderPick.Versions = nil
+	m.modal = modalLoader
+	return m, fetchLoaderVersionsCmd(m.client, kind, m.loaderPick.Minecraft)
 }
 
 // instanceFormValues validates the name and memory of the new-instance form.
@@ -112,12 +155,4 @@ func (m *Model) finishPendingCreate(loaderVersionID string) {
 	m.screen = ScreenInstances
 	m.setToast(m.tf("Created %s", inst.Name), toastSuccess)
 	m.addLog("launcher", "created instance "+inst.Name)
-}
-
-// formLoaderValue is what the loader row shows on the right.
-func (m *Model) formLoaderValue() string {
-	if m.form.Loader == "" {
-		return m.t("None")
-	}
-	return loaderKindName(m.form.Loader)
 }

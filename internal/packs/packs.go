@@ -4,6 +4,7 @@ package packs
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
@@ -18,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MoonCC233/MCLauncher-TUI/internal/mirror"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
@@ -84,6 +86,7 @@ type Record struct {
 	Title       string `json:"title"`
 	Filename    string `json:"filename"`
 	SHA512      string `json:"sha512,omitempty"`
+	SHA1        string `json:"sha1,omitempty"`
 	Size        int64  `json:"size,omitempty"`
 	InstalledAt int64  `json:"installed_at"`
 	ContentType string `json:"content_type,omitempty"`
@@ -194,7 +197,17 @@ var validatePackURL = ValidateURL
 // installs. Players can still add any https URL by hand through InstallURL.
 var packHostsAllowed = func(host string) bool {
 	host = strings.ToLower(strings.TrimSpace(host))
-	return host == "cdn.modrinth.com" || strings.HasSuffix(host, ".modrinth.com")
+	switch {
+	case host == "cdn.modrinth.com", strings.HasSuffix(host, ".modrinth.com"):
+		return true
+	case host == "edge.forgecdn.net", host == "mediafilez.forgecdn.net":
+		return true
+	case strings.HasSuffix(host, ".forgecdn.net"):
+		return true
+	case host == "mod.mcimirror.top", strings.HasSuffix(host, ".mcimirror.top"):
+		return true
+	}
+	return false
 }
 
 // ValidateURL checks that a catalog download uses https on a trusted host.
@@ -212,8 +225,38 @@ func ValidateURL(raw string) error {
 	return nil
 }
 
-// Install downloads a catalog file into the instance folder. When a SHA-512 is
-// provided the file is verified before it becomes visible to the game.
+// contentMirror maps the content CDN hosts onto the keyless read-only mirror.
+// Both families keep the path unchanged, so only the host has to be replaced.
+const contentMirror = "https://mod.mcimirror.top"
+
+// candidateURLs lists the places a content file can be downloaded from. The
+// official CDN is tried first unless the player enabled the download mirror in
+// Settings, in which case the mirror is preferred and the CDN stays as a
+// fallback. URLs on other hosts are returned unchanged.
+func candidateURLs(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+		return []string{raw}
+	}
+	host := strings.ToLower(parsed.Hostname())
+	switch host {
+	case "cdn.modrinth.com", "edge.forgecdn.net", "mediafilez.forgecdn.net":
+	default:
+		return []string{raw}
+	}
+	mirrored := contentMirror + parsed.EscapedPath()
+	if mirrored == raw {
+		return []string{raw}
+	}
+	if mirror.Enabled() {
+		return []string{mirrored, raw}
+	}
+	return []string{raw, mirrored}
+}
+
+// Install downloads a catalog file into the instance folder. When a SHA-512 or
+// SHA-1 is provided the file is verified before it becomes visible to the game.
 func Install(ctx context.Context, client *http.Client, instanceDir string, kind Kind, record Record, rawURL string, onProgress func(int64)) (Record, error) {
 	if err := validatePackURL(rawURL); err != nil {
 		return Record{}, err
@@ -222,11 +265,15 @@ func Install(ctx context.Context, client *http.Client, instanceDir string, kind 
 }
 
 // InstallURL downloads any https URL the player pasted. It is the entry point for
-// content hosted outside Modrinth, so it only requires https and a sane name.
+// content hosted outside Modrinth and CurseForge, so it only requires https and a
+// sane name. Known content CDNs additionally get a mirror fallback.
 func InstallURL(ctx context.Context, client *http.Client, instanceDir string, kind Kind, record Record, rawURL string, onProgress func(int64)) (Record, error) {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
 		return Record{}, fmt.Errorf("pack url must be an https link")
+	}
+	if client == nil {
+		client = util.NewHTTPClient()
 	}
 	filename := SanitizeFilename(record.Filename)
 	if !strings.HasSuffix(strings.ToLower(filename), kind.Extension()) {
@@ -237,28 +284,59 @@ func InstallURL(ctx context.Context, client *http.Client, instanceDir string, ki
 		return Record{}, err
 	}
 	dest := filepath.Join(dir, filename)
-	partial := dest + ".part"
 
-	if err := download(ctx, client, rawURL, partial, onProgress); err != nil {
-		_ = os.Remove(partial)
+	// Reinstalling a file that is already on disk with the expected checksum
+	// does not need the network.
+	if alreadyInstalled(dest, record) {
+		return finishRecord(instanceDir, kind, record, filename, dest)
+	}
+
+	temp := dest + ".download"
+	urls := candidateURLs(rawURL)
+	spec := util.DownloadSpec{
+		URL:    urls[0],
+		Dest:   temp,
+		Size:   record.Size,
+		SHA1:   record.SHA1,
+		SHA512: record.SHA512,
+	}
+	if len(urls) > 1 {
+		spec.Alt = urls[1:]
+	}
+	if err := util.DownloadFile(ctx, client, spec, onProgress); err != nil {
+		_ = os.Remove(temp)
+		_ = os.Remove(temp + ".part")
 		return Record{}, err
+	}
+	if err := os.Rename(temp, dest); err != nil {
+		_ = os.Remove(temp)
+		return Record{}, err
+	}
+	return finishRecord(instanceDir, kind, record, filename, dest)
+}
+
+// alreadyInstalled reports whether dest already matches the record.
+func alreadyInstalled(dest string, record Record) bool {
+	info, err := os.Stat(dest)
+	if err != nil || info.IsDir() {
+		return false
+	}
+	if record.Size > 0 && info.Size() != record.Size {
+		return false
 	}
 	if record.SHA512 != "" {
-		sum, err := SHA512File(partial)
-		if err != nil {
-			_ = os.Remove(partial)
-			return Record{}, err
-		}
-		if !strings.EqualFold(sum, record.SHA512) {
-			_ = os.Remove(partial)
-			return Record{}, fmt.Errorf("checksum mismatch for %s", filename)
-		}
+		sum, err := SHA512File(dest)
+		return err == nil && strings.EqualFold(sum, record.SHA512)
 	}
-	if err := os.Rename(partial, dest); err != nil {
-		_ = os.Remove(partial)
-		return Record{}, err
+	if record.SHA1 != "" {
+		sum, err := SHA1File(dest)
+		return err == nil && strings.EqualFold(sum, record.SHA1)
 	}
+	// Without a checksum, an existing file of the expected size is reused.
+	return record.Size > 0
+}
 
+func finishRecord(instanceDir string, kind Kind, record Record, filename, dest string) (Record, error) {
 	record.Filename = filename
 	record.ContentType = string(kind)
 	record.InstalledAt = time.Now().Unix()
@@ -442,6 +520,20 @@ func SHA512File(path string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
+// SHA1File returns the lowercase hex SHA-1 of a file.
+func SHA1File(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	hash := sha1.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
+
 func packEntry(filename string) string { return "file/" + filename }
 
 var resourcePacksLine = regexp.MustCompile(`^resourcePacks\s*:`)
@@ -553,53 +645,4 @@ func copyFile(source, dest string) error {
 		return err
 	}
 	return out.Close()
-}
-
-func download(ctx context.Context, client *http.Client, rawURL, dest string, onProgress func(int64)) error {
-	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Minute}
-	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
-	if err != nil {
-		return err
-	}
-	request.Header.Set("User-Agent", "mclauncher (github.com/MoonCC233/MCLauncher-TUI)")
-	response, err := client.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("download: %s", response.Status)
-	}
-	file, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	buf := make([]byte, 64<<10)
-	var done int64
-	for {
-		n, readErr := response.Body.Read(buf)
-		if n > 0 {
-			if _, err := file.Write(buf[:n]); err != nil {
-				return err
-			}
-			done += int64(n)
-			if onProgress != nil {
-				onProgress(done)
-			}
-		}
-		if readErr == io.EOF {
-			break
-		}
-		if readErr != nil {
-			return readErr
-		}
-		if ctxErr := ctx.Err(); ctxErr != nil {
-			return ctxErr
-		}
-	}
-	return file.Sync()
 }

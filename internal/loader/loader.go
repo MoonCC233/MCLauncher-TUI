@@ -6,6 +6,7 @@ package loader
 
 import (
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -108,37 +109,20 @@ const (
 	neoforgeMavenBase = "https://maven.neoforged.net/releases"
 )
 
-// fabricMetaURL resolves a path against the official Fabric meta service or
-// the mirror configured with MCLAUNCHER_FABRIC_MIRROR. The mirror expects the
-// full v2 base, for example https://bmclapi2.bangbang93.com/fabric-meta/v2.
-// fabricMetaURLs lists where one Fabric meta path can be read from: the
-// configured mirror first, then the official API, so a mirror that is down or
-// missing a path never breaks loader discovery.
-// fetchJSONAny reads the first URL that answers with JSON.
-func fetchJSONAny(ctx context.Context, client *http.Client, urls []string, target any) error {
-	var lastErr error
-	for _, url := range urls {
-		if err := util.FetchJSON(ctx, client, url, target); err != nil {
-			lastErr = err
-			continue
-		}
-		return nil
-	}
-	if lastErr == nil {
-		lastErr = fmt.Errorf("no source is available")
-	}
-	return lastErr
-}
-
+// fabricMetaURLs lists where one Fabric meta path can be read from: an explicit
+// override, the domestic BMCLAPI mirror, then the official API. Loader
+// discovery races them, so the fastest reachable source wins.
 func fabricMetaURLs(path string) []string {
 	path = "/" + strings.TrimLeft(path, "/")
 	urls := []string{}
 	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FABRIC_MIRROR")), "/"); override != "" {
 		urls = append(urls, override+path)
-	} else if mirrored := mirror.FabricMetaBase(); mirrored != "" {
-		urls = append(urls, mirrored+path)
 	}
-	return append(urls, fabricMetaBase+path)
+	urls = append(urls,
+		mirror.BMCLAPIBase+"/fabric-meta/v2"+path,
+		fabricMetaBase+path,
+	)
+	return dedupeURLs(urls)
 }
 
 // fabricMetaURL is the first candidate, kept for callers that only need one.
@@ -150,14 +134,138 @@ func quiltMetaURLs(path string) []string {
 	urls := []string{}
 	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MIRROR")), "/"); override != "" {
 		urls = append(urls, override+path)
-	} else if mirrored := mirror.QuiltMetaBase(); mirrored != "" {
-		urls = append(urls, mirrored+path)
 	}
-	return append(urls, quiltMetaBase+path)
+	urls = append(urls,
+		mirror.BMCLAPIBase+"/quilt-meta/v3"+path,
+		quiltMetaBase+path,
+	)
+	return dedupeURLs(urls)
 }
 
 // quiltMetaURL is the first candidate.
 func quiltMetaURL(path string) string { return quiltMetaURLs(path)[0] }
+
+// quiltAllLoaderURLs lists the unfiltered loader list. Some mirrors expose only
+// this page, so it is used as a fallback when the game-specific endpoint is
+// missing.
+func quiltAllLoaderURLs() []string {
+	urls := []string{}
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_QUILT_MIRROR")), "/"); override != "" {
+		urls = append(urls, override+"/versions/loader")
+	}
+	urls = append(urls,
+		mirror.BMCLAPIBase+"/quilt-meta/v3/versions/loader",
+		quiltMetaBase+"/versions/loader",
+	)
+	return dedupeURLs(urls)
+}
+
+// dedupeURLs removes empty and duplicate candidates while keeping their order.
+func dedupeURLs(urls []string) []string {
+	out := make([]string, 0, len(urls))
+	seen := make(map[string]bool, len(urls))
+	for _, raw := range urls {
+		raw = strings.TrimSpace(raw)
+		if raw == "" || seen[raw] {
+			continue
+		}
+		seen[raw] = true
+		out = append(out, raw)
+	}
+	return out
+}
+
+// fetchJSONAny reads the first URL that answers with JSON. The candidates are
+// queried concurrently so a blocked official host cannot delay the domestic
+// mirror for the whole timeout window.
+func fetchJSONAny(ctx context.Context, client *http.Client, urls []string, target any) error {
+	return fetchJSONAnyWithin(ctx, client, urls, target, 25*time.Second)
+}
+
+func fetchJSONAnyWithin(ctx context.Context, client *http.Client, urls []string, target any, timeout time.Duration) error {
+	body, err := fetchBytesAny(ctx, client, urls, "application/json", timeout)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(body, target); err != nil {
+		return fmt.Errorf("decode loader metadata: %w", err)
+	}
+	return nil
+}
+
+// fetchTextAny is the text/XML counterpart of fetchJSONAny.
+func fetchTextAny(ctx context.Context, client *http.Client, urls []string) (string, error) {
+	body, err := fetchBytesAny(ctx, client, urls, "*/*", 25*time.Second)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+// fetchBytesAny races every candidate and returns the first successful body.
+func fetchBytesAny(ctx context.Context, client *http.Client, urls []string, accept string, timeout time.Duration) ([]byte, error) {
+	urls = dedupeURLs(urls)
+	if len(urls) == 0 {
+		return nil, fmt.Errorf("no source is available")
+	}
+	if client == nil {
+		client = util.NewHTTPClient()
+	}
+	raceCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	type result struct {
+		body []byte
+		err  error
+	}
+	results := make(chan result, len(urls))
+	for _, raw := range urls {
+		go func(raw string) {
+			attemptCtx, attemptCancel := context.WithTimeout(raceCtx, timeout)
+			defer attemptCancel()
+			body, err := fetchBytesOnce(attemptCtx, client, raw, accept)
+			results <- result{body: body, err: err}
+		}(raw)
+	}
+
+	var lastErr error
+	for range urls {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case result := <-results:
+			if result.err == nil {
+				cancel()
+				return result.body, nil
+			}
+			lastErr = result.err
+		}
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("no source is available")
+	}
+	return nil, lastErr
+}
+
+func fetchBytesOnce(ctx context.Context, client *http.Client, rawURL, accept string) ([]byte, error) {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("User-Agent", "mclauncher/0.5 (+https://github.com/MoonCC233/MCLauncher-TUI)")
+	if accept != "" {
+		request.Header.Set("Accept", accept)
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GET %s: HTTP %d", rawURL, response.StatusCode)
+	}
+	return io.ReadAll(io.LimitReader(response.Body, 32<<20))
+}
 
 // FetchVersions downloads the available loader builds for a Minecraft version.
 // OptiFine has no public API; it is imported from a local jar instead.
@@ -191,6 +299,12 @@ type loaderVersionEntry struct {
 	} `json:"loader"`
 }
 
+// loaderRootEntry is one item of the unfiltered Quilt loader list, which uses a
+// flat shape instead of the game-specific {"loader": {...}} reply.
+type loaderRootEntry struct {
+	Version string `json:"version"`
+}
+
 // parseMetaVersions reads the Fabric v2 and Quilt v3 game-specific replies.
 // Both nest the loader version under "loader"; Quilt omits "stable", so the
 // version string is used as the fallback.
@@ -219,10 +333,31 @@ func fetchFabricVersions(ctx context.Context, client *http.Client, minecraft str
 
 func fetchQuiltVersions(ctx context.Context, client *http.Client, minecraft string) ([]RemoteVersion, error) {
 	var raw []loaderVersionEntry
-	if err := fetchJSONAny(ctx, client, quiltMetaURLs("versions/loader/"+minecraft), &raw); err != nil {
-		return nil, err
+	if err := fetchJSONAnyWithin(ctx, client, quiltMetaURLs("versions/loader/"+minecraft), &raw, 8*time.Second); err != nil {
+		// Some domestic mirrors only expose the unfiltered loader list. Showing
+		// it is better than an empty screen; the installer still validates the
+		// selected loader against the game version.
+		var all []loaderRootEntry
+		if fallbackErr := fetchJSONAny(ctx, client, quiltAllLoaderURLs(), &all); fallbackErr != nil {
+			return nil, err
+		}
+		return parseQuiltLoaderList(all), nil
 	}
 	return parseMetaVersions(raw), nil
+}
+
+// parseQuiltLoaderList converts the unfiltered Quilt loader list. Those entries
+// have no stability flag, so the version string is used instead.
+func parseQuiltLoaderList(raw []loaderRootEntry) []RemoteVersion {
+	out := make([]RemoteVersion, 0, len(raw))
+	for _, entry := range raw {
+		version := strings.TrimSpace(entry.Version)
+		if version == "" {
+			continue
+		}
+		out = append(out, RemoteVersion{Version: version, Stable: !strings.Contains(version, "-")})
+	}
+	return out
 }
 
 type mavenMetadata struct {
@@ -230,12 +365,44 @@ type mavenMetadata struct {
 }
 
 func fetchForgeVersions(ctx context.Context, client *http.Client, minecraft string) ([]RemoteVersion, error) {
-	url := forgeMavenURL("net/minecraftforge/forge/maven-metadata.xml")
-	body, err := fetchText(ctx, client, url)
+	body, err := fetchTextAny(ctx, client, forgeMetadataURLs("net/minecraftforge/forge/maven-metadata.xml"))
 	if err != nil {
 		return nil, err
 	}
 	return parseForgeMetadata([]byte(body), minecraft)
+}
+
+// forgeMetadataURLs lists the Forge metadata candidates: an explicit override,
+// the domestic BMCLAPI mirror, then the official repositories.
+func forgeMetadataURLs(rel string) []string {
+	rel = strings.TrimLeft(rel, "/")
+	urls := []string{}
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_FORGE_MIRROR")), "/"); override != "" {
+		urls = append(urls, override+"/"+rel)
+	}
+	urls = append(urls,
+		mirror.BMCLAPIBase+"/maven/"+rel,
+		mirror.SJTUBase+"/"+rel,
+		forgeMavenBase+"/"+rel,
+		"https://files.minecraftforge.net/maven/"+rel,
+	)
+	return dedupeURLs(urls)
+}
+
+// neoforgeMetadataURLs is the NeoForge equivalent of forgeMetadataURLs.
+func neoforgeMetadataURLs(rel string) []string {
+	rel = strings.TrimLeft(rel, "/")
+	urls := []string{}
+	if override := strings.TrimRight(strings.TrimSpace(os.Getenv("MCLAUNCHER_NEOFORGE_MIRROR")), "/"); override != "" {
+		urls = append(urls, override+"/"+rel)
+	}
+	urls = append(urls,
+		mirror.BMCLAPIBase+"/maven/"+rel,
+		mirror.SJTUBase+"/"+rel,
+		neoforgeMavenBase+"/"+rel,
+		"https://maven.minecraftforge.net/"+rel,
+	)
+	return dedupeURLs(urls)
 }
 
 func parseForgeMetadata(body []byte, minecraft string) ([]RemoteVersion, error) {
@@ -292,8 +459,7 @@ func fetchNeoForgeVersions(ctx context.Context, client *http.Client, minecraft s
 	if err != nil {
 		return nil, err
 	}
-	url := neoforgeMavenURL(group + "/maven-metadata.xml")
-	body, err := fetchText(ctx, client, url)
+	body, err := fetchTextAny(ctx, client, neoforgeMetadataURLs(group+"/maven-metadata.xml"))
 	if err != nil {
 		return nil, err
 	}

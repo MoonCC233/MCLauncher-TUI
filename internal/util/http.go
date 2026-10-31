@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"crypto/sha1"
+	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -43,7 +44,11 @@ type DownloadSpec struct {
 	Alt  []string
 	Dest string
 	SHA1 string
-	Size int64
+	// SHA512 is checked when the caller has a SHA-512 digest. It takes
+	// precedence over SHA1, and a mismatch falls through to the next URL just
+	// like a transport error.
+	SHA512 string
+	Size   int64
 }
 
 func DownloadFile(ctx context.Context, client *http.Client, spec DownloadSpec, onProgress func(int64)) error {
@@ -146,6 +151,7 @@ func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, u
 		}
 	}()
 	h := sha1.New()
+	h512 := sha512.New()
 	var written int64
 	buf := make([]byte, 128*1024)
 	for {
@@ -156,6 +162,7 @@ func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, u
 				return err
 			}
 			h.Write(buf[:n])
+			h512.Write(buf[:n])
 			written += int64(n)
 			if onProgress != nil {
 				onProgress(written)
@@ -177,7 +184,12 @@ func downloadOnce(ctx context.Context, client *http.Client, spec DownloadSpec, u
 	if spec.Size > 0 && written != spec.Size {
 		return fmt.Errorf("size mismatch for %s: got %d, want %d", filepath.Base(spec.Dest), written, spec.Size)
 	}
-	if spec.SHA1 != "" {
+	if spec.SHA512 != "" {
+		got := hex.EncodeToString(h512.Sum(nil))
+		if !strings.EqualFold(got, spec.SHA512) {
+			return fmt.Errorf("checksum mismatch for %s", filepath.Base(spec.Dest))
+		}
+	} else if spec.SHA1 != "" {
 		got := hex.EncodeToString(h.Sum(nil))
 		if !strings.EqualFold(got, spec.SHA1) {
 			return fmt.Errorf("checksum mismatch for %s", filepath.Base(spec.Dest))

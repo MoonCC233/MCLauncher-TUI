@@ -8,11 +8,23 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/MoonCC233/MCLauncher-TUI/internal/i18n"
+	"github.com/MoonCC233/MCLauncher-TUI/internal/loader"
 	"github.com/MoonCC233/MCLauncher-TUI/internal/util"
 )
 
 func (m *Model) modalWidth() int {
 	w := 76
+	switch m.modal {
+	case modalPackSearch, modalPackVersions:
+		// The download center needs room for cards, filters and version
+		// metadata, so it uses a wider panel than the other dialogs.
+		w = 104
+	case modalForm:
+		if m.form.Kind == formInstance && m.form.EditID == "" {
+			// The install sheet has a version card and one row per loader.
+			w = 92
+		}
+	}
 	if m.width-6 < w {
 		w = m.width - 6
 	}
@@ -25,6 +37,75 @@ func (m *Model) modalWidth() int {
 func (m *Model) modalContentWidth() int {
 	// The flat panel has two cells of horizontal padding and no border.
 	return m.modalWidth() - 4
+}
+
+// instanceInstallBody renders the new-instance sheet: a version card, the name
+// and memory fields, one row per supported loader, and a primary action.
+func (m *Model) instanceInstallBody(contentW int) ([]string, []hitRegion) {
+	const bodyStart = 3
+	var body []string
+	var hits []hitRegion
+
+	cardLeft := stylePrimary.Render("← ") + styleGreen.Render("▦") + "  " + styleBold.Render(m.form.VersionID)
+	cardRight := styleDim.Render(m.t("Vanilla"))
+	if meta, ok := m.loaderMeta[m.form.VersionID]; ok {
+		cardRight = styleDim.Render(loaderKindName(meta.Kind))
+	}
+	body = append(body, composeLR("  ", cardLeft, cardRight, contentW))
+	hits = append(hits, hitRegion{Kind: hitKey, Key: keyMsg("esc"), Y: bodyStart + len(body) - 1, W: 3, H: 1})
+
+	versionHint := m.tf("Version %s will be installed first", m.form.VersionID)
+	if m.installed[m.form.VersionID] {
+		versionHint = m.t("installed")
+	}
+	body = append(body, fitLine("     "+styleDim.Render(versionHint), contentW), "")
+
+	for i := range m.form.Fields {
+		m.form.Fields[i].Width = max(10, contentW-6)
+		body = append(body, "  "+styleMuted.Render(m.form.Labels[i]))
+		body = append(body, "  "+m.form.Fields[i].View())
+		hits = append(hits, hitRegion{Kind: hitFormField, Index: i, Y: bodyStart + len(body) - 2, W: contentW, H: 2})
+		if i < len(m.form.Hints) && m.form.Hints[i] != "" && i != 0 {
+			body = append(body, "  "+styleDim.Render(m.form.Hints[i]))
+		}
+		body = append(body, "")
+	}
+
+	if m.form.LoaderRow {
+		body = append(body, "  "+styleMuted.Render(m.t("Mod loader")), "")
+		for i, kind := range formLoaderKinds {
+			focused := m.form.Focus == len(m.form.Fields)+i
+			bar := styleBorder.Render("▌")
+			nameStyle := styleText
+			if focused {
+				bar = stylePrimary.Render("▌")
+				nameStyle = stylePrimaryB
+			}
+			status := m.t("Can be added")
+			if kind == loader.OptiFine {
+				status = m.t("Needs a local jar")
+			}
+			row := composeLR("  "+bar+" ", nameStyle.Render(loaderKindName(kind)),
+				styleDim.Render(status)+"  "+stylePrimary.Render("›"), contentW)
+			body = append(body, row)
+			hits = append(hits, hitRegion{Kind: hitFormLoaderRow, Index: i, Y: bodyStart + len(body) - 1, W: contentW, H: 1})
+		}
+		body = append(body, "  "+styleDim.Render(m.t("Pick a loader or create a vanilla instance.")), "")
+	}
+
+	if m.form.Err != "" {
+		body = append(body, "  "+styleRed.Render("✗ "+m.form.Err), "")
+	}
+
+	submit := m.t("Start download")
+	if m.installed[m.form.VersionID] {
+		submit = m.t("create")
+	}
+	button := lipgloss.NewStyle().Background(colPrimary).Foreground(colBackground).Bold(true).
+		Padding(0, 4).Render("  " + submit + "  ")
+	body = append(body, "", lipgloss.PlaceHorizontal(contentW, lipgloss.Center, button), "")
+	hits = append(hits, hitRegion{Kind: hitFormSubmit, Y: bodyStart + len(body) - 2, W: contentW, H: 1})
+	return body, hits
 }
 
 func (m *Model) modalView(base string) string {
@@ -68,6 +149,13 @@ func (m *Model) modalView(base string) string {
 		}
 	case modalForm:
 		title = m.form.Title
+		if m.form.Kind == formInstance && m.form.EditID == "" {
+			var hits []hitRegion
+			body, hits = m.instanceInstallBody(contentW)
+			pending = append(pending, hits...)
+			footer = nil
+			break
+		}
 		bodyStart := 3
 		if m.form.Kind == formInstance {
 			body = append(body, styleMuted.Render(m.t("Version"))+"  "+styleCyan.Render(m.form.VersionID))
@@ -81,16 +169,6 @@ func (m *Model) modalView(base string) string {
 			if i < len(m.form.Hints) && m.form.Hints[i] != "" {
 				body = append(body, styleDim.Render(m.form.Hints[i]))
 			}
-			body = append(body, styleBorder.Render(strings.Repeat("─", max(12, contentW-4))), "")
-		}
-		if m.form.LoaderRow {
-			label := styleMuted.Render(m.t("Mod loader"))
-			value := styleCyan.Render(m.formLoaderValue())
-			if m.formLoaderFocus() {
-				value = stylePrimary.Render("▸ " + m.t("Choose a mod loader…") + " ◂")
-			}
-			body = append(body, label, "  "+value)
-			body = append(body, styleDim.Render(m.t("Press enter to pick the loader, its version and the Java runtime.")))
 			body = append(body, styleBorder.Render(strings.Repeat("─", max(12, contentW-4))), "")
 		}
 		if m.form.Err != "" {
@@ -224,16 +302,27 @@ func (m *Model) modalView(base string) string {
 			hint("d", m.t("remove")),
 		}
 	case modalPackSearch:
-		title = m.t("Search resource packs")
+		title = m.packKindName(m.packs.kind) + " · " + m.packSourceName()
 		body = m.packSearchBody(contentW)
 		footer = []hintSpec{
-			hint("enter", m.t("search")),
+			hint("tab", m.t("switch type")),
+			hint("ctrl+t", m.t("source")),
+			hint("ctrl+f", m.t("version")),
+			hint("ctrl+k", m.t("loader")),
+			hint("ctrl+o", m.t("sort")),
+			hint("ctrl+p", m.t("prev page")),
+			hint("ctrl+n", m.t("next page")),
+			hint("enter", m.t("choose")),
 		}
 	case modalPackVersions:
-		title = m.t("Choose a version")
+		title = m.packs.project.Title
+		if strings.TrimSpace(title) == "" {
+			title = m.t("Choose a version")
+		}
 		body = m.packVersionsBody(contentW)
 		footer = []hintSpec{
-			hint("enter", m.t("choose")),
+			hint("enter", m.t("install")),
+			hint("esc", m.t("back")),
 		}
 	case modalAnnounce:
 		title = m.t("Announcements")

@@ -83,6 +83,12 @@ func (m *Model) updateLoaderPicker(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.loaderPick.Cursor = 0
 			return m, nil
 		case loaderStepVersion:
+			if m.loaderPick.FromForm {
+				m.loaderPick.FromForm = false
+				m.pendingCreate = nil
+				m.modal = modalForm
+				return m, nil
+			}
 			m.loaderPick.Step = loaderStepKind
 			m.loaderPick.Cursor = 0
 			m.loaderPick.Err = ""

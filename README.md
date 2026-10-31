@@ -13,11 +13,11 @@
 - **终端原生 TUI**：Bubble Tea + Lip Gloss，键盘与鼠标操作，窄终端自动收起侧栏；首页标题是四行 ASCII 大字 “MCTL”，带渐变高光，字形（方块 / 线条）与动效（`Sheen` / `Wave` / `Breathe` / `Off`）都能在设置里切换，窄终端自动回退成单行文字。
 - **多语言界面**：14 种可选语言，自动跟随系统区域设置；中文、日文、韩文按显示宽度排版，阿拉伯语镜像侧栏、表头与底栏。
 - **原版版本安装**：从 Mojang `piston-meta` 获取版本清单，安装 client、libraries、assets、natives 与 log4j 配置。
-- **模组加载器**：新建实例时在表单里选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例直接引用该版本；OptiFine 需要本地下载的 `OptiFine_<version>_<edition>.jar`。
-- **资源与模组**：在 `Instances` 按 `p` 打开「资源与模组」窗口，`tab` / `←` `→` / 数字键在材质包、光影与模组之间切换。可以从 Modrinth 搜索（按游戏版本与模组加载器过滤），也可以按 `i` 导入本地已下载的文件、按 `u` 粘贴任意 https 直链——从其他网站下载的内容同样能装进来。材质包装入 `resourcepacks/` 并改写 `options.txt` 开关，模组装入 `mods/` 并用 `.jar.disabled` 开关，光影装入 `shaderpacks/` 后在游戏内选择；下载按 SHA-512 校验，手放进目录的文件也会被列出。
+- **模组加载器**：新建实例的安装页会列出 Fabric、Quilt、Forge、NeoForge 与 OptiFine 行，选中后直接用该加载器的版本列表与 Java 运行时安装；加载器会注册为独立版本并通过 `inheritsFrom` 继承原版，实例直接引用该版本。OptiFine 需要本地下载的 `OptiFine_<version>_<edition>.jar`。
+- **资源与模组**：在 `Instances` 按 `p` 打开「资源与模组」窗口，`tab` / `←` `→` / 数字键在材质包、光影与模组之间切换，`s` 在 Modrinth 与 CurseForge 两个内容源之间切换。按 `/` 进入下载中心：顶部是来源、游戏版本、加载器、排序与分页筛选条，中间以卡片列出标题、作者、来源、下载量和简介；选中项目后进入详情页，按版本查看游戏版本、加载器、下载量与文件大小，再按 `enter` 安装。搜索会按实例的游戏版本与模组加载器过滤；CurseForge 通过免密钥的只读镜像接入，不需要自己申请 API Key。也可以按 `i` 导入本地已下载的文件、按 `u` 粘贴任意 https 直链——从其他网站下载的内容同样能装进来。模组会递归安装所需的必需依赖并自动去重。材质包装入 `resourcepacks/` 并改写 `options.txt` 开关，模组装入 `mods/` 并用 `.jar.disabled` 开关，光影装入 `shaderpacks/` 后在游戏内选择；下载按 SHA-512 / SHA-1 校验，已知内容 CDN 在失败时会自动回退到镜像，手放进目录的文件也会被列出。
 - **更新公告与关于页**：启动器会拉取 GitHub Releases，把**当前版本对应的更新日志**用弹窗展示（开发版则显示最新一个 Release），每个版本只弹一次，`a` 可重新查看。侧栏的「关于」里有四个标签：软件信息（版本、Go 版本、平台、数据目录、仓库、许可证）、贡献者名单、历次更新公告（含 Release 说明）以及来自 GitHub issue 的反馈列表，`enter` 可在浏览器里打开对应页面，`n` 直接新建 issue。
 - **主题与强调色**：内置 OpenCode、Midnight、Forest、Rose、Mono 五种主题，支持自定义十六进制强调色并即时应用到整个界面。
-- **下载镜像**：`Settings → Download mirror` 可在官方服务器与 **BMCLAPI**（国内镜像）之间切换，切换后版本清单、版本元数据、libraries、assets 以及 Fabric / Quilt / Forge / NeoForge 的元数据和 Maven 依赖都走镜像；镜像缺文件或不可达时会自动回退到官方源，不会因此装坏。客户端 jar（`piston-data.mojang.com`）和 log4j 配置没有镜像等价物，仍从官方下载。也可以用环境变量 `MCLAUNCHER_FABRIC_MIRROR` 等单独覆盖某个源。
+- **下载镜像**：`Settings → Download mirror` 可在官方服务器与 **BMCLAPI**（国内镜像）之间切换，切换后版本清单、版本元数据、libraries 与 assets 都走镜像。模组加载器的版本列表会自动并行查询 BMCLAPI 与官方源（Forge / NeoForge 还会同时使用上海交大 BMCLAPI 文件镜像），国内网络下无需先切换设置也能加载 Fabric / Quilt / Forge / NeoForge 版本；Forge / NeoForge 的安装器与依赖默认优先走镜像，缺失时回退官方。资源包、光影与模组的 CDN 下载也会优先尝试只读内容镜像，失败后回退官方 CDN。镜像缺文件或不可达时会自动回退，不会因此装坏。客户端 jar（`piston-data.mojang.com`）和 log4j 配置没有镜像等价物，仍从官方下载。也可以用环境变量 `MCLAUNCHER_FABRIC_MIRROR` 等单独覆盖某个源。
 - **共享依赖，独立实例**：libraries 和 assets 全局共享，每个实例拥有独立的游戏目录与存档。
 - **离线与正版账户**：支持离线账户与 Microsoft 正版登录（device code 流程），可保存多个账户并快速切换；启动时自动刷新过期的 Microsoft 会话。
 - **离线皮肤**：在 `Accounts` 选中离线账户按 `s` 打开皮肤窗口，导入 `64×64` 或 `64×32` PNG，选择 `classic` / `slim` 模型，终端里会直接显示半方块人物预览。启动器会把皮肤复制到配置文件旁的 `skins/`，第一次使用时自动下载 authlib-injector，并通过本机回环 Yggdrasil 服务把皮肤注入游戏；也可以随时用任意图片编辑器修改保存的 PNG，回到窗口按 `r` 重新加载。Microsoft 账户继续使用 Mojang 皮肤。
@@ -43,6 +43,10 @@
 | 安装加载器 | 资源与模组 |
 | --- | --- |
 | ![加载器](docs/loader.png) | ![资源与模组](docs/content.png) |
+
+| 下载中心 | 版本详情 |
+| --- | --- |
+| ![下载中心](docs/content-search.png) | ![版本详情](docs/content-detail.png) |
 
 | 关于 | 更新公告 |
 | --- | --- |
@@ -154,12 +158,12 @@ Windows 下输出文件为 `mclauncher.exe`。
    - `r`：重新拉取 Mojang 版本清单。
 
 3. **选择模组加载器（可选）**  
-   在上一步的「新建实例」表单里，按 `tab` 移到「模组加载器」行并按 `enter`，依次选择 Fabric、Quilt、Forge、NeoForge 或 OptiFine，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge/NeoForge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。装好后实例会自动指向该加载器版本。
+   「新建实例」安装页顶部是版本卡片，下面是名称、内存与加载器列表。按 `tab` / `shift+tab` 在字段和 Forge、NeoForge、Fabric、Quilt、OptiFine 行之间移动；在加载器行按 `enter`（或双击）直接打开该加载器的版本列表，再选择加载器版本与安装用的 Java 运行时。Fabric/Quilt 会下载官方 profile，Forge/NeoForge 会运行 Maven 安装器，OptiFine 需要输入本地 `OptiFine_<version>_<edition>.jar` 的路径。装好后实例会自动指向该加载器版本。
 4. **创建并启动实例**  
-   在表单中填写实例名、可选内存上限，按 `enter` 创建。回到 `Instances` 或 `Home`，按 `enter` 启动。
+   填写实例名与可选内存后，按底部的「开始下载」（版本已安装时显示为「创建」）；不需要加载器时直接这样创建原版实例即可。回到 `Instances` 或 `Home`，按 `enter` 启动。
 
 5. **管理资源与模组**  
-   在 `Instances` 中选中实例按 `p`：材质包 / 光影 / 模组三个标签，`enter` 启用或禁用，`/` 搜 Modrinth，`i` 导入本地 `.zip` / `.jar`，`u` 粘贴 https 直链，`d` 删除。
+   在 `Instances` 中选中实例按 `p`：材质包 / 光影 / 模组三个标签，`enter` 启用或禁用，`/` 打开下载中心，`s` 切换 Modrinth / CurseForge，`i` 导入本地 `.zip` / `.jar`，`u` 粘贴 https 直链，`d` 删除。下载中心支持 `ctrl+t` 切换来源、`ctrl+f` 切换游戏版本、`ctrl+k` 切换加载器、`ctrl+o` 切换排序、`ctrl+p` / `ctrl+n` 翻页；选中项目后 `enter` 查看版本，再按 `enter` 安装。安装模组时会一并下载所需的必需依赖。
 
 6. **查看日志 / 停止游戏**  
    进入 `Console` 查看实时输出。按 `x` 停止游戏进程，按 `o` 打开日志目录；直接退出启动器也会先停止正在运行的游戏，不再残留后台进程。
@@ -201,7 +205,9 @@ Windows 下输出文件为 `mclauncher.exe`。
 | --- | --- |
 | Instances | `n` 新建实例 · `e` 编辑 · `p` 打开资源与模组 · `d` 删除（保留游戏文件）· `o` 打开实例目录 · `x` 停止游戏 |
 | Versions | 标题右侧搜索框或 `/` 搜索版本 ID · `t` 切换类型（全部 / 正式版 / 快照 / 远古版 / 愚人节版）· `enter` 安装并创建实例 · `i` 仅安装 · `d` 卸载已安装版本 · `r` 刷新 · `o` 打开版本目录 |
-| 资源与模组 | `tab` / `1`-`3` 切换材质包、光影、模组 · `enter` 启用或禁用 · `/` 搜索 Modrinth · `i` 导入本地文件 · `u` 添加 https 链接 · `d` 删除 · `esc` 关闭 |
+| 新建实例 | `tab` / `shift+tab` 在名称、内存与加载器行之间移动 · `enter` 选择加载器或开始下载 · `esc` 返回 |
+| 资源与模组 | `tab` / `1`-`3` 切换材质包、光影、模组 · `s` 切换 Modrinth / CurseForge · `enter` 启用或禁用 · `/` 打开下载中心 · `i` 导入本地文件 · `u` 添加 https 链接 · `d` 删除 · `esc` 关闭 |
+| 下载中心 | `ctrl+t` 切换来源 · `ctrl+f` 切换游戏版本 · `ctrl+k` 切换加载器 · `ctrl+o` 切换排序 · `ctrl+p` / `ctrl+n` 上一页 / 下一页 · `enter` 查看版本或安装 · `esc` 返回 |
 | 关于 | `tab` / `1`-`4` 切换软件信息、贡献者、更新公告、反馈 · `enter` 在浏览器中打开 · `r` 重新加载 · `a` 重新查看公告 · `o` 打开仓库 · `n` 新建 issue |
 | Accounts | `a` / `n` 添加账户（离线或 Microsoft）· `enter` 设为当前 · `s` 编辑离线皮肤 · `d` 移除账户 |
 | 离线皮肤 | `i` 导入 PNG · `m` 切换 classic / slim · `o` 打开皮肤文件 · `r` 重新加载 · `d` 移除 · `esc` 关闭 |
@@ -320,7 +326,7 @@ internal/install/       下载、校验、资源索引与安装标记
 internal/loader/        Fabric / Quilt / Forge / NeoForge / OptiFine 安装与加载器元数据
 internal/mods/          模组扫描、元数据解析、启用/禁用与删除
 internal/packs/         资源包、光影与模组的安装、启停和目录扫描
-internal/catalog/       Modrinth 搜索与下载元数据
+internal/catalog/       Modrinth / CurseForge 搜索、版本与必需依赖解析
 internal/skin/          离线皮肤校验、终端预览、本机 Yggdrasil 服务与 authlib-injector 下载
 internal/gametitle/     Windows 游戏窗口标题修改
 internal/remote/        GitHub Releases、贡献者、issue 与更新公告读取
@@ -376,6 +382,9 @@ Release 工作流会读取对应标签的 `docs/releases/<tag>.md`，通过 GoRe
 
 - **Microsoft 登录依赖网络与浏览器**：设备代码流程需要访问 Microsoft 登录页；部分账户首次使用前可能需要先在 `xbox.com` 创建 Xbox 档案。自定义 Entra 客户端需要 Mojang 审批，内置客户端开箱即用。
 - **材质包不检查 `pack_format`**：搜索与下载会按实例的游戏版本过滤，但兼容性最终由 Minecraft 判断，不匹配的包在游戏内会显示为不可用；光影需要 Iris 或 OptiFine，模组需要对应的加载器。
+- **CurseForge 依赖只读镜像**：CurseForge 搜索、版本与文件信息通过免密钥的公共镜像读取；镜像不可达时仍可切换到 Modrinth 搜索，或直接用 `u` 粘贴 https 链接安装。镜像不会绕过作者关闭第三方分发的内容，这类文件不会出现在版本列表中。
+- **依赖解析不保证覆盖所有第三方关系**：启动器会安装 Modrinth / CurseForge 标记为 required 的依赖并递归去重，但可选依赖、加载器内置组件和手动放入的模组不会被自动补全。
+- **Quilt 元数据镜像不完整**：国内镜像可能只提供未过滤的 Quilt loader 列表，启动器会回退到该列表以保证能看到版本；安装 Quilt 时仍需访问官方 Quilt Meta，若该域名不可达，建议改用 Fabric 或 Forge。
 - **阿拉伯语显示取决于终端**：启动器会镜像布局，但阿拉伯文字形连写和 BiDi 排序由终端与字体决定；Windows Terminal 的显示效果通常最好。
 - **预编译二进制未签名**：macOS 首次运行可能需要 `xattr -d com.apple.quarantine ./mclauncher`。
 

@@ -264,16 +264,14 @@ func (m *Model) sidebarView(height int) []string {
 		add(styleDim.Render("○ " + m.t("idle")))
 	}
 
-	bottom := []string{
-		"",
-		styleDim.Render(m.t("DATA")),
-		styleDim.Render(util.ShortenPath(m.layout.Root, inner)),
-		styleDim.Render("v" + m.AppVersion),
-	}
-	for len(lines)+len(bottom) < height {
+	for len(lines) < height {
 		lines = append(lines, "")
 	}
-	lines = append(lines, bottom...)
+	if height > 0 {
+		// The data block now continues into the action bar and footer rows,
+		// ending flush with the bottom-left corner.
+		lines[height-1] = styleDim.Render(m.t("DATA"))
+	}
 	out := make([]string, height)
 	for i := 0; i < height; i++ {
 		if i < len(lines) {
@@ -283,6 +281,23 @@ func (m *Model) sidebarView(height int) []string {
 		}
 	}
 	return out
+}
+
+// sidebarFooterLine renders the data directory and version on the action-bar
+// and footer rows, so the block ends flush with the bottom-left corner.
+func (m *Model) sidebarFooterLine(row int) string {
+	w := m.sidebarWidth()
+	if w == 0 {
+		return ""
+	}
+	var text string
+	switch row {
+	case 1:
+		text = styleDim.Render(util.ShortenPath(m.layout.Root, max(4, w-2)))
+	case 2:
+		text = styleDim.Render("v" + m.AppVersion)
+	}
+	return fitLine(text, w)
 }
 
 // actionBarView draws the current screen's actions at the bottom of its
@@ -315,7 +330,7 @@ func (m *Model) actionBarView() string {
 	if m.sidebarWidth() == 0 {
 		return fitLine(main, m.width)
 	}
-	side := strings.Repeat(" ", m.sidebarWidth())
+	side := m.sidebarFooterLine(1)
 	sep := styleBorder.Render("│")
 	if m.rtl() {
 		return fitLine(main, m.mainWidth()) + sep + side
@@ -324,7 +339,8 @@ func (m *Model) actionBarView() string {
 }
 
 func (m *Model) footerView() string {
-	avail := m.width - 2
+	mainW := m.mainWidth()
+	avail := mainW - 2
 	if avail < 10 {
 		avail = 10
 	}
@@ -352,7 +368,16 @@ func (m *Model) footerView() string {
 	if m.rtl() {
 		line = right + strings.Repeat(" ", gap) + left
 	}
-	return " " + fitLine(line, avail) + " "
+	main := " " + fitLine(line, avail) + " "
+	if m.sidebarWidth() == 0 {
+		return fitLine(main, m.width)
+	}
+	side := m.sidebarFooterLine(2)
+	sep := styleBorder.Render("│")
+	if m.rtl() {
+		return fitLine(main, mainW) + sep + side
+	}
+	return side + sep + fitLine(main, mainW)
 }
 
 func (m *Model) screenHints() []hintSpec {
